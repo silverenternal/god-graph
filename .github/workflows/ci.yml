@@ -52,10 +52,13 @@ jobs:
           components: clippy
 
       - name: Run Clippy (default features)
-        run: cargo clippy --all-targets --all-features -- -D warnings
+        run: cargo clippy --all-targets -- -D warnings
 
       - name: Run Clippy (no default features)
         run: cargo clippy --all-targets --no-default-features -- -D warnings
+
+      - name: Run Clippy (all non-GPU features)
+        run: cargo clippy --all-targets --features "std,parallel,serde,dot,matrix,rand,simd,tensor,tensor-sparse,tensor-gnn,tensor-pool,tensor-batch" -- -D warnings
 
   # ============================================
   # 测试套件
@@ -71,10 +74,10 @@ jobs:
           - beta
           - "1.85" # MSRV
         features:
-          - "--all-features"
           - "--no-default-features"
           - "--features parallel"
           - "--features serde"
+          - "--features \"std,parallel,serde,dot,matrix,rand,simd,tensor,tensor-sparse,tensor-gnn,tensor-pool,tensor-batch\""
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -121,7 +124,7 @@ jobs:
           key: ${{ runner.os }}-cargo-bench-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Run benchmarks
-        run: cargo bench --all-features --no-fail-fast
+        run: cargo bench --features "std,parallel,serde,dot,matrix,rand,simd,tensor,tensor-sparse,tensor-gnn,tensor-pool,tensor-batch" --no-fail-fast
 
       - name: Upload benchmark results
         uses: actions/upload-artifact@v4
@@ -145,7 +148,7 @@ jobs:
       - name: Check documentation
         env:
           RUSTDOCFLAGS: -D warnings
-        run: cargo doc --all-features --no-deps
+        run: cargo doc --features "std,parallel,serde,dot,matrix,rand,simd,tensor,tensor-sparse,tensor-gnn,tensor-pool,tensor-batch" --no-deps
 
   # ============================================
   # 覆盖率检查（可选，需要 tarpaulin）
@@ -165,7 +168,7 @@ jobs:
         run: cargo install cargo-tarpaulin
 
       - name: Generate coverage report
-        run: cargo tarpaulin --all-features --out xml --fail-on-uncovered
+        run: cargo tarpaulin --features "std,parallel,serde,dot,matrix,rand,simd,tensor,tensor-sparse,tensor-gnn,tensor-pool,tensor-batch" --out xml --fail-on-uncovered
 
       - name: Check coverage threshold (minimum 70%)
         run: |
@@ -204,7 +207,7 @@ jobs:
       - name: Simulate docs.rs build
         env:
           RUSTDOCFLAGS: --cfg docsrs
-        run: cargo doc --all-features --no-deps
+        run: cargo doc --features "std,parallel,serde,dot,matrix,rand,simd,tensor,tensor-sparse,tensor-gnn,tensor-pool,tensor-batch" --no-deps
 
   # ============================================
   # 发布检查（仅在创建 tag 时运行）
@@ -221,7 +224,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Build release
-        run: cargo build --release --all-features
+        run: cargo build --release --features "std,parallel,serde,dot,matrix,rand,simd,tensor,tensor-sparse,tensor-gnn,tensor-pool,tensor-batch"
 
       - name: Verify package
-        run: cargo package --allow-dirty
+        run: cargo package
