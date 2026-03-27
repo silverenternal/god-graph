@@ -431,9 +431,9 @@ impl GATConv {
     fn softmax(&self, scores: &[f64], edge_index: &[(usize, usize)]) -> Vec<f64> {
         // 按目标节点分组
         let mut dst_scores: std::collections::HashMap<usize, Vec<(usize, f64)>> = std::collections::HashMap::new();
-        
+
         for ((src, dst), score) in edge_index.iter().zip(scores.iter()) {
-            dst_scores.entry(*dst).or_insert_with(Vec::new).push((*src, *score));
+            dst_scores.entry(*dst).or_default().push((*src, *score));
         }
         
         // 对每个目标节点的注意力分数进行 softmax

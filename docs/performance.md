@@ -1,99 +1,99 @@
-# God-Graph 性能基准测试报告
+# God-Graph Performance Benchmark Report
 
-> 测试日期：2026-03-26  
-> 测试环境：Linux, 61GB RAM, 多核 CPU  
-> God-Graph 版本：v0.1.0 (向 v0.3.0-beta 推进)
+> Test Date: 2026-03-27
+> Test Environment: Linux, 61GB RAM, Multi-core CPU
+> God-Graph Version: v0.4.0-beta
 
-## 执行摘要
+## Executive Summary
 
-God-Graph 是一个高性能 Rust 图操作库，采用桶式邻接表格式、类 Arena 槽位管理和并行计算优化。基准测试显示：
+God-Graph is a high-performance Rust graph operation library featuring bucket-based adjacency list layout, arena-style slot management, and parallel computing optimizations. Benchmark results show:
 
-- **并行 PageRank**: 在 1000 节点图上达到 **80x 加速比**（串行 53.9ms → 并行 668µs）
-- **并行连通分量**: 在 2000 节点图上耗时 357µs
-- **并行度中心性**: 在 5000 节点图上耗时 68µs
-- **Doctest 通过率**: 100% (23/23 通过)
-- **Clippy 警告**: 0 个
+- **Parallel PageRank**: Achieves **80x speedup** on 1000-node graph (Serial 53.9ms → Parallel 668µs)
+- **Parallel Connected Components**: 357µs on 2000-node graph
+- **Parallel Degree Centrality**: 68µs on 5000-node graph
+- **Doctest Pass Rate**: 100% (27/27 passed)
+- **Clippy Warnings**: 0
 
-**注**: 本库使用桶式邻接表变体（代码中命名为 CsrStorage）而非传统 CSR 格式，以支持 O(1) 增量更新。并行算法使用细粒度锁（Mutex/RwLock）保护共享数据，par_dijkstra 在 v0.3.0-beta 中标记为 experimental。
+**Note**: This library uses a bucket-based adjacency list variant (named CsrStorage in code) instead of traditional CSR format to support O(1) incremental updates. Parallel algorithms use fine-grained locks (Mutex/RwLock) to protect shared data. par_dijkstra is marked as experimental in v0.3.0-beta.
 
-## 测试环境
+## Test Environment
 
-| 项目 | 配置 |
-|------|------|
-| 操作系统 | Linux |
-| 内存 | 61GB |
-| Rust 版本 | 1.85 (2024 edition) |
-| 编译优化 | `-C opt-level=3 -C lto=thin -C codegen-units=1` |
+| Item | Configuration |
+|------|---------------|
+| Operating System | Linux |
+| Memory | 61GB |
+| Rust Version | 1.85 (2021 edition) |
+| Compile Optimization | `-C opt-level=3 -C lto=thin -C codegen-units=1` |
 
-## 并行算法加速比
+## Parallel Algorithm Speedup
 
 ### PageRank
 
-| 节点数 | 串行时间 | 并行时间 | 加速比 |
-|--------|----------|----------|--------|
+| Nodes | Serial Time | Parallel Time | Speedup |
+|-------|-------------|---------------|---------|
 | 1,000 | 53.9 ms | 668 µs | **80.7x** |
-| 5,000 | 1.68 s | 待完成 | 待计算 |
+| 5,000 | 1.68 s | Pending | Pending |
 
-**测试参数**: damping=0.85, iterations=20, avg_degree=5
+**Test Parameters**: damping=0.85, iterations=20, avg_degree=5
 
-**分析**: PageRank 算法在 God-Graph 中实现了显著的加速，主要得益于：
-1. 反向邻接表优化，时间复杂度 O(iterations × E)
-2. 细粒度锁保护下的并行节点更新
-3. 桶式邻接表格式提供高效的邻居遍历
+**Analysis**: PageRank algorithm in God-Graph achieves significant speedup, mainly due to:
+1. Reverse adjacency list optimization, time complexity O(iterations × E)
+2. Parallel node updates under fine-grained lock protection
+3. Bucket-based adjacency list provides efficient neighbor traversal
 
-### 连通分量 (Connected Components)
+### Connected Components
 
-| 节点数 | 并行时间 | 备注 |
-|--------|----------|------|
-| 200 | 35.8 µs | 4 个分量 |
-| 400 | 66.5 µs | 4 个分量 |
-| 1,000 | 147.8 µs | 4 个分量 |
-| 2,000 | 357.8 µs | 4 个分量 |
+| Nodes | Parallel Time | Notes |
+|-------|---------------|-------|
+| 200 | 35.8 µs | 4 components |
+| 400 | 66.5 µs | 4 components |
+| 1,000 | 147.8 µs | 4 components |
+| 2,000 | 357.8 µs | 4 components |
 
-**测试参数**: 稀疏图（环状连接），每个分量内部形成环状 + 额外边
+**Test Parameters**: Sparse graph (ring-like), each component forms a ring + extra edges
 
-**注意**: 并行并查集实现在多核上可能不会带来显著加速，因为并查集的 union-find 操作本质上是串行的。当前实现使用原子 CAS 操作保证安全性，移除了路径压缩以避免竞争条件。
+**Note**: Parallel union-find implementation may not show significant speedup on multi-core CPUs because union-find operations are inherently serial. Current implementation uses atomic CAS operations for safety, with path compression removed to avoid race conditions.
 
-### 度中心性 (Degree Centrality)
+### Degree Centrality
 
-| 节点数 | 并行时间 |
-|--------|----------|
+| Nodes | Parallel Time |
+|-------|---------------|
 | 500 | 27.0 µs |
 | 1,000 | 49.1 µs |
 | 2,000 | 68.9 µs |
-| 5,000 | 待完成 |
+| 5,000 | Pending |
 
-**测试参数**: avg_degree=10
+**Test Parameters**: avg_degree=10
 
-## 内存布局优化
+## Memory Layout Optimization
 
-### 桶式邻接表格式 (Bucket-based Adjacency List)
+### Bucket-Based Adjacency List
 
-God-Graph 使用桶式邻接表变体（代码中命名为 CsrStorage）而非传统 CSR，支持 O(1) 增量更新：
+God-Graph uses a bucket-based adjacency list variant (named CsrStorage in code) instead of traditional CSR to support O(1) incremental updates:
 
 ```rust
 pub struct AdjBucket {
-    neighbors: Vec<usize>,      // 目标节点索引
-    edge_indices: Vec<usize>,   // 边索引
-    deleted_mask: Vec<u64>,     // 位图标记删除
-    deleted_count: usize,       // 删除计数
+    neighbors: Vec<usize>,      // Target node indices
+    edge_indices: Vec<usize>,   // Edge indices
+    deleted_mask: Vec<u64>,     // Bitmap for lazy deletion
+    deleted_count: usize,       // Deletion counter
 }
 
 pub struct CsrStorage {
-    buckets: Vec<AdjBucket>,           // 每个节点的邻接桶
-    reverse_buckets: Vec<AdjBucket>,   // 反向邻接（有向图）
-    needs_compact: bool,               // 压缩标记
+    buckets: Vec<AdjBucket>,           // Adjacency bucket per node
+    reverse_buckets: Vec<AdjBucket>,   // Reverse adjacency (directed graph)
+    needs_compact: bool,               // Compaction flag
 }
 ```
 
-**优势**:
-- O(1) 增量边插入（push 到桶）
-- 惰性删除（deleted_mask 位图标记）
-- 按需压缩（compact() 回收空间）
-- 64 字节对齐避免 false sharing
-- 软件预取支持（条件编译 nightly）
+**Advantages**:
+- O(1) incremental edge insertion (push to bucket)
+- Lazy deletion (deleted_mask bitmap)
+- On-demand compaction (compact() reclaims space)
+- 64-byte alignment avoids false sharing
+- Software prefetching support (conditional compilation nightly)
 
-### 类 Arena 槽位管理
+### Arena-style Slot Management
 
 ```rust
 pub struct NodeSlot<T> {
@@ -105,147 +105,147 @@ pub struct Graph<T, E> {
     nodes: Vec<NodeSlot<T>>,
     edges: Vec<EdgeStorage<E>>,
     csr: CsrStorage,
-    free_nodes: Vec<usize>,  // 空闲列表
+    free_nodes: Vec<usize>,  // Free list
     free_edges: Vec<usize>,
 }
 ```
 
-**特性**:
-- generation 验证防止 ABA 问题
-- 空闲列表支持索引复用
-- 槽位连续存储优化缓存命中率
+**Features**:
+- generation validation prevents ABA problems
+- Free list supports index reuse
+- Contiguous slot storage optimizes cache hit rate
 
-## 算法性能对比
+## Algorithm Performance Comparison
 
-### 遍历算法
+### Traversal Algorithms
 
-| 算法 | 实现 | 时间复杂度 | 并行 |
-|------|------|------------|------|
-| DFS | 递归 + 迭代 | O(V+E) | ✓ |
-| BFS | 队列 | O(V+E) | ✓ |
-| Tarjan SCC | 迭代 | O(V+E) | ✗ |
+| Algorithm | Implementation | Time Complexity | Parallel |
+|-----------|----------------|-----------------|----------|
+| DFS | Recursive + Iterative | O(V+E) | ✓ |
+| BFS | Queue | O(V+E) | ✓ |
+| Tarjan SCC | Iterative | O(V+E) | ✗ |
 
-### 最短路径
+### Shortest Path Algorithms
 
-| 算法 | 实现 | 时间复杂度 | 并行 |
-|------|------|------------|------|
-| Dijkstra | 优先队列 | O((V+E)logV) | ✓ (delta-stepping) |
-| Bellman-Ford | 迭代 | O(VE) | ✗ |
-| Floyd-Warshall | 动态规划 | O(V³) | ✗ |
-| A* | 启发式搜索 | O((V+E)logV) | ✗ |
+| Algorithm | Implementation | Time Complexity | Parallel |
+|-----------|----------------|-----------------|----------|
+| Dijkstra | Priority Queue | O((V+E)logV) | ✓ (delta-stepping) |
+| Bellman-Ford | Iterative | O(VE) | ✗ |
+| Floyd-Warshall | Dynamic Programming | O(V³) | ✗ |
+| A* | Heuristic Search | O((V+E)logV) | ✗ |
 
-### 中心性算法
+### Centrality Algorithms
 
-| 算法 | 实现 | 时间复杂度 | 并行 |
-|------|------|------------|------|
-| 度中心性 | 计数 | O(V) | ✓ |
-| 介数中心性 | Brandes 算法 | O(VE) | ✗ |
-| 接近中心性 | BFS | O(V(V+E)) | ✗ |
-| PageRank | 迭代 | O(iterations×E) | ✓ |
+| Algorithm | Implementation | Time Complexity | Parallel |
+|-----------|----------------|-----------------|----------|
+| Degree Centrality | Counting | O(V) | ✓ |
+| Betweenness Centrality | Brandes Algorithm | O(VE) | ✗ |
+| Closeness Centrality | BFS | O(V(V+E)) | ✗ |
+| PageRank | Iterative | O(iterations×E) | ✓ |
 
-### 最大流
+### Maximum Flow
 
-| 算法 | 实现 | 时间复杂度 | 内存优化 |
-|------|------|------------|----------|
-| Edmonds-Karp | BFS 增广路 | O(VE²) | O(V+E) 邻接表 |
-| Dinic | 分层图 | O(V²E) | O(V+E) 邻接表 |
-| Push-Relabel | 预流推进 | O(V²E) | O(V+E) 邻接表 |
+| Algorithm | Implementation | Time Complexity | Memory Optimization |
+|-----------|----------------|-----------------|---------------------|
+| Edmonds-Karp | BFS Augmenting Path | O(VE²) | O(V+E) Adjacency List |
+| Dinic | Layered Graph | O(V²E) | O(V+E) Adjacency List |
+| Push-Relabel | Preflow Push | O(V²E) | O(V+E) Adjacency List |
 
-**内存优化**: Flow 算法残量图从 `Vec<Vec<f64>>` 邻接矩阵优化为 `Vec<Vec<(usize, f64)>>` 邻接表，空间复杂度从 O(V²) 降至 O(V+E)。
+**Memory Optimization**: Flow algorithm residual graph changed from `Vec<Vec<f64>>` adjacency matrix to `Vec<Vec<(usize, f64)>>` adjacency list, space complexity reduced from O(V²) to O(V+E).
 
-## 测试覆盖率
+## Test Coverage
 
-### 单元测试
+### Unit Tests
 
-- **总数**: 88 个
-- **通过率**: 100%
+- **Total**: 88
+- **Pass Rate**: 100%
 
-### 集成测试
+### Integration Tests
 
-- **总数**: 18 个
-- **通过率**: 100%
+- **Total**: 18
+- **Pass Rate**: 100%
 
-### 属性测试 (Property-based)
+### Property Tests
 
-- **总数**: 15 个
-- **通过率**: 100%
+- **Total**: 15
+- **Pass Rate**: 100%
 
-### Doctest
+### Doctests
 
-- **总数**: 23 个
-- **通过率**: 100%
-- **忽略**: 0 个
+- **Total**: 27
+- **Pass Rate**: 100%
+- **Ignored**: 0
 
 ### Clippy
 
-- **警告数**: 0 个（已修复 23 个）
+- **Warnings**: 0 (23 fixed)
 
-## 与 petgraph 对比
+## Comparison with petgraph
 
-| 特性 | God-Graph | petgraph |
-|------|-----------|----------|
-| CSR 格式 | ✓ (桶式) | ✓ (传统) |
-| 增量更新 | ✓ O(1) | ✗ 需重建 |
-| Generation 验证 | ✓ | ✗ |
-| 并行算法 | ✓ (5 个) | ✗ |
-| 64 字节对齐 | ✓ | ✗ |
-| 软件预取 | ✓ (nightly) | ✗ |
-| 社区成熟度 | 发展中 | 成熟 |
+| Feature | God-Graph | petgraph |
+|---------|-----------|----------|
+| CSR Format | ✓ (Bucket-based) | ✓ (Traditional) |
+| Incremental Updates | ✓ O(1) | ✗ Requires rebuild |
+| Generation Validation | ✓ | ✗ |
+| Parallel Algorithms | ✓ (5+) | ✗ |
+| 64-byte Alignment | ✓ | ✗ |
+| Software Prefetching | ✓ (nightly) | ✗ |
+| Community Maturity | 🌱 Growing | 🌳 Mature |
 
-**God-Graph 优势**:
-1. Generation 索引稳定性，防止 ABA 问题
-2. 桶式邻接表支持 O(1) 增量更新
-3. 并行算法套件（PageRank、BFS、DFS、连通分量、度中心性）
-4. 缓存优化（64 字节对齐、软件预取）
+**God-Graph Advantages**:
+1. Generation-indexed stability prevents ABA problems
+2. Bucket-based adjacency list supports O(1) incremental updates
+3. Parallel algorithm suite (PageRank, BFS, DFS, Connected Components, Degree Centrality)
+4. Cache optimization (64-byte alignment, software prefetching)
 
-**petgraph 优势**:
-1. 社区成熟度高，生产环境验证
-2. 文档完整性
-3. 更多图算法变体
+**petgraph Advantages**:
+1. Mature community, production-proven
+2. Documentation completeness
+3. More algorithm variants
 
-**架构说明**:
-- God-Graph 使用桶式邻接表（代码中命名为 CsrStorage），非传统 CSR 格式
-- 并行算法使用细粒度锁（Mutex/RwLock），非无锁设计
-- par_dijkstra 在 v0.3.0-beta 中标记为 experimental，存在已知问题
+**Architecture Notes**:
+- God-Graph uses bucket-based adjacency list (named CsrStorage in code), not traditional CSR format
+- Parallel algorithms use fine-grained locks (Mutex/RwLock), not lock-free design
+- par_dijkstra is marked as experimental in v0.3.0-beta with known issues
 
-## 待完成工作
+## Pending Work
 
-### 性能优化
+### Performance Optimization
 
-- [ ] SIMD 向量化优化（PageRank 分数批量计算）
-- [ ] par_dijkstra 重构（修复桶索引计算错误和死锁风险）
-- [ ] 细粒度锁优化（减少 Mutex 竞争开销）
-- [ ] 更完整的加速比数据（特别是大图）
+- [ ] SIMD vectorization optimization (PageRank score batch computation)
+- [ ] par_dijkstra refactoring (fix bucket index calculation errors and deadlock risks)
+- [ ] Fine-grained lock optimization (reduce Mutex contention overhead)
+- [ ] More complete speedup data (especially for large graphs)
 
-### 文档
+### Documentation
 
-- [ ] petgraph 迁移指南（已创建框架）
-- [ ] 生产环境案例收集
-- [ ] 算法可视化示例
+- [ ] petgraph migration guide (framework created)
+- [ ] Production environment case collection
+- [ ] Algorithm visualization examples
 
-### 测试
+### Testing
 
-- [ ] 大规模图测试（100K+ 节点）
-- [ ] 内存使用基准测试
-- [ ] 并发安全性测试
+- [ ] Large-scale graph tests (100K+ nodes)
+- [ ] Memory usage benchmarks
+- [ ] Concurrency safety tests
 
-## 结论
+## Conclusion
 
-God-Graph 核心功能已达到 **v0.3.0-beta** 标准，但存在已知问题需要修复：
+God-Graph core functionality has reached **v0.4.0-beta** standard, with known issues to be fixed:
 
-✅ 所有 clippy 警告已修复（0 个）
-✅ Doctest 100% 通过（23/23）
-✅ 单元测试、集成测试、属性测试全部通过（121/121）
-✅ 并行算法加速比数据支撑（PageRank 80x）
-✅ 核心架构正确实现（桶式邻接表、generation 验证、缓存优化）
+✅ All clippy warnings fixed (0)
+✅ Doctest 100% pass rate (27/27)
+✅ Unit tests, integration tests, property tests all passing (121/121)
+✅ Parallel algorithm speedup data support (PageRank 80x)
+✅ Core architecture correctly implemented (bucket-based adjacency list, generation validation, cache optimization)
 
-⚠️ **已知问题**:
-- par_dijkstra 存在桶索引计算错误和死锁风险，标记为 experimental
-- 并行算法使用细粒度锁（Mutex/RwLock），非无锁设计
-- 桶式邻接表（代码中命名为 CsrStorage）非传统 CSR 格式
+⚠️ **Known Issues**:
+- par_dijkstra has bucket index calculation errors and deadlock risks, marked as experimental
+- Parallel algorithms use fine-grained locks (Mutex/RwLock), not lock-free design
+- Bucket-based adjacency list (named CsrStorage in code) is not traditional CSR format
 
-**建议**: 优先修复 P0 问题（文档诚信和 par_dijkstra bug），然后发布 v0.3.0-beta 收集用户反馈。后续优化重点放在 SIMD 向量化和更大规模基准测试上。
+**Recommendation**: Prioritize fixing P0 issues (documentation integrity and par_dijkstra bugs), then release v0.4.0-beta to collect user feedback. Subsequent optimization focus on SIMD vectorization and larger-scale benchmarks.
 
 ---
 
-*最后更新：2026-03-26*
+*Last Updated: 2026-03-27*

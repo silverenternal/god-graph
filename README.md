@@ -6,7 +6,7 @@
 [![Build Status](https://github.com/silverenternal/god-graph/workflows/CI/badge.svg)](https://github.com/silverenternal/god-graph/actions)
 [![Coverage Status](https://codecov.io/gh/silverenternal/god-graph/branch/main/graph/badge.svg)](https://codecov.io/gh/silverenternal/god-graph)
 
-**God-Graph** is a high-performance Rust graph data structure and algorithm library featuring bucket-based adjacency list layout, arena-style slot management, SIMD optimization, and parallel computing capabilities.
+**God-Graph** is a high-performance graph data structure and algorithm library written in Rust, featuring bucket-based adjacency list layout, arena-style slot management, SIMD optimization, and parallel computing capabilities.
 
 ## Features
 
@@ -293,8 +293,8 @@ assert_eq!(adjacency.num_nodes, 3);
 
 ### GNN Layers
 
-> **Important**: god-gragh GNN modules are **inference-only** (forward pass only). 
-> For training workflows, you need to integrate external autograd libraries:
+> **Important**: God-Graph GNN modules are **inference-only** (forward pass only).
+> For training workflows, integrate with external autograd libraries:
 > - **[dfdx](https://crates.io/crates/dfdx)**: Deep learning framework with CUDA support
 > - **[Candle](https://github.com/huggingface/candle)**: HuggingFace's lightweight tensor library
 > - **[tch-rs](https://crates.io/crates/tch-rs)**: Rust bindings for PyTorch
@@ -516,7 +516,7 @@ let edge_list = to_edge_list(&graph);
 | `tensor-inference` | GNN inference only | tensor, tensor-sparse, tensor-gnn |
 | `tensor-ml` | ML training support | tensor, tensor-sparse, tensor-gnn, tensor-autograd, tensor-pool |
 
-**Note**: For GNN training workflows, you'll need to integrate external autograd libraries (dfdx/candle). See [GNN Support](#gnn-support) for details.
+**Note**: For GNN training workflows, integrate with external autograd libraries (dfdx/candle). See [GNN Support](#gnn-support) for details.
 
 ## Comparison with petgraph
 
@@ -530,7 +530,7 @@ let edge_list = to_edge_list(&graph);
 | SIMD Vectorization | ✅ wide::f64x4 | ❌ |
 | Tensor/GNN Support | ✅ Multi-backend | ❌ |
 | API Design | Generic traits | Concrete types |
-| Documentation | 🎯 Comprehensive | ✅ Complete |
+| Documentation | 🌱 Growing | 🌳 Mature |
 | Community Maturity | 🌱 Growing | 🌳 Mature |
 
 **God-Graph Advantages**:
@@ -613,7 +613,6 @@ See [ROADMAP.json](ROADMAP.json) for detailed roadmap.
 - [x] v0.2.0-alpha: Complete algorithm suite, random graph generators
 - [x] v0.3.0-beta: Performance reports, migration guide, parallel algorithms
 - [x] **v0.4.0-beta**: Tensor/GNN integration, memory pool optimization, differentiable graph
-- [ ] v0.4.0-tensor-alpha: Tensor/GNN integration, multi-backend support
 - [ ] v0.5.0-rc: Serde support, API stabilization
 - [ ] v1.0.0-stable: Production-ready
 
@@ -669,7 +668,7 @@ See [LICENSE-MIT](LICENSE-MIT) and [LICENSE-APACHE](LICENSE-APACHE) for details.
 - [wide](https://crates.io/crates/wide) - SIMD math library for stable Rust
 - [ndarray](https://crates.io/crates/ndarray) - N-dimensional arrays
 - [dfdx](https://crates.io/crates/dfdx) - Deep learning framework with CUDA support
-- [Candle](https://github.com/huggingface/candle) - Hugging Face's lightweight tensor library
+- [Candle](https://github.com/huggingface/candle) - HuggingFace's lightweight tensor library
 
 ## Contact
 

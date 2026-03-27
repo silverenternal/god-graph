@@ -1,160 +1,160 @@
-# 可微图结构变换 (Differentiable Graph Transformation)
+# Differentiable Graph Structure Transformation
 
-## 概述
+## Overview
 
-本模块实现了**图结构变换操作的梯度计算**，使得可以通过梯度下降优化图的结构。这是图神经网络、图生成和图优化领域的前沿技术。
+This module implements **gradient computation for graph structure transformation operations**, enabling gradient descent optimization of graph structures. This is cutting-edge technology in graph neural networks, graph generation, and graph optimization.
 
-## 核心概念
+## Core Concepts
 
-### 1. 连续松弛 (Continuous Relaxation)
+### 1. Continuous Relaxation
 
-传统图结构是离散的：边要么存在 (1) 要么不存在 (0)。为了支持梯度计算，我们使用**连续松弛**：
+Traditional graph structures are discrete: edges either exist (1) or don't exist (0). To support gradient computation, we use **continuous relaxation**:
 
 ```
 A_soft = σ(logits / τ)
 
-其中：
-- logits: 边的对数几率（可学习参数）
-- τ: 温度参数（控制离散程度）
-- σ: sigmoid 函数
+Where:
+- logits: Edge log-odds (learnable parameters)
+- τ: Temperature parameter (controls discreteness)
+- σ: Sigmoid function
 ```
 
-当 τ → 0 时，软松弛趋近于离散值。
+As τ → 0, soft relaxation approaches discrete values.
 
 ### 2. Straight-Through Estimator (STE)
 
-对于需要离散输出的场景，使用 STE：
-- **前向传播**：硬阈值（0 或 1）
-- **反向传播**：软梯度（通过 sigmoid）
+For scenarios requiring discrete output, use STE:
+- **Forward pass**: Hard threshold (0 or 1)
+- **Backward pass**: Soft gradient (through sigmoid)
 
 ```rust
-// 离散化
+// Discretization
 exists = probability > 0.5
 
-// 梯度传播
+// Gradient propagation
 ∂L/∂logits = ∂L/∂A · A·(1-A)/τ
 ```
 
-### 3. Gumbel-Softmax 采样
+### 3. Gumbel-Softmax Sampling
 
-用于可微的离散采样：
+For differentiable discrete sampling:
 
 ```
 y_i = exp((log(π_i) + g_i) / τ) / Σ_j exp((log(π_j) + g_j) / τ)
 
-其中：
-- π: 类别概率
-- g_i ~ Gumbel(0,1): 噪声
-- τ: 温度
+Where:
+- π: Category probabilities
+- g_i ~ Gumbel(0,1): Noise
+- τ: Temperature
 ```
 
-## 使用方法
+## Usage
 
-### 基本示例
+### Basic Example
 
 ```rust
 use god_gragh::tensor::differentiable::{
     DifferentiableGraph, GradientConfig
 };
 
-// 创建可微图
+// Create differentiable graph
 let mut graph = DifferentiableGraph::<Vec<f64>>::new(4);
 
-// 添加可学习边（初始概率表示边的存在可能性）
+// Add learnable edges (initial probability indicates edge existence likelihood)
 graph.add_learnable_edge(0, 1, 0.5);
 graph.add_learnable_edge(1, 2, 0.8);
 graph.add_learnable_edge(2, 3, 0.3);
 
-// 离散化（获取当前结构）
+// Discretize (get current structure)
 graph.discretize();
 
-// 获取边是否存在
+// Check if edge exists
 let edge_01_exists = graph.get_edge_exists(0, 1).unwrap();
 ```
 
-### 梯度计算与优化
+### Gradient Computation and Optimization
 
 ```rust
 use std::collections::HashMap;
 
-// 假设从下游任务（如 GNN 分类）获得梯度
-// 这些梯度表示：如果某条边存在，损失会增加/减少多少
+// Assume gradients from downstream tasks (e.g., GNN classification)
+// These gradients indicate: if an edge exists, will loss increase/decrease
 let mut loss_gradients = HashMap::new();
-loss_gradients.insert((0, 1), 0.5);   // 正梯度：鼓励删除
-loss_gradients.insert((1, 2), -0.8);  // 负梯度：鼓励保留
+loss_gradients.insert((0, 1), 0.5);   // Positive gradient: encourage removal
+loss_gradients.insert((1, 2), -0.8);  // Negative gradient: encourage retention
 
-// 计算结构梯度
+// Compute structure gradients
 let structure_gradients = graph.compute_structure_gradients(&loss_gradients);
 
-// 基于梯度更新结构
+// Update structure based on gradients
 graph.update_structure(&structure_gradients);
 ```
 
-### 完整的优化循环
+### Complete Optimization Loop
 
 ```rust
-// 配置优化器
+// Configure optimizer
 let config = GradientConfig::new(
-    1.0,    // 初始温度
-    true,   // 使用 STE
-    0.05,   // 边学习率
-    0.01,   // 节点学习率
+    1.0,    // Initial temperature
+    true,   // Use STE
+    0.05,   // Edge learning rate
+    0.01,   // Node learning rate
 )
-.with_sparsity(0.001)      // L1 稀疏正则化
-.with_smoothness(0.0001);  // 平滑正则化
+.with_sparsity(0.001)      // L1 sparse regularization
+.with_smoothness(0.0001);  // Smooth regularization
 
 let mut graph = DifferentiableGraph::with_config(5, config);
 
-// 初始化边
+// Initialize edges
 graph.add_learnable_edge(0, 1, 0.5);
 graph.add_learnable_edge(1, 2, 0.5);
 // ...
 
-// 优化循环
+// Optimization loop
 for step in 0..100 {
-    // 1. 从下游任务获取梯度
+    // 1. Get gradients from downstream tasks
     let loss_gradients = compute_loss_gradients(&graph);
-    
-    // 2. 一步优化（离散化 → 计算梯度 → 更新 → 退火）
+
+    // 2. One-step optimization (discretize → compute gradients → update → annealing)
     graph.optimization_step(loss_gradients);
-    
-    // 3. 定期检查
+
+    // 3. Periodic checking
     if step % 10 == 0 {
         println!("Step {}: T={:.4}", step, graph.temperature());
     }
 }
 ```
 
-### 使用编辑策略
+### Using Edit Policies
 
 ```rust
 use god_gragh::tensor::differentiable::{
     GraphTransformer, ThresholdEditPolicy
 };
 
-// 定义编辑策略
+// Define edit policy
 let policy = Box::new(ThresholdEditPolicy {
-    add_threshold: 0.1,      // 梯度>0.1 时添加边
-    remove_threshold: -0.1,  // 梯度<-0.1 时删除边
+    add_threshold: 0.1,      // Add edge when gradient > 0.1
+    remove_threshold: -0.1,  // Remove edge when gradient < -0.1
     min_prob: 0.01,
     max_prob: 0.99,
 });
 
 let mut transformer = GraphTransformer::new(policy);
 
-// 记录梯度
+// Record gradients
 transformer.record_gradients(&gradients);
 
-// 执行结构变换
+// Execute structure transformation
 let edits = transformer.transform(&mut graph);
 
-// 查看编辑历史
+// View edit history
 for edit in &edits {
-    println!("编辑操作：{:?}, 梯度：{:.4}", edit.operation, edit.gradient);
+    println!("Edit operation: {:?}, Gradient: {:.4}", edit.operation, edit.gradient);
 }
 ```
 
-### Gumbel-Softmax 采样
+### Gumbel-Softmax Sampling
 
 ```rust
 use god_gragh::tensor::differentiable::GumbelSoftmaxSampler;
@@ -162,170 +162,170 @@ use god_gragh::tensor::differentiable::GumbelSoftmaxSampler;
 let sampler = GumbelSoftmaxSampler::new(1.0);
 let logits = vec![0.5, 1.0, -0.5, 2.0];
 
-// 软采样（可微，用于训练）
+// Soft sampling (differentiable, for training)
 let soft = sampler.sample_soft(&logits);
 
-// 硬采样（不可微，用于推理）
+// Hard sampling (non-differentiable, for inference)
 let hard = sampler.sample_hard(&logits);
 
-// STE 采样（前向硬，反向软）
+// STE sampling (hard forward, soft backward)
 let (hard_ste, soft_ste) = sampler.sample_ste(&logits);
 ```
 
-## 配置选项
+## Configuration Options
 
 ### GradientConfig
 
 ```rust
 pub struct GradientConfig {
-    pub temperature: f64,           // 温度参数（默认 1.0）
-    pub use_ste: bool,              // 是否使用 STE（默认 true）
-    pub edge_learning_rate: f64,    // 边学习率（默认 0.01）
-    pub node_learning_rate: f64,    // 节点学习率（默认 0.001）
-    pub sparsity_weight: f64,       // L1 稀疏权重（默认 0.0）
-    pub smoothness_weight: f64,     // 平滑权重（默认 0.0）
+    pub temperature: f64,           // Temperature parameter (default 1.0)
+    pub use_ste: bool,              // Whether to use STE (default true)
+    pub edge_learning_rate: f64,    // Edge learning rate (default 0.01)
+    pub node_learning_rate: f64,    // Node learning rate (default 0.001)
+    pub sparsity_weight: f64,       // L1 sparse weight (default 0.0)
+    pub smoothness_weight: f64,     // Smooth weight (default 0.0)
 }
 ```
 
-### 正则化
+### Regularization
 
-**稀疏正则化 (L1)**:
+**Sparse Regularization (L1)**:
 ```rust
 let config = GradientConfig::default().with_sparsity(0.01);
 ```
-鼓励边概率趋向 0，产生更稀疏的图结构。
+Encourages edge probabilities toward 0, producing sparser graph structures.
 
-**平滑正则化**:
+**Smooth Regularization**:
 ```rust
 let config = GradientConfig::default().with_smoothness(0.001);
 ```
-鼓励相连的边有相似的概率。
+Encourages connected edges to have similar probabilities.
 
-### 温度退火
+### Temperature Annealing
 
 ```rust
 let mut graph = DifferentiableGraph::with_config(5, config)
-    .with_temperature_annealing(100);  // 100 步退火
+    .with_temperature_annealing(100);  // 100-step annealing
 
-// 每步优化自动退火
+// Automatic annealing per optimization step
 for _ in 0..100 {
     graph.optimization_step(gradients);
-    // 温度从 1.0 指数衰减到 ~0.1
+    // Temperature exponentially decays from 1.0 to ~0.1
 }
 ```
 
-## 数学原理
+## Mathematical Principles
 
-### 梯度计算
+### Gradient Computation
 
-对于边 (i, j)，损失 L 对 logits 的梯度：
+For edge (i, j), gradient of loss L with respect to logits:
 
 ```
 ∂L/∂logits_ij = ∂L/∂A_ij · ∂A_ij/∂logits_ij
               = ∂L/∂A_ij · A_ij·(1-A_ij)/τ
 ```
 
-其中：
-- `∂L/∂A_ij`: 从下游任务传来的梯度
-- `A_ij·(1-A_ij)/τ`: sigmoid 的导数
+Where:
+- `∂L/∂A_ij`: Gradient from downstream tasks
+- `A_ij·(1-A_ij)/τ`: Sigmoid derivative
 
-### 稀疏正则化梯度
+### Sparse Regularization Gradient
 
 ```
 L_sparse = λ · ||logits||_1
 ∂L_sparse/∂logits = λ · sign(logits)
 ```
 
-### 平滑正则化梯度
+### Smooth Regularization Gradient
 
 ```
 L_smooth = μ · Σ_{(i,j),(i,k)∈E} (A_ij - A_ik)²
 ∂L_smooth/∂A_ij = 2μ · Σ_k (A_ij - A_ik)
 ```
 
-## 应用场景
+## Application Scenarios
 
-### 1. 图结构学习
+### 1. Graph Structure Learning
 
-从数据中学习最优的图结构：
+Learn optimal graph structure from data:
 ```rust
-// 初始图可能不完整或有噪声
+// Initial graph may be incomplete or noisy
 let mut graph = create_initial_graph(data);
 
-// 通过优化任务损失来学习结构
+// Learn structure by optimizing task loss
 for epoch in 0..num_epochs {
-    // 前向：GNN 在当前结构上训练
+    // Forward: GNN trains on current structure
     let predictions = gnn.forward(&graph, features);
     let loss = compute_loss(predictions, labels);
-    
-    // 反向：计算结构梯度
+
+    // Backward: Compute structure gradients
     let structure_gradients = compute_structure_gradients(loss);
-    
-    // 更新图结构
+
+    // Update graph structure
     graph.optimization_step(structure_gradients);
 }
 ```
 
-### 2. 图优化
+### 2. Graph Optimization
 
-优化图以满足特定目标：
+Optimize graph to meet specific objectives:
 ```rust
-// 目标：学习一个有利于分类的图结构
+// Objective: Learn graph structure beneficial for classification
 fn compute_loss_gradients(graph: &DifferentiableGraph) -> HashMap<(usize, usize), f64> {
     let mut gradients = HashMap::new();
-    
+
     for ((src, dst), edge) in graph.get_learnable_edges() {
-        // 模拟梯度：如果边连接同类节点，给负梯度（鼓励）
-        // 如果连接异类节点，给正梯度（抑制）
+        // Simulated gradient: if edge connects same-class nodes, give negative gradient (encourage)
+        // If connects different-class nodes, give positive gradient (suppress)
         let same_class = check_same_class(*src, *dst);
         let grad = if same_class { -0.5 } else { 0.5 };
         gradients.insert((*src, *dst), grad);
     }
-    
+
     gradients
 }
 ```
 
-### 3. 图生成
+### 3. Graph Generation
 
-生成符合特定分布的图：
+Generate graphs conforming to specific distributions:
 ```rust
-// 学习边的概率分布
+// Learn edge probability distribution
 let mut graph = DifferentiableGraph::new(num_nodes);
 
-// 通过对抗训练或最大似然学习
+// Learn via adversarial training or maximum likelihood
 for step in 0..num_steps {
-    // 采样当前结构
+    // Sample current structure
     graph.discretize();
-    
-    // 计算生成分布与目标分布的差异
+
+    // Compute difference between generated and target distributions
     let gradients = compute_distribution_gradients(&graph);
-    
-    // 更新概率参数
+
+    // Update probability parameters
     graph.optimization_step(gradients);
 }
 ```
 
-## 运行示例
+## Running Examples
 
 ```bash
-# 运行完整示例
+# Run complete example
 cargo run --example differentiable_graph --features "tensor,tensor-sparse,rand"
 
-# 运行测试
+# Run tests
 cargo test --features "tensor,tensor-sparse,rand" --lib tensor::differentiable
 ```
 
-## 参考资料
+## References
 
 - **IDGL**: Iterative Deep Graph Learning (NeurIPS 2020)
 - **GDC**: Graph Diffusion Convolution (NeurIPS 2019)
 - **ProGNN**: Graph Structure Learning for Robust GNNs (KDD 2020)
 - **Gumbel-Softmax**: Categorical Reparameterization with Gumbel-Softmax (ICLR 2017)
 
-## 注意事项
+## Notes
 
-1. **温度选择**: 较高的温度（τ>1）使分布更平滑，较低的温度（τ<0.5）使分布更离散
-2. **学习率调优**: 边学习率通常比节点学习率大一个数量级
-3. **正则化平衡**: 稀疏和平滑正则化需要根据具体任务调整权重
-4. **梯度截断**: 对于大规模图，建议对梯度进行截断以防止数值不稳定
+1. **Temperature Selection**: Higher temperature (τ>1) makes distribution smoother, lower temperature (τ<0.5) makes distribution more discrete
+2. **Learning Rate Tuning**: Edge learning rate is typically one order of magnitude larger than node learning rate
+3. **Regularization Balance**: Sparse and smooth regularization weights need adjustment based on specific tasks
+4. **Gradient Clipping**: For large-scale graphs, consider gradient clipping to prevent numerical instability

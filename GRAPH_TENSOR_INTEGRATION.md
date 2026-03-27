@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document describes the Graph-Tensor deep integration implemented for God-Graph v0.4.0-tensor-alpha. The integration enables seamless conversion between graph structures and tensor representations, which is essential for Graph Neural Network (GNN) workflows.
+This document describes the Graph-Tensor deep integration implemented for God-Graph v0.4.0-beta. The integration enables seamless conversion between graph structures and tensor representations, essential for Graph Neural Network (GNN) workflows.
 
 ## Implementation Details
 
@@ -147,7 +147,7 @@ assert_eq!(batch.len(), 2);
 
 ## GNN Integration
 
-The graph-tensor integration is designed to work seamlessly with the existing GNN primitives:
+The graph-tensor integration is designed to work seamlessly with existing GNN primitives:
 
 ```rust
 use god_gragh::graph::Graph;
@@ -199,7 +199,7 @@ Test coverage includes:
 
 ## Version Information
 
-- **Target Version**: v0.4.0-tensor-alpha
+- **Target Version**: v0.4.0-beta
 - **Feature Flags**: `tensor`, `tensor-sparse`, `tensor-gnn`, `tensor-pool`
 - **Rust Version**: 1.85+
 - **License**: MIT OR Apache-2.0
