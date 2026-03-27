@@ -2,8 +2,8 @@
 //!
 //! 包含 Label Propagation、Louvain、连通分量等算法
 
-use crate::graph::Graph;
 use crate::graph::traits::{GraphBase, GraphQuery};
+use crate::graph::Graph;
 use crate::node::NodeIndex;
 use std::collections::{HashMap, VecDeque};
 
@@ -13,11 +13,11 @@ use std::collections::{HashMap, VecDeque};
 pub fn connected_components<T>(graph: &Graph<T, impl Clone>) -> Vec<Vec<NodeIndex>> {
     // 收集所有有效节点
     let node_indices: Vec<NodeIndex> = graph.nodes().map(|n| n.index()).collect();
-    
+
     // 创建索引到 NodeIndex 的映射
-    let index_to_node: std::collections::HashMap<usize, NodeIndex> = 
+    let index_to_node: std::collections::HashMap<usize, NodeIndex> =
         node_indices.iter().map(|&ni| (ni.index(), ni)).collect();
-    
+
     let n = graph.node_count();
     let mut visited = vec![false; n];
     let mut components = Vec::new();
@@ -64,9 +64,9 @@ fn bfs_component<T>(
 /// 返回所有强连通分量（仅适用于有向图）
 pub fn strongly_connected_components<T>(graph: &Graph<T, impl Clone>) -> Vec<Vec<NodeIndex>> {
     let node_indices: Vec<NodeIndex> = graph.nodes().map(|n| n.index()).collect();
-    let index_to_node: std::collections::HashMap<usize, NodeIndex> = 
+    let index_to_node: std::collections::HashMap<usize, NodeIndex> =
         node_indices.iter().map(|&ni| (ni.index(), ni)).collect();
-    
+
     let n = graph.node_count();
     let mut visited = vec![false; n];
     let mut finish_order = Vec::with_capacity(n);
@@ -137,7 +137,10 @@ fn dfs_reverse<T>(
 /// Label Propagation 社区发现算法
 ///
 /// 基于标签传播的社区发现，每个节点最终被分配到一个社区标签
-pub fn label_propagation<T>(graph: &Graph<T, impl Clone>, max_iterations: usize) -> HashMap<NodeIndex, usize> {
+pub fn label_propagation<T>(
+    graph: &Graph<T, impl Clone>,
+    max_iterations: usize,
+) -> HashMap<NodeIndex, usize> {
     let node_indices: Vec<NodeIndex> = graph.nodes().map(|n| n.index()).collect();
     let n = node_indices.len();
 
@@ -187,13 +190,13 @@ pub fn label_propagation<T>(graph: &Graph<T, impl Clone>, max_iterations: usize)
 /// Louvain 社区发现算法（简化版）
 ///
 /// 基于模块度优化的社区发现算法
-pub fn louvain<T>(graph: &Graph<T, impl Clone>, resolution: f64) -> HashMap<NodeIndex, usize> 
+pub fn louvain<T>(graph: &Graph<T, impl Clone>, resolution: f64) -> HashMap<NodeIndex, usize>
 where
     T: Clone,
 {
     let node_indices: Vec<NodeIndex> = graph.nodes().map(|n| n.index()).collect();
     let n = node_indices.len();
-    
+
     if n == 0 {
         return HashMap::new();
     }
@@ -233,7 +236,9 @@ where
                 if neighbor_comm != current_comm {
                     // 简化：假设无权重边
                     let delta_q = 1.0 / (2.0 * total_edges)
-                        - resolution * (node_degree as f64 * degrees.get(&neighbor).copied().unwrap_or(0) as f64)
+                        - resolution
+                            * (node_degree as f64
+                                * degrees.get(&neighbor).copied().unwrap_or(0) as f64)
                             / (4.0 * total_edges * total_edges);
 
                     *comm_delta_q.entry(neighbor_comm).or_insert(0.0) += delta_q;
@@ -241,9 +246,10 @@ where
             }
 
             // 选择最大增益的社区（使用 partial_cmp 处理 f64）
-            if let Some((&best_comm, &max_delta)) = comm_delta_q.iter().max_by(|a, b| {
-                a.1.partial_cmp(b.1).unwrap_or(std::cmp::Ordering::Equal)
-            }) {
+            if let Some((&best_comm, &max_delta)) = comm_delta_q
+                .iter()
+                .max_by(|a, b| a.1.partial_cmp(b.1).unwrap_or(std::cmp::Ordering::Equal))
+            {
                 if max_delta > 0.0 {
                     communities.insert(node, best_comm);
                     improved = true;
@@ -312,8 +318,11 @@ mod tests {
         let graph: Graph<i32, f64> = GraphBuilder::undirected()
             .with_nodes(vec![1, 2, 3, 4])
             .with_edges(vec![
-                (0, 1, 1.0), (0, 2, 1.0), (0, 3, 1.0),
-                (1, 2, 1.0), (1, 3, 1.0),
+                (0, 1, 1.0),
+                (0, 2, 1.0),
+                (0, 3, 1.0),
+                (1, 2, 1.0),
+                (1, 3, 1.0),
                 (2, 3, 1.0),
             ])
             .build()

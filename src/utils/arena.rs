@@ -25,8 +25,8 @@
 //! # }
 //! ```
 
-use std::marker::PhantomData;
 use std::fmt;
+use std::marker::PhantomData;
 
 /// 缓存行大小，用于对齐优化
 #[allow(dead_code)]
@@ -363,11 +363,11 @@ mod tests {
     fn test_arena_is_valid() {
         let mut arena = Arena::new();
         let (idx, generation) = arena.allocate(42);
-        
+
         assert!(arena.is_valid(idx, generation));
         assert!(!arena.is_valid(idx, generation + 1)); // generation 不匹配
         assert!(!arena.is_valid(idx + 1, generation)); // 索引越界
-        
+
         arena.deallocate(idx, generation);
         assert!(!arena.is_valid(idx, generation)); // 已释放
     }
@@ -378,11 +378,11 @@ mod tests {
         assert_eq!(arena.len(), 0);
         assert!(arena.is_empty());
         assert!(arena.capacity() >= 10);
-        
+
         let (idx, generation) = arena.allocate(1);
         assert_eq!(arena.len(), 1);
         assert!(!arena.is_empty());
-        
+
         arena.deallocate(idx, generation);
         assert_eq!(arena.len(), 0);
     }
@@ -392,9 +392,9 @@ mod tests {
         let mut arena = Arena::new();
         let (idx1, _) = arena.allocate(1);
         let (idx2, _) = arena.allocate(2);
-        
+
         arena.clear();
-        
+
         assert!(arena.is_empty());
         assert!(!arena.is_valid(idx1, 1));
         assert!(!arena.is_valid(idx2, 1));
@@ -406,27 +406,31 @@ mod tests {
         let (idx1, gen1) = arena.allocate(1);
         let (idx2, gen2) = arena.allocate(2);
         let (idx3, gen3) = arena.allocate(3);
-        
+
         arena.deallocate(idx2, gen2);
-        
+
         let items: Vec<_> = arena.iter().collect();
         assert_eq!(items.len(), 2);
-        assert!(items.iter().any(|(i, g, v)| *i == idx1 && *g == gen1 && **v == 1));
-        assert!(items.iter().any(|(i, g, v)| *i == idx3 && *g == gen3 && **v == 3));
+        assert!(items
+            .iter()
+            .any(|(i, g, v)| *i == idx1 && *g == gen1 && **v == 1));
+        assert!(items
+            .iter()
+            .any(|(i, g, v)| *i == idx3 && *g == gen3 && **v == 3));
     }
 
     #[test]
     fn test_arena_generation_wrap() {
         let mut arena = Arena::new();
         let (idx, mut generation) = arena.allocate(42);
-        
+
         // 模拟多次分配/释放，测试 generation 回绕
         for _ in 0..10 {
             arena.deallocate(idx, generation);
             let (_, new_generation) = arena.allocate(100);
             generation = new_generation;
         }
-        
+
         // 仍然可以正常访问
         assert!(arena.is_valid(idx, generation));
     }
@@ -435,11 +439,11 @@ mod tests {
     fn test_arena_get_mut() {
         let mut arena = Arena::new();
         let (idx, generation) = arena.allocate(42);
-        
+
         if let Some(val) = arena.get_mut(idx, generation) {
             *val = 100;
         }
-        
+
         assert_eq!(arena.get(idx, generation), Some(&100));
     }
 
@@ -448,7 +452,7 @@ mod tests {
         let mut arena = Arena::<i32>::with_capacity(100);
         assert!(arena.is_empty());
         assert!(arena.capacity() >= 100);
-        
+
         // 预分配后应该不需要重新分配
         for i in 0..100 {
             arena.allocate(i);

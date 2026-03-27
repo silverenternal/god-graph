@@ -2,8 +2,8 @@
 //!
 //! 包含度中心性、介数中心性、接近中心性、PageRank 等算法
 
-use crate::graph::Graph;
 use crate::graph::traits::{GraphBase, GraphQuery};
+use crate::graph::Graph;
 use crate::node::NodeIndex;
 use std::collections::{HashMap, VecDeque};
 
@@ -50,7 +50,7 @@ pub fn pagerank<T>(
 
     // 收集所有有效节点
     let node_indices: Vec<NodeIndex> = graph.nodes().map(|n| n.index()).collect();
-    
+
     // 初始化：均匀分布
     let mut scores: HashMap<NodeIndex, f64> = node_indices
         .iter()
@@ -58,10 +58,8 @@ pub fn pagerank<T>(
         .collect();
 
     for _ in 0..iterations {
-        let mut new_scores: HashMap<NodeIndex, f64> = node_indices
-            .iter()
-            .map(|&ni| (ni, 0.0))
-            .collect();
+        let mut new_scores: HashMap<NodeIndex, f64> =
+            node_indices.iter().map(|&ni| (ni, 0.0)).collect();
 
         // 计算每个节点的 PageRank
         for &node in &node_indices {
@@ -100,16 +98,14 @@ pub fn betweenness_centrality<T>(graph: &Graph<T, impl Clone>) -> HashMap<NodeIn
     }
 
     let node_indices: Vec<NodeIndex> = graph.nodes().map(|n| n.index()).collect();
-    let mut centrality: HashMap<NodeIndex, f64> = node_indices
-        .iter()
-        .map(|&ni| (ni, 0.0))
-        .collect();
+    let mut centrality: HashMap<NodeIndex, f64> =
+        node_indices.iter().map(|&ni| (ni, 0.0)).collect();
 
     for s in &node_indices {
         // 单源最短路径
         let mut dist: HashMap<NodeIndex, i32> = node_indices.iter().map(|&ni| (ni, -1)).collect();
         let mut sigma: HashMap<NodeIndex, usize> = node_indices.iter().map(|&ni| (ni, 0)).collect();
-        let mut predecessors: HashMap<NodeIndex, Vec<NodeIndex>> = 
+        let mut predecessors: HashMap<NodeIndex, Vec<NodeIndex>> =
             node_indices.iter().map(|&ni| (ni, Vec::new())).collect();
         let mut stack = Vec::new();
 
@@ -138,19 +134,19 @@ pub fn betweenness_centrality<T>(graph: &Graph<T, impl Clone>) -> HashMap<NodeIn
 
         // 反向累加依赖值
         let mut delta: HashMap<NodeIndex, f64> = node_indices.iter().map(|&ni| (ni, 0.0)).collect();
-        
+
         while let Some(w) = stack.pop() {
             for &v in predecessors.get(&w).unwrap_or(&Vec::new()) {
                 let delta_w = delta.get(&w).copied().unwrap_or(0.0);
                 let sigma_w = sigma.get(&w).copied().unwrap_or(1);
                 let sigma_v = sigma.get(&v).copied().unwrap_or(1);
-                
+
                 if sigma_w > 0 {
                     let contrib = (sigma_v as f64 / sigma_w as f64) * (1.0 + delta_w);
                     *delta.get_mut(&v).unwrap() += contrib;
                 }
             }
-            
+
             if w != *s {
                 let centrality_w = centrality.get_mut(&w).unwrap();
                 *centrality_w += delta.get(&w).copied().unwrap_or(0.0);
@@ -184,7 +180,8 @@ pub fn closeness_centrality<T>(graph: &Graph<T, impl Clone>) -> HashMap<NodeInde
 
     for &source in &node_indices {
         // BFS 计算从 source 到所有节点的最短距离
-        let mut dist: HashMap<NodeIndex, usize> = node_indices.iter().map(|&ni| (ni, usize::MAX)).collect();
+        let mut dist: HashMap<NodeIndex, usize> =
+            node_indices.iter().map(|&ni| (ni, usize::MAX)).collect();
         let mut queue = VecDeque::new();
 
         dist.insert(source, 0);
@@ -204,7 +201,7 @@ pub fn closeness_centrality<T>(graph: &Graph<T, impl Clone>) -> HashMap<NodeInde
         // 计算可达节点的总距离
         let mut total_dist = 0usize;
         let mut reachable = 0usize;
-        
+
         for &node in &node_indices {
             if node != source {
                 let d = dist.get(&node).copied().unwrap_or(usize::MAX);
@@ -262,7 +259,7 @@ mod tests {
             .unwrap();
 
         let centrality = degree_centrality(&graph);
-        
+
         // A 的出度为 3，中心性最高
         let a_idx = graph.nodes().next().unwrap().index();
         assert!(centrality.contains_key(&a_idx));
@@ -278,7 +275,7 @@ mod tests {
 
         let centrality = betweenness_centrality(&graph);
         assert_eq!(centrality.len(), 3);
-        
+
         // B 在 A->C 的路径上，介数中心性应该最高
         let b_idx = graph.nodes().nth(1).unwrap().index();
         let b_centrality = centrality.get(&b_idx).copied().unwrap_or(0.0);
@@ -303,18 +300,22 @@ mod tests {
         let graph = GraphBuilder::directed()
             .with_nodes(vec!["center", "A", "B", "C"])
             .with_edges(vec![
-                (1, 0, 1.0), (2, 0, 1.0), (3, 0, 1.0),  // A, B, C -> center
-                (0, 1, 1.0), (0, 2, 1.0), (0, 3, 1.0),  // center -> A, B, C
+                (1, 0, 1.0),
+                (2, 0, 1.0),
+                (3, 0, 1.0), // A, B, C -> center
+                (0, 1, 1.0),
+                (0, 2, 1.0),
+                (0, 3, 1.0), // center -> A, B, C
             ])
             .build()
             .unwrap();
 
         let centrality = betweenness_centrality(&graph);
-        
+
         // 中心节点应该是介数最高的
         let center_idx = graph.nodes().next().unwrap().index();
         let center_centrality = centrality.get(&center_idx).copied().unwrap_or(0.0);
-        
+
         // 验证中心节点的介数大于 0
         assert!(center_centrality > 0.0);
     }
@@ -325,16 +326,24 @@ mod tests {
         let graph = GraphBuilder::directed()
             .with_nodes(vec!["A", "B", "C", "D"])
             .with_edges(vec![
-                (0, 1, 1.0), (0, 2, 1.0), (0, 3, 1.0),
-                (1, 0, 1.0), (1, 2, 1.0), (1, 3, 1.0),
-                (2, 0, 1.0), (2, 1, 1.0), (2, 3, 1.0),
-                (3, 0, 1.0), (3, 1, 1.0), (3, 2, 1.0),
+                (0, 1, 1.0),
+                (0, 2, 1.0),
+                (0, 3, 1.0),
+                (1, 0, 1.0),
+                (1, 2, 1.0),
+                (1, 3, 1.0),
+                (2, 0, 1.0),
+                (2, 1, 1.0),
+                (2, 3, 1.0),
+                (3, 0, 1.0),
+                (3, 1, 1.0),
+                (3, 2, 1.0),
             ])
             .build()
             .unwrap();
 
         let centrality = closeness_centrality(&graph);
-        
+
         // 所有节点的接近中心性应该都大于 0
         for (&node, &cent) in &centrality {
             assert!(cent > 0.0, "Node {:?} has zero closeness", node);

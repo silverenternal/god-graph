@@ -2,12 +2,12 @@
 //!
 //! 包含 Dijkstra、Bellman-Ford、Floyd-Warshall、A* 等算法
 
-use crate::graph::Graph;
-use crate::graph::traits::{GraphBase, GraphQuery};
-use crate::node::NodeIndex;
 use crate::errors::{GraphError, GraphResult};
-use std::collections::{BinaryHeap, HashMap};
+use crate::graph::traits::{GraphBase, GraphQuery};
+use crate::graph::Graph;
+use crate::node::NodeIndex;
 use std::cmp::Ordering;
+use std::collections::{BinaryHeap, HashMap};
 
 /// Dijkstra 最短路径算法
 ///
@@ -79,7 +79,10 @@ where
     let mut heap = BinaryHeap::new();
 
     distances.insert(source, 0.0);
-    heap.push(State { node: source, distance: 0.0 });
+    heap.push(State {
+        node: source,
+        distance: 0.0,
+    });
 
     while let Some(State { node, distance }) = heap.pop() {
         // 跳过过期的条目
@@ -94,7 +97,10 @@ where
 
             if new_distance < *distances.get(&neighbor).unwrap_or(&f64::INFINITY) {
                 distances.insert(neighbor, new_distance);
-                heap.push(State { node: neighbor, distance: new_distance });
+                heap.push(State {
+                    node: neighbor,
+                    distance: new_distance,
+                });
             }
         }
     }
@@ -119,7 +125,7 @@ where
     F: FnMut(NodeIndex, NodeIndex, &E) -> f64,
 {
     let mut distances: HashMap<NodeIndex, f64> = HashMap::new();
-    
+
     // 初始化距离
     for node in graph.nodes() {
         distances.insert(node.index(), f64::INFINITY);
@@ -241,12 +247,17 @@ where
                 came_from.insert(neighbor, node);
                 g_scores.insert(neighbor, tentative_g);
                 let f_score = tentative_g + heuristic(neighbor);
-                heap.push(State { node: neighbor, f_score });
+                heap.push(State {
+                    node: neighbor,
+                    f_score,
+                });
             }
         }
     }
 
-    Err(GraphError::NodeNotFound { index: goal.index() })
+    Err(GraphError::NodeNotFound {
+        index: goal.index(),
+    })
 }
 
 /// Floyd-Warshall 算法
@@ -292,8 +303,11 @@ where
 
     // 创建索引到 NodeIndex 的映射
     let index_to_node = &node_indices;
-    let node_to_index: std::collections::HashMap<usize, usize> =
-        node_indices.iter().enumerate().map(|(i, ni)| (ni.index(), i)).collect();
+    let node_to_index: std::collections::HashMap<usize, usize> = node_indices
+        .iter()
+        .enumerate()
+        .map(|(i, ni)| (ni.index(), i))
+        .collect();
 
     // 初始化距离矩阵
     const INF: f64 = f64::INFINITY;
@@ -308,7 +322,8 @@ where
     for edge in graph.edges() {
         let u = edge.source();
         let v = edge.target();
-        if let (Some(&i), Some(&j)) = (node_to_index.get(&u.index()), node_to_index.get(&v.index())) {
+        if let (Some(&i), Some(&j)) = (node_to_index.get(&u.index()), node_to_index.get(&v.index()))
+        {
             let weight = get_weight(u, v, edge.data());
             dist[i][j] = dist[i][j].min(weight);
         }
@@ -358,7 +373,13 @@ mod tests {
     fn test_dijkstra_basic() {
         let graph = GraphBuilder::directed()
             .with_nodes(vec!["A", "B", "C", "D"])
-            .with_edges(vec![(0, 1, 1.0), (0, 2, 4.0), (1, 2, 2.0), (1, 3, 5.0), (2, 3, 1.0)])
+            .with_edges(vec![
+                (0, 1, 1.0),
+                (0, 2, 4.0),
+                (1, 2, 2.0),
+                (1, 3, 5.0),
+                (2, 3, 1.0),
+            ])
             .build()
             .unwrap();
 
@@ -436,7 +457,13 @@ mod tests {
     fn test_astar_basic() {
         let graph = GraphBuilder::directed()
             .with_nodes(vec!["A", "B", "C", "D"])
-            .with_edges(vec![(0, 1, 1.0), (0, 2, 4.0), (1, 2, 2.0), (1, 3, 5.0), (2, 3, 1.0)])
+            .with_edges(vec![
+                (0, 1, 1.0),
+                (0, 2, 4.0),
+                (1, 2, 2.0),
+                (1, 3, 5.0),
+                (2, 3, 1.0),
+            ])
             .build()
             .unwrap();
 
@@ -457,7 +484,11 @@ mod tests {
         let graph = GraphBuilder::directed()
             .with_nodes(vec!["A", "B", "C", "D"])
             .with_edges(vec![
-                (0, 1, 1.0), (0, 2, 4.0), (1, 2, 2.0), (1, 3, 5.0), (2, 3, 1.0)
+                (0, 1, 1.0),
+                (0, 2, 4.0),
+                (1, 2, 2.0),
+                (1, 3, 5.0),
+                (2, 3, 1.0),
             ])
             .build()
             .unwrap();
@@ -466,7 +497,10 @@ mod tests {
 
         // 验证节点对之间的距离
         let nodes: Vec<_> = graph.nodes().collect();
-        assert_eq!(distances.get(&(nodes[0].index(), nodes[3].index())), Some(&4.0)); // A->B->C->D = 1+2+1 = 4
+        assert_eq!(
+            distances.get(&(nodes[0].index(), nodes[3].index())),
+            Some(&4.0)
+        ); // A->B->C->D = 1+2+1 = 4
     }
 
     #[test]
@@ -481,7 +515,10 @@ mod tests {
 
         let nodes: Vec<_> = graph.nodes().collect();
         // A->B->C = 1 + (-2) = -1
-        assert_eq!(distances.get(&(nodes[0].index(), nodes[2].index())), Some(&-1.0));
+        assert_eq!(
+            distances.get(&(nodes[0].index(), nodes[2].index())),
+            Some(&-1.0)
+        );
     }
 
     #[test]

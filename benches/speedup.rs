@@ -3,20 +3,18 @@
 //! 验证并行算法相对于串行版本的加速比
 //! 目标：8 核 CPU 上达到 6-8x 加速比
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId, Throughput};
-use god_gragh::graph::Graph;
-use god_gragh::graph::traits::{GraphOps, GraphQuery};
-use god_gragh::algorithms::traversal::{dfs, bfs};
+use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use god_gragh::algorithms::centrality::pagerank;
-use god_gragh::algorithms::parallel::{par_dfs, par_bfs, par_pagerank};
+use god_gragh::algorithms::parallel::{par_bfs, par_dfs, par_pagerank};
+use god_gragh::algorithms::traversal::{bfs, dfs};
+use god_gragh::graph::traits::{GraphOps, GraphQuery};
+use god_gragh::graph::Graph;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 /// 创建测试图
 fn create_test_graph(num_nodes: usize, avg_degree: usize) -> Graph<usize, f64> {
     let mut graph: Graph<usize, f64> = Graph::with_capacity(num_nodes, num_nodes * avg_degree);
-    let nodes: Vec<_> = (0..num_nodes)
-        .map(|i| graph.add_node(i).unwrap())
-        .collect();
+    let nodes: Vec<_> = (0..num_nodes).map(|i| graph.add_node(i).unwrap()).collect();
 
     // 添加随机边（确定性伪随机）
     let mut seed = 42u64;
@@ -91,7 +89,7 @@ fn parallel_pagerank(graph: &Graph<usize, f64>, damping: f64, iterations: usize)
 
 fn bench_dfs_speedup(c: &mut Criterion) {
     let mut group = c.benchmark_group("dfs_speedup");
-    
+
     let sizes = vec![
         (1_000, 5),
         (5_000, 5),
@@ -103,9 +101,9 @@ fn bench_dfs_speedup(c: &mut Criterion) {
     for (num_nodes, avg_degree) in sizes {
         let graph = create_test_graph(num_nodes, avg_degree);
         let start = 0;
-        
+
         group.throughput(Throughput::Elements(num_nodes as u64));
-        
+
         group.bench_with_input(
             BenchmarkId::new("serial", num_nodes),
             &(&graph, start),
@@ -123,7 +121,7 @@ fn bench_dfs_speedup(c: &mut Criterion) {
 
 fn bench_bfs_speedup(c: &mut Criterion) {
     let mut group = c.benchmark_group("bfs_speedup");
-    
+
     let sizes = vec![
         (1_000, 5),
         (5_000, 5),
@@ -135,9 +133,9 @@ fn bench_bfs_speedup(c: &mut Criterion) {
     for (num_nodes, avg_degree) in sizes {
         let graph = create_test_graph(num_nodes, avg_degree);
         let start = 0;
-        
+
         group.throughput(Throughput::Elements(num_nodes as u64));
-        
+
         group.bench_with_input(
             BenchmarkId::new("serial", num_nodes),
             &(&graph, start),
@@ -155,32 +153,31 @@ fn bench_bfs_speedup(c: &mut Criterion) {
 
 fn bench_pagerank_speedup(c: &mut Criterion) {
     let mut group = c.benchmark_group("pagerank_speedup");
-    
-    let sizes = vec![
-        (1_000, 5),
-        (5_000, 5),
-        (10_000, 5),
-        (50_000, 5),
-    ];
+
+    let sizes = vec![(1_000, 5), (5_000, 5), (10_000, 5), (50_000, 5)];
 
     let damping = 0.85;
     let iterations = 20;
 
     for (num_nodes, avg_degree) in sizes {
         let graph = create_test_graph(num_nodes, avg_degree);
-        
+
         group.throughput(Throughput::Elements((num_nodes * iterations) as u64));
-        
+
         group.bench_with_input(
             BenchmarkId::new("serial", num_nodes),
             &(&graph, damping, iterations),
-            |b, &(graph, damping, iterations)| b.iter(|| serial_pagerank(graph, damping, iterations)),
+            |b, &(graph, damping, iterations)| {
+                b.iter(|| serial_pagerank(graph, damping, iterations))
+            },
         );
 
         group.bench_with_input(
             BenchmarkId::new("parallel", num_nodes),
             &(&graph, damping, iterations),
-            |b, &(graph, damping, iterations)| b.iter(|| parallel_pagerank(graph, damping, iterations)),
+            |b, &(graph, damping, iterations)| {
+                b.iter(|| parallel_pagerank(graph, damping, iterations))
+            },
         );
     }
     group.finish();
@@ -189,7 +186,7 @@ fn bench_pagerank_speedup(c: &mut Criterion) {
 criterion_group!(
     name = benches;
     config = Criterion::default().sample_size(50);
-    targets = 
+    targets =
         bench_dfs_speedup,
         bench_bfs_speedup,
         bench_pagerank_speedup,

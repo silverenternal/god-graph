@@ -15,10 +15,10 @@
 //! std::fs::write("graph.svg", svg).unwrap();
 //! ```
 
-use std::collections::HashMap;
-use crate::graph::Graph;
 use crate::graph::traits::GraphQuery;
+use crate::graph::Graph;
 use crate::node::NodeIndex;
+use std::collections::HashMap;
 
 /// SVG 可视化选项
 #[derive(Debug, Clone)]
@@ -166,7 +166,12 @@ pub fn to_svg_with_options<T: std::fmt::Display, E: std::fmt::Display + Clone>(
             // 节点圆形
             output.push_str(&format!(
                 r#"<circle cx="{}" cy="{}" r="{}" fill="{}" stroke="{}" stroke-width="{}"/>"#,
-                x, y, options.node_radius, options.node_fill, options.node_stroke, options.node_stroke_width
+                x,
+                y,
+                options.node_radius,
+                options.node_fill,
+                options.node_stroke,
+                options.node_stroke_width
             ));
             output.push('\n');
 
@@ -258,10 +263,12 @@ fn compute_force_directed_layout<T, E>(
     let attraction = 0.01;
     let damping = 0.85;
 
-    let mut velocities: HashMap<NodeIndex, (f64, f64)> = nodes.iter().map(|&n| (n, (0.0, 0.0))).collect();
+    let mut velocities: HashMap<NodeIndex, (f64, f64)> =
+        nodes.iter().map(|&n| (n, (0.0, 0.0))).collect();
 
     for _ in 0..iterations {
-        let mut forces: HashMap<NodeIndex, (f64, f64)> = nodes.iter().map(|&n| (n, (0.0, 0.0))).collect();
+        let mut forces: HashMap<NodeIndex, (f64, f64)> =
+            nodes.iter().map(|&n| (n, (0.0, 0.0))).collect();
 
         // 斥力（节点之间）
         for i in 0..n {
@@ -359,11 +366,19 @@ fn compute_hierarchical_layout<T, E: Clone>(
     // 如果有环或错误，回退到圆形布局
     let nodes = match nodes_result {
         Ok(n) => n,
-        Err(_) => return compute_circular_layout(&graph.nodes().map(|n| n.index()).collect::<Vec<_>>(), options),
+        Err(_) => {
+            return compute_circular_layout(
+                &graph.nodes().map(|n| n.index()).collect::<Vec<_>>(),
+                options,
+            )
+        }
     };
 
     if nodes.is_empty() {
-        return compute_circular_layout(&graph.nodes().map(|n| n.index()).collect::<Vec<_>>(), options);
+        return compute_circular_layout(
+            &graph.nodes().map(|n| n.index()).collect::<Vec<_>>(),
+            options,
+        );
     }
 
     let n = nodes.len();
@@ -435,8 +450,8 @@ pub fn write_svg_to_file(svg: &str, path: &str) -> std::io::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::graph::Graph;
     use crate::graph::traits::GraphOps;
+    use crate::graph::Graph;
 
     #[test]
     fn test_svg_export_basic() {

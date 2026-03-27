@@ -187,10 +187,7 @@ pub fn prefetch_read<T>(data: &T) {
         // SAFETY: `prefetch_read_data` 仅预取数据到缓存，不修改内存，
         // 指针有效且大小正确
         unsafe {
-            std::hint::prefetch_read_data(
-                data as *const T as *const _,
-                core::mem::size_of::<T>(),
-            );
+            std::hint::prefetch_read_data(data as *const T as *const _, core::mem::size_of::<T>());
         }
     }
 }

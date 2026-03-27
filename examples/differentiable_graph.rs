@@ -9,11 +9,8 @@
 #[cfg(feature = "tensor")]
 mod differentiable_graph_example {
     use god_gragh::tensor::differentiable::{
-        DifferentiableGraph,
-        GradientConfig,
-        GumbelSoftmaxSampler,
+        DifferentiableGraph, GradientConfig, GraphTransformer, GumbelSoftmaxSampler,
         ThresholdEditPolicy,
-        GraphTransformer,
     };
     use std::collections::HashMap;
 
@@ -74,13 +71,13 @@ mod differentiable_graph_example {
         // 模拟从下游任务（如 GNN 分类）传来的梯度
         // 这些梯度表示：如果某条边存在，损失会增加/减少多少
         let mut loss_gradients = HashMap::new();
-        
+
         // 正梯度：损失随边存在而增加 → 应该删除
         loss_gradients.insert((0, 1), 0.5);
-        
+
         // 负梯度：损失随边存在而减少 → 应该保留/加强
         loss_gradients.insert((1, 2), -0.8);
-        
+
         // 小的负梯度
         loss_gradients.insert((0, 2), -0.2);
         loss_gradients.insert((2, 3), -0.3);
@@ -97,8 +94,10 @@ mod differentiable_graph_example {
         println!("\n计算得到的结构梯度 (∂L/∂logits):");
         for ((src, dst), &grad) in &structure_gradients {
             let edge = graph.get_edge_probability(*src, *dst).unwrap();
-            println!("  ∂L/∂logits_{}{} = {:.4}, 当前 P({}→{}) = {:.4}", 
-                     src, dst, grad, src, dst, edge);
+            println!(
+                "  ∂L/∂logits_{}{} = {:.4}, 当前 P({}→{}) = {:.4}",
+                src, dst, grad, src, dst, edge
+            );
         }
 
         // 基于梯度更新结构
@@ -118,16 +117,16 @@ mod differentiable_graph_example {
 
         // 配置优化器
         let config = GradientConfig::new(
-            1.0,    // 初始温度
-            true,   // 使用 STE
-            0.05,   // 边学习率
-            0.01,   // 节点学习率
+            1.0,  // 初始温度
+            true, // 使用 STE
+            0.05, // 边学习率
+            0.01, // 节点学习率
         )
-        .with_sparsity(0.001)      // L1 稀疏正则化
-        .with_smoothness(0.0001);  // 平滑正则化
+        .with_sparsity(0.001) // L1 稀疏正则化
+        .with_smoothness(0.0001); // 平滑正则化
 
         let mut graph = DifferentiableGraph::<Vec<f64>>::with_config(5, config);
-        
+
         // 初始化边
         graph.add_learnable_edge(0, 1, 0.5);
         graph.add_learnable_edge(0, 2, 0.5);
@@ -143,16 +142,16 @@ mod differentiable_graph_example {
         for step in 0..10 {
             // 模拟损失梯度（实际应用中来自反向传播）
             let mut loss_gradients = HashMap::new();
-            
+
             // 模拟一个任务：希望形成 0→1→2→3→4 的链式结构
             // 对不在链上的边给正梯度（鼓励删除）
             // 对在链上的边给负梯度（鼓励保留）
-            loss_gradients.insert((0, 1), -0.5);  // 链上
-            loss_gradients.insert((1, 2), -0.5);  // 链上
-            loss_gradients.insert((2, 3), -0.5);  // 链上
-            loss_gradients.insert((3, 4), -0.5);  // 链上
-            loss_gradients.insert((0, 2), 0.3);   // 不在链上
-            loss_gradients.insert((1, 3), 0.3);   // 不在链上
+            loss_gradients.insert((0, 1), -0.5); // 链上
+            loss_gradients.insert((1, 2), -0.5); // 链上
+            loss_gradients.insert((2, 3), -0.5); // 链上
+            loss_gradients.insert((3, 4), -0.5); // 链上
+            loss_gradients.insert((0, 2), 0.3); // 不在链上
+            loss_gradients.insert((1, 3), 0.3); // 不在链上
 
             // 一步优化
             let _gradients = graph.optimization_step(loss_gradients);
@@ -172,7 +171,7 @@ mod differentiable_graph_example {
         println!("\n=== 示例 4: Gumbel-Softmax 采样 ===\n");
 
         let mut sampler = GumbelSoftmaxSampler::new(1.0);
-        
+
         // 边的 logits（可学习参数）
         let edge_logits = vec![0.5, 1.0, -0.5, 2.0];
 
@@ -180,30 +179,56 @@ mod differentiable_graph_example {
 
         // 软采样（可微，用于训练）
         let soft_sample = sampler.sample_soft(&edge_logits);
-        println!("软采样结果: {:?}", 
-                 soft_sample.iter().map(|x| format!("{:.4}", x)).collect::<Vec<_>>());
+        println!(
+            "软采样结果: {:?}",
+            soft_sample
+                .iter()
+                .map(|x| format!("{:.4}", x))
+                .collect::<Vec<_>>()
+        );
         println!("  和：{:.6}", soft_sample.iter().sum::<f64>());
 
         // 硬采样（不可微，用于推理）
         let hard_sample = sampler.sample_hard(&edge_logits);
-        println!("硬采样结果: {:?}", 
-                 hard_sample.iter().map(|x| format!("{:.4}", x)).collect::<Vec<_>>());
+        println!(
+            "硬采样结果: {:?}",
+            hard_sample
+                .iter()
+                .map(|x| format!("{:.4}", x))
+                .collect::<Vec<_>>()
+        );
 
         // STE 采样（前向硬，反向软）
         let (hard_ste, soft_ste) = sampler.sample_ste(&edge_logits);
         println!("STE 采样:");
-        println!("  前向（硬）: {:?}", 
-                 hard_ste.iter().map(|x| format!("{:.4}", x)).collect::<Vec<_>>());
-        println!("  反向（软）: {:?}", 
-                 soft_ste.iter().map(|x| format!("{:.4}", x)).collect::<Vec<_>>());
+        println!(
+            "  前向（硬）: {:?}",
+            hard_ste
+                .iter()
+                .map(|x| format!("{:.4}", x))
+                .collect::<Vec<_>>()
+        );
+        println!(
+            "  反向（软）: {:?}",
+            soft_ste
+                .iter()
+                .map(|x| format!("{:.4}", x))
+                .collect::<Vec<_>>()
+        );
 
         // 温度退火演示
         println!("\n温度退火演示:");
         for &temp in &[1.0, 0.5, 0.2, 0.1] {
             sampler.set_temperature(temp);
             let sample = sampler.sample_soft(&edge_logits);
-            println!("  T={:.1}: {:?}", temp, 
-                     sample.iter().map(|x| format!("{:.3}", x)).collect::<Vec<_>>());
+            println!(
+                "  T={:.1}: {:?}",
+                temp,
+                sample
+                    .iter()
+                    .map(|x| format!("{:.3}", x))
+                    .collect::<Vec<_>>()
+            );
         }
     }
 
@@ -235,10 +260,10 @@ mod differentiable_graph_example {
         for round in 0..5 {
             // 模拟梯度（实际来自反向传播）
             let mut gradients = HashMap::new();
-            gradients.insert((0, 1), -0.2);  // 鼓励
-            gradients.insert((0, 2), 0.15);  // 抑制
-            gradients.insert((1, 2), -0.3);  // 鼓励
-            gradients.insert((2, 3), -0.1);  // 轻微鼓励
+            gradients.insert((0, 1), -0.2); // 鼓励
+            gradients.insert((0, 2), 0.15); // 抑制
+            gradients.insert((1, 2), -0.3); // 鼓励
+            gradients.insert((2, 3), -0.1); // 轻微鼓励
 
             // 记录梯度
             transformer.record_gradients(&gradients);
@@ -255,8 +280,10 @@ mod differentiable_graph_example {
                             god_gragh::tensor::differentiable::EdgeEditOp::Remove => "删除",
                             god_gragh::tensor::differentiable::EdgeEditOp::Modify => "修改",
                         };
-                        println!("  {}→{}: {} (P: {:.3}→{:.3}, ∇: {:.4})",
-                                 src, dst, op_str, edit.before, edit.after, edit.gradient);
+                        println!(
+                            "  {}→{}: {} (P: {:.3}→{:.3}, ∇: {:.4})",
+                            src, dst, op_str, edit.before, edit.after, edit.gradient
+                        );
                     }
                     _ => {}
                 }
@@ -274,14 +301,13 @@ mod differentiable_graph_example {
         // 无稀疏正则化
         let mut graph_no_sparse = DifferentiableGraph::<Vec<f64>>::with_config(
             4,
-            GradientConfig::new(1.0, true, 0.05, 0.01)
+            GradientConfig::new(1.0, true, 0.05, 0.01),
         );
 
         // 有稀疏正则化
         let mut graph_with_sparse = DifferentiableGraph::<Vec<f64>>::with_config(
             4,
-            GradientConfig::new(1.0, true, 0.05, 0.01)
-                .with_sparsity(0.1)  // 较强的稀疏权重
+            GradientConfig::new(1.0, true, 0.05, 0.01).with_sparsity(0.1), // 较强的稀疏权重
         );
 
         // 初始化相同的边
@@ -308,26 +334,38 @@ mod differentiable_graph_example {
             let prob = graph_no_sparse.get_edge_probability(src, dst).unwrap();
             println!("  P({}→{}) = {:.4}", src, dst, prob);
         }
-        println!("  平均概率：{:.4}", 
-                 [(0, 1), (0, 2), (1, 2)].iter()
-                     .map(|(s, d)| graph_no_sparse.get_edge_probability(*s, *d).unwrap())
-                     .sum::<f64>() / 3.0);
+        println!(
+            "  平均概率：{:.4}",
+            [(0, 1), (0, 2), (1, 2)]
+                .iter()
+                .map(|(s, d)| graph_no_sparse.get_edge_probability(*s, *d).unwrap())
+                .sum::<f64>()
+                / 3.0
+        );
 
         println!("\n有稀疏正则化 (λ=0.1):");
         for (src, dst) in [(0, 1), (0, 2), (1, 2)] {
             let prob = graph_with_sparse.get_edge_probability(src, dst).unwrap();
             println!("  P({}→{}) = {:.4}", src, dst, prob);
         }
-        println!("  平均概率：{:.4}", 
-                 [(0, 1), (0, 2), (1, 2)].iter()
-                     .map(|(s, d)| graph_with_sparse.get_edge_probability(*s, *d).unwrap())
-                     .sum::<f64>() / 3.0);
+        println!(
+            "  平均概率：{:.4}",
+            [(0, 1), (0, 2), (1, 2)]
+                .iter()
+                .map(|(s, d)| graph_with_sparse.get_edge_probability(*s, *d).unwrap())
+                .sum::<f64>()
+                / 3.0
+        );
     }
 
     fn print_graph_state<T: Clone + Default>(graph: &DifferentiableGraph<T>) {
-        println!("  节点数：{}, 边数：{}, 温度：{:.4}", 
-                 graph.num_nodes(), graph.num_edges(), graph.temperature());
-        
+        println!(
+            "  节点数：{}, 边数：{}, 温度：{:.4}",
+            graph.num_nodes(),
+            graph.num_edges(),
+            graph.temperature()
+        );
+
         let prob_matrix = graph.get_probability_matrix();
         for (i, row) in prob_matrix.iter().enumerate() {
             for (j, &prob) in row.iter().enumerate() {
@@ -354,7 +392,9 @@ fn main() {
     differentiable_graph_example::run_all_examples();
 
     #[cfg(not(feature = "tensor"))]
-    println!("请启用 tensor 特性运行此示例：cargo run --example differentiable_graph --features tensor");
+    println!(
+        "请启用 tensor 特性运行此示例：cargo run --example differentiable_graph --features tensor"
+    );
 }
 
 #[cfg(test)]

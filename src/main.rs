@@ -1,7 +1,7 @@
 //! God-Graph 示例程序
 
-use god_gragh::prelude::*;
 use god_gragh::graph::traits::GraphQuery;
+use god_gragh::prelude::*;
 
 fn main() {
     println!("🚀 God-Graph 高性能图库\n");
@@ -42,7 +42,7 @@ fn basic_graph_example() {
         .with_edge(0, 1, 1200.0) // 北京 -> 上海
         .with_edge(0, 2, 2100.0) // 北京 -> 广州
         .with_edge(1, 3, 1400.0) // 上海 -> 深圳
-        .with_edge(2, 3, 150.0)  // 广州 -> 深圳
+        .with_edge(2, 3, 150.0) // 广州 -> 深圳
         .build()
         .expect("图构建失败");
 

@@ -2,10 +2,10 @@
 //!
 //! 包含 DFS、BFS、拓扑排序等遍历算法
 
-use crate::graph::Graph;
-use crate::graph::traits::{GraphBase, GraphQuery};
-use crate::node::NodeIndex;
 use crate::errors::GraphError;
+use crate::graph::traits::{GraphBase, GraphQuery};
+use crate::graph::Graph;
+use crate::node::NodeIndex;
 use crate::GraphResult;
 use std::collections::VecDeque;
 
@@ -97,7 +97,7 @@ where
 {
     let mut visited = vec![false; graph.node_count()];
     let mut queue = VecDeque::new();
-    
+
     visited[start.index()] = true;
     queue.push_back((start, 0));
 
@@ -132,9 +132,9 @@ pub fn topological_sort<T>(graph: &Graph<T, impl Clone>) -> GraphResult<Vec<Node
 
     // 收集所有有效节点及其索引映射
     let node_indices: Vec<NodeIndex> = graph.nodes().map(|n| n.index()).collect();
-    
+
     // 创建索引到 NodeIndex 的映射
-    let index_to_node: std::collections::HashMap<usize, NodeIndex> = 
+    let index_to_node: std::collections::HashMap<usize, NodeIndex> =
         node_indices.iter().map(|ni| (ni.index(), *ni)).collect();
 
     // 计算每个节点的入度（使用内部索引）
@@ -303,7 +303,14 @@ pub fn tarjan_scc<T: Clone>(graph: &Graph<T, impl Clone>) -> Vec<Vec<NodeIndex>>
             match indices[w] {
                 None => {
                     strongconnect(
-                        graph, w, index_counter, stack, on_stack, indices, lowlinks, sccs,
+                        graph,
+                        w,
+                        index_counter,
+                        stack,
+                        on_stack,
+                        indices,
+                        lowlinks,
+                        sccs,
                         index_to_node,
                     );
                     lowlinks[v] = lowlinks[v].min(lowlinks[w]);
@@ -403,7 +410,10 @@ mod tests {
         assert_eq!(result.len(), 4);
 
         // 验证拓扑顺序：A 必须在 B、C 之前，B、C 必须在 D 之前
-        let pos: Vec<_> = result.iter().map(|n| n.index()).enumerate()
+        let pos: Vec<_> = result
+            .iter()
+            .map(|n| n.index())
+            .enumerate()
             .flat_map(|(i, n)| vec![(n, i)])
             .collect();
         assert!(!pos.is_empty());
@@ -415,9 +425,12 @@ mod tests {
         let graph = GraphBuilder::directed()
             .with_nodes(vec![0, 1, 2, 3, 4])
             .with_edges(vec![
-                (0, 1, 1.0), (1, 2, 1.0), (2, 0, 1.0),  // SCC: {0, 1, 2}
-                (2, 3, 1.0),                              // 桥接边
-                (3, 4, 1.0), (4, 3, 1.0),                // SCC: {3, 4}
+                (0, 1, 1.0),
+                (1, 2, 1.0),
+                (2, 0, 1.0), // SCC: {0, 1, 2}
+                (2, 3, 1.0), // 桥接边
+                (3, 4, 1.0),
+                (4, 3, 1.0), // SCC: {3, 4}
             ])
             .build()
             .unwrap();
@@ -445,9 +458,7 @@ mod tests {
 
     #[test]
     fn test_tarjan_scc_empty_graph() {
-        let graph = GraphBuilder::<i32, f64>::directed()
-            .build()
-            .unwrap();
+        let graph = GraphBuilder::<i32, f64>::directed().build().unwrap();
 
         let sccs = tarjan_scc(&graph);
         assert!(sccs.is_empty());

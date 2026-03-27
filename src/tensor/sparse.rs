@@ -5,9 +5,9 @@
 
 use core::fmt;
 
-use crate::tensor::traits::{TensorBase, DType, Device, COOView, SparseTensorOps};
 use crate::tensor::dense::DenseTensor;
 use crate::tensor::error::TensorError;
+use crate::tensor::traits::{COOView, DType, Device, SparseTensorOps, TensorBase};
 
 /// COO（Coordinate）格式稀疏张量
 #[derive(Debug, Clone)]
@@ -21,7 +21,12 @@ pub struct COOTensor {
 #[cfg(feature = "tensor-sparse")]
 impl COOTensor {
     /// 创建新的 COO 张量
-    pub fn new(row_indices: Vec<usize>, col_indices: Vec<usize>, values: DenseTensor, shape: [usize; 2]) -> Self {
+    pub fn new(
+        row_indices: Vec<usize>,
+        col_indices: Vec<usize>,
+        values: DenseTensor,
+        shape: [usize; 2],
+    ) -> Self {
         assert_eq!(
             row_indices.len(),
             col_indices.len(),
@@ -82,7 +87,12 @@ pub struct CSRTensor {
 #[cfg(feature = "tensor-sparse")]
 impl CSRTensor {
     /// 创建新的 CSR 张量
-    pub fn new(row_offsets: Vec<usize>, col_indices: Vec<usize>, values: DenseTensor, shape: [usize; 2]) -> Self {
+    pub fn new(
+        row_offsets: Vec<usize>,
+        col_indices: Vec<usize>,
+        values: DenseTensor,
+        shape: [usize; 2],
+    ) -> Self {
         assert_eq!(
             col_indices.len(),
             values.numel(),
@@ -119,7 +129,12 @@ impl CSRTensor {
 
         // 填充列索引和值
         let mut row_pos = row_offsets.clone();
-        for (i, (&row, &col)) in coo.row_indices.iter().zip(coo.col_indices.iter()).enumerate() {
+        for (i, (&row, &col)) in coo
+            .row_indices
+            .iter()
+            .zip(coo.col_indices.iter())
+            .enumerate()
+        {
             let pos = row_pos[row];
             col_indices[pos] = col;
             values_data[pos] = coo.values.data()[i];
@@ -158,12 +173,22 @@ pub enum SparseTensor {
 #[cfg(feature = "tensor-sparse")]
 impl SparseTensor {
     /// 创建 COO 格式稀疏张量
-    pub fn coo(row_indices: Vec<usize>, col_indices: Vec<usize>, values: DenseTensor, shape: [usize; 2]) -> Self {
+    pub fn coo(
+        row_indices: Vec<usize>,
+        col_indices: Vec<usize>,
+        values: DenseTensor,
+        shape: [usize; 2],
+    ) -> Self {
         SparseTensor::COO(COOTensor::new(row_indices, col_indices, values, shape))
     }
 
     /// 创建 CSR 格式稀疏张量
-    pub fn csr(row_offsets: Vec<usize>, col_indices: Vec<usize>, values: DenseTensor, shape: [usize; 2]) -> Self {
+    pub fn csr(
+        row_offsets: Vec<usize>,
+        col_indices: Vec<usize>,
+        values: DenseTensor,
+        shape: [usize; 2],
+    ) -> Self {
         SparseTensor::CSR(CSRTensor::new(row_offsets, col_indices, values, shape))
     }
 
@@ -213,9 +238,12 @@ impl SparseTensor {
     /// 获取 COO 视图
     pub fn coo_view(&self) -> COOView<'_> {
         match self {
-            SparseTensor::COO(coo) => {
-                COOView::new(&coo.row_indices, &coo.col_indices, coo.values.data(), coo.shape)
-            }
+            SparseTensor::COO(coo) => COOView::new(
+                &coo.row_indices,
+                &coo.col_indices,
+                coo.values.data(),
+                coo.shape,
+            ),
             SparseTensor::CSR(_) => {
                 // For CSR, we need to convert to COO first, but we can't return a view
                 // So we return an empty view as a workaround (this is a limitation)
@@ -252,7 +280,12 @@ impl SparseTensor {
         let mut result = vec![0.0; rows];
         let coo = self.to_coo();
 
-        for (i, (&row, &col)) in coo.row_indices.iter().zip(coo.col_indices.iter()).enumerate() {
+        for (i, (&row, &col)) in coo
+            .row_indices
+            .iter()
+            .zip(coo.col_indices.iter())
+            .enumerate()
+        {
             let val = coo.values.data()[i];
             let x_val = x.data()[col];
             result[row] += val * x_val;
@@ -283,9 +316,19 @@ impl SparseTensor {
         use std::collections::HashMap;
         let mut result_map: HashMap<(usize, usize), f64> = HashMap::new();
 
-        for (i, (&row_a, &col_a)) in coo_a.row_indices.iter().zip(coo_a.col_indices.iter()).enumerate() {
+        for (i, (&row_a, &col_a)) in coo_a
+            .row_indices
+            .iter()
+            .zip(coo_a.col_indices.iter())
+            .enumerate()
+        {
             let val_a = coo_a.values.data()[i];
-            for (j, (&row_b, &col_b)) in coo_b.row_indices.iter().zip(coo_b.col_indices.iter()).enumerate() {
+            for (j, (&row_b, &col_b)) in coo_b
+                .row_indices
+                .iter()
+                .zip(coo_b.col_indices.iter())
+                .enumerate()
+            {
                 if col_a == row_b {
                     let val_b = coo_b.values.data()[j];
                     *result_map.entry((row_a, col_b)).or_insert(0.0) += val_a * val_b;
@@ -308,7 +351,12 @@ impl SparseTensor {
         }
 
         let values = DenseTensor::new(values_data.clone(), vec![values_data.len()]);
-        Ok(SparseTensor::COO(COOTensor::new(row_indices, col_indices, values, [rows_a, cols_b])))
+        Ok(SparseTensor::COO(COOTensor::new(
+            row_indices,
+            col_indices,
+            values,
+            [rows_a, cols_b],
+        )))
     }
 }
 
@@ -371,7 +419,12 @@ impl TensorBase for SparseTensor {
         let mut data = vec![0.0; rows * cols];
         let coo = self.to_coo();
 
-        for (i, (&row, &col)) in coo.row_indices.iter().zip(coo.col_indices.iter()).enumerate() {
+        for (i, (&row, &col)) in coo
+            .row_indices
+            .iter()
+            .zip(coo.col_indices.iter())
+            .enumerate()
+        {
             let val = coo.values.data()[i];
             data[row * cols + col] = val;
         }
@@ -441,12 +494,7 @@ mod tests {
 
     #[test]
     fn test_coo_creation() {
-        let edges = vec![
-            (0, 1, 1.0),
-            (0, 2, 2.0),
-            (1, 2, 3.0),
-            (2, 0, 4.0),
-        ];
+        let edges = vec![(0, 1, 1.0), (0, 2, 2.0), (1, 2, 3.0), (2, 0, 4.0)];
         let coo = SparseTensor::from_edges(&edges, [3, 3]);
 
         assert_eq!(coo.nnz(), 4);
@@ -455,12 +503,7 @@ mod tests {
 
     #[test]
     fn test_coo_to_csr() {
-        let edges = vec![
-            (0, 1, 1.0),
-            (0, 2, 2.0),
-            (1, 2, 3.0),
-            (2, 0, 4.0),
-        ];
+        let edges = vec![(0, 1, 1.0), (0, 2, 2.0), (1, 2, 3.0), (2, 0, 4.0)];
         let coo = SparseTensor::from_edges(&edges, [3, 3]);
         let csr = coo.to_csr();
 
@@ -470,12 +513,7 @@ mod tests {
 
     #[test]
     fn test_sparse_dense_conversion() {
-        let edges = vec![
-            (0, 1, 1.0),
-            (0, 2, 2.0),
-            (1, 2, 3.0),
-            (2, 0, 4.0),
-        ];
+        let edges = vec![(0, 1, 1.0), (0, 2, 2.0), (1, 2, 3.0), (2, 0, 4.0)];
         let sparse = SparseTensor::from_edges(&edges, [3, 3]);
         let dense = sparse.to_dense();
 
@@ -487,12 +525,7 @@ mod tests {
 
     #[test]
     fn test_spmv() {
-        let edges = vec![
-            (0, 0, 1.0),
-            (0, 1, 2.0),
-            (1, 0, 3.0),
-            (1, 1, 4.0),
-        ];
+        let edges = vec![(0, 0, 1.0), (0, 1, 2.0), (1, 0, 3.0), (1, 1, 4.0)];
         let sparse = SparseTensor::from_edges(&edges, [2, 2]);
         let x = DenseTensor::new(vec![1.0, 2.0], vec![2]);
 
@@ -503,20 +536,10 @@ mod tests {
 
     #[test]
     fn test_spmm() {
-        let edges_a = vec![
-            (0, 0, 1.0),
-            (0, 1, 2.0),
-            (1, 0, 3.0),
-            (1, 1, 4.0),
-        ];
+        let edges_a = vec![(0, 0, 1.0), (0, 1, 2.0), (1, 0, 3.0), (1, 1, 4.0)];
         let a = SparseTensor::from_edges(&edges_a, [2, 2]);
 
-        let edges_b = vec![
-            (0, 0, 5.0),
-            (0, 1, 6.0),
-            (1, 0, 7.0),
-            (1, 1, 8.0),
-        ];
+        let edges_b = vec![(0, 0, 5.0), (0, 1, 6.0), (1, 0, 7.0), (1, 1, 8.0)];
         let b = SparseTensor::from_edges(&edges_b, [2, 2]);
 
         let result = a.spmm(&b).unwrap();

@@ -3,8 +3,8 @@
 //! 定义图操作的基本接口，支持泛型实现
 
 use crate::edge::{EdgeIndex, EdgeRef};
-use crate::node::{NodeIndex, NodeRef};
 use crate::errors::{GraphError, GraphResult};
+use crate::node::{NodeIndex, NodeRef};
 
 /// 图基础 trait
 ///

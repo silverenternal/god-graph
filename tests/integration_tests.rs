@@ -2,15 +2,15 @@
 //!
 //! 测试 god-gragh 库的整体功能和正确性
 
-use god_gragh::graph::Graph;
-use god_gragh::graph::builders::GraphBuilder;
-use god_gragh::graph::traits::{GraphBase, GraphQuery, GraphOps};
-use god_gragh::algorithms::traversal::{dfs, bfs, topological_sort, tarjan_scc};
-use god_gragh::algorithms::shortest_path::{dijkstra, bellman_ford, floyd_warshall, astar};
-use god_gragh::algorithms::mst::{kruskal, prim};
 use god_gragh::algorithms::centrality::degree_centrality;
 use god_gragh::algorithms::community::connected_components;
+use god_gragh::algorithms::mst::{kruskal, prim};
+use god_gragh::algorithms::shortest_path::{astar, bellman_ford, dijkstra, floyd_warshall};
+use god_gragh::algorithms::traversal::{bfs, dfs, tarjan_scc, topological_sort};
 use god_gragh::generators::{complete_graph, grid_graph, tree_graph};
+use god_gragh::graph::builders::GraphBuilder;
+use god_gragh::graph::traits::{GraphBase, GraphOps, GraphQuery};
+use god_gragh::graph::Graph;
 
 /// 测试图的基本 CRUD 操作
 #[test]
@@ -79,12 +79,7 @@ fn test_node_index_generation() {
 fn test_dfs_traversal() {
     let graph = GraphBuilder::directed()
         .with_nodes(vec!["A", "B", "C", "D", "E"])
-        .with_edges(vec![
-            (0, 1, 1.0),
-            (0, 2, 1.0),
-            (1, 3, 1.0),
-            (2, 4, 1.0),
-        ])
+        .with_edges(vec![(0, 1, 1.0), (0, 2, 1.0), (1, 3, 1.0), (2, 4, 1.0)])
         .build()
         .unwrap();
 
@@ -104,12 +99,7 @@ fn test_dfs_traversal() {
 fn test_bfs_traversal() {
     let graph = GraphBuilder::directed()
         .with_nodes(vec!["A", "B", "C", "D"])
-        .with_edges(vec![
-            (0, 1, 1.0),
-            (0, 2, 1.0),
-            (1, 3, 1.0),
-            (2, 3, 1.0),
-        ])
+        .with_edges(vec![(0, 1, 1.0), (0, 2, 1.0), (1, 3, 1.0), (2, 3, 1.0)])
         .build()
         .unwrap();
 
@@ -164,13 +154,19 @@ fn test_strongly_connected_components() {
         .with_nodes(vec![1, 2, 3, 4, 5, 6, 7, 8])
         .with_edges(vec![
             // SCC 1: {1, 2, 4, 5}
-            (0, 1, 1.0), (1, 3, 1.0), (3, 0, 1.0), (0, 4, 1.0), (4, 0, 1.0),
+            (0, 1, 1.0),
+            (1, 3, 1.0),
+            (3, 0, 1.0),
+            (0, 4, 1.0),
+            (4, 0, 1.0),
             // SCC 2: {3}
             // SCC 3: {6, 7}
-            (5, 6, 1.0), (6, 5, 1.0),
+            (5, 6, 1.0),
+            (6, 5, 1.0),
             // SCC 4: {8}
             // 连接边
-            (2, 5, 1.0), (5, 7, 1.0),
+            (2, 5, 1.0),
+            (5, 7, 1.0),
         ])
         .build()
         .unwrap();
@@ -236,11 +232,7 @@ fn test_bellman_ford_negative_cycle() {
 fn test_floyd_warshall_all_pairs() {
     let graph = GraphBuilder::directed()
         .with_nodes(vec!["A", "B", "C"])
-        .with_edges(vec![
-            (0, 1, 1.0),
-            (1, 2, 2.0),
-            (0, 2, 4.0),
-        ])
+        .with_edges(vec![(0, 1, 1.0), (1, 2, 2.0), (0, 2, 4.0)])
         .build()
         .unwrap();
 
@@ -309,10 +301,7 @@ fn test_kruskal_mst() {
     assert_eq!(mst_edges.len(), 3);
 
     // 计算 MST 总权重
-    let total_weight: f64 = mst_edges
-        .iter()
-        .map(|&e| *graph.get_edge(e).unwrap())
-        .sum();
+    let total_weight: f64 = mst_edges.iter().map(|&e| *graph.get_edge(e).unwrap()).sum();
 
     // 最小生成树总权重应该是 1 + 2 + 3 = 6
     assert_eq!(total_weight, 6.0);
@@ -339,10 +328,7 @@ fn test_prim_mst() {
     assert_eq!(mst_edges.len(), 3);
 
     // 计算 MST 总权重
-    let total_weight: f64 = mst_edges
-        .iter()
-        .map(|&e| *graph.get_edge(e).unwrap())
-        .sum();
+    let total_weight: f64 = mst_edges.iter().map(|&e| *graph.get_edge(e).unwrap()).sum();
 
     // 最小生成树总权重应该是 1 + 2 + 3 = 6
     assert_eq!(total_weight, 6.0);
@@ -353,12 +339,7 @@ fn test_prim_mst() {
 fn test_degree_centrality() {
     let graph = GraphBuilder::directed()
         .with_nodes(vec!["A", "B", "C", "D"])
-        .with_edges(vec![
-            (0, 1, 1.0),
-            (0, 2, 1.0),
-            (0, 3, 1.0),
-            (1, 2, 1.0),
-        ])
+        .with_edges(vec![(0, 1, 1.0), (0, 2, 1.0), (0, 3, 1.0), (1, 2, 1.0)])
         .build()
         .unwrap();
 

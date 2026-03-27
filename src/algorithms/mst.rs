@@ -3,8 +3,8 @@
 //! 包含 Kruskal 和 Prim 算法
 
 use crate::edge::EdgeIndex;
-use crate::graph::Graph;
 use crate::graph::traits::{GraphBase, GraphQuery};
+use crate::graph::Graph;
 use crate::node::NodeIndex;
 use std::cmp::Ordering;
 use std::collections::HashMap;
@@ -209,7 +209,12 @@ pub fn prim<T>(graph: &Graph<T, f64>) -> Vec<EdgeIndex> {
         }
     }
 
-    while let Some(EdgeCandidate { target_idx, edge_idx, weight: _ }) = heap.pop() {
+    while let Some(EdgeCandidate {
+        target_idx,
+        edge_idx,
+        weight: _,
+    }) = heap.pop()
+    {
         if in_mst[target_idx] {
             continue;
         }
@@ -225,7 +230,11 @@ pub fn prim<T>(graph: &Graph<T, f64>) -> Vec<EdgeIndex> {
         let target_node = node_indices[target_idx];
         for edge in graph.incident_edges(target_node) {
             if let Ok((source, target)) = graph.edge_endpoints(edge) {
-                let neighbor = if source == target_node { target } else { source };
+                let neighbor = if source == target_node {
+                    target
+                } else {
+                    source
+                };
                 if let Some(&pos) = index_to_pos.get(&neighbor.index()) {
                     if !in_mst[pos] {
                         if let Ok(weight) = graph.get_edge(edge) {

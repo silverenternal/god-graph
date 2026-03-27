@@ -7,7 +7,7 @@ pub mod cache;
 pub mod matrix;
 
 pub use arena::Arena;
-pub use cache::{Padded, prefetch_read, prefetch_write};
+pub use cache::{prefetch_read, prefetch_write, Padded};
 
 #[cfg(feature = "matrix")]
-pub use matrix::{AdjacencyMatrix, LaplacianMatrix, fiedler_vector, spectral_radius};
+pub use matrix::{fiedler_vector, spectral_radius, AdjacencyMatrix, LaplacianMatrix};

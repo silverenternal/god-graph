@@ -1,8 +1,8 @@
 //! 图构建性能基准测试
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
-use god_gragh::graph::Graph;
+use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use god_gragh::graph::traits::GraphOps;
+use god_gragh::graph::Graph;
 
 fn bench_add_nodes(c: &mut Criterion) {
     let sizes = vec![100, 1000, 5000, 10000];

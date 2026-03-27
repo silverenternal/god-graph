@@ -2,8 +2,8 @@
 //!
 //! G(n, p) 模型：每个边以概率 p 独立存在
 
-use crate::graph::Graph;
 use crate::graph::builders::GraphBuilder;
+use crate::graph::Graph;
 
 /// 生成 Erdős-Rényi 随机图 G(n, p)
 ///
@@ -15,12 +15,7 @@ use crate::graph::builders::GraphBuilder;
 ///
 /// # 返回
 /// 生成的图
-pub fn erdos_renyi_graph<T>(
-    n: usize,
-    p: f64,
-    directed: bool,
-    seed: u64,
-) -> Graph<T, f64>
+pub fn erdos_renyi_graph<T>(n: usize, p: f64, directed: bool, seed: u64) -> Graph<T, f64>
 where
     T: Clone + Default,
 {

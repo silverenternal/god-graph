@@ -2,8 +2,8 @@
 //!
 //! 生成具有高聚类系数和短平均路径长度的小世界网络
 
-use crate::graph::Graph;
 use crate::graph::builders::GraphBuilder;
+use crate::graph::Graph;
 
 /// 生成 Watts-Strogatz 小世界网络
 ///

@@ -1,7 +1,7 @@
 //! 完全图生成器
 
-use crate::graph::Graph;
 use crate::graph::builders::GraphBuilder;
+use crate::graph::Graph;
 
 /// 生成完全图 K_n
 ///
@@ -16,8 +16,7 @@ pub fn complete_graph<T>(n: usize) -> Graph<T, f64>
 where
     T: Clone + Default,
 {
-    let mut builder = GraphBuilder::undirected()
-        .with_nodes((0..n).map(|_| T::default()));
+    let mut builder = GraphBuilder::undirected().with_nodes((0..n).map(|_| T::default()));
 
     for i in 0..n {
         for j in (i + 1)..n {

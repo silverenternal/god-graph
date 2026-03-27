@@ -6,7 +6,7 @@ use core::fmt;
 use core::hash::{Hash, Hasher};
 
 #[cfg(feature = "serde")]
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 /// 节点索引：稳定引用节点的句柄
 ///
@@ -138,10 +138,10 @@ where
 /// 使用 64 字节对齐，避免 false sharing
 #[derive(Debug)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "serde", serde(bound(
-    serialize = "T: Serialize",
-    deserialize = "T: Deserialize<'de>"
-)))]
+#[cfg_attr(
+    feature = "serde",
+    serde(bound(serialize = "T: Serialize", deserialize = "T: Deserialize<'de>"))
+)]
 #[repr(align(64))]
 pub(crate) struct NodeSlot<T> {
     /// Generation 计数器，每次分配递增

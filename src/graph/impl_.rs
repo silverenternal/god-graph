@@ -19,12 +19,12 @@
 use core::fmt;
 
 #[cfg(feature = "serde")]
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 use crate::edge::{EdgeIndex, EdgeRef, EdgeStorage};
 use crate::errors::{GraphError, GraphResult};
-use crate::node::{NodeIndex, NodeRef, NodeSlot};
 use crate::graph::traits::{GraphBase, GraphOps, GraphQuery};
+use crate::node::{NodeIndex, NodeRef, NodeSlot};
 
 /// 单个邻接桶，用于 O(1) 增量边插入
 /// 使用 64 字节缓存行对齐，避免 false sharing
@@ -202,7 +202,9 @@ impl Iterator for NeighborsIter {
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        self.snapshot.next().map(|(idx, generation)| NodeIndex::new(idx, generation))
+        self.snapshot
+            .next()
+            .map(|(idx, generation)| NodeIndex::new(idx, generation))
     }
 }
 
@@ -227,7 +229,9 @@ impl Iterator for IncidentEdgesIter {
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        self.snapshot.next().map(|(idx, generation)| EdgeIndex::new(idx, generation))
+        self.snapshot
+            .next()
+            .map(|(idx, generation)| EdgeIndex::new(idx, generation))
     }
 }
 
@@ -253,7 +257,10 @@ pub(crate) struct AdjacencyBuckets {
 ///
 /// 历史原因：早期代码使用 `CsrStorage` 命名，但实际实现是桶式邻接表。
 /// 为保持 API 稳定性保留此别名，但推荐在新代码中使用 `AdjacencyBuckets`。
-#[deprecated(since = "0.3.1", note = "使用 AdjacencyBuckets 代替，命名更准确反映实现")]
+#[deprecated(
+    since = "0.3.1",
+    note = "使用 AdjacencyBuckets 代替，命名更准确反映实现"
+)]
 #[allow(dead_code)]
 pub(crate) type CsrStorage = AdjacencyBuckets;
 
@@ -266,8 +273,16 @@ impl AdjacencyBuckets {
             needs_compact: false,
         };
         // 验证空 Vec 的对齐（空指针 0 % 64 = 0，总是成立，但保留断言用于文档说明）
-        debug_assert_eq!(this.buckets.as_ptr() as usize % 64, 0, "buckets 初始对齐失败");
-        debug_assert_eq!(this.reverse_buckets.as_ptr() as usize % 64, 0, "reverse_buckets 初始对齐失败");
+        debug_assert_eq!(
+            this.buckets.as_ptr() as usize % 64,
+            0,
+            "buckets 初始对齐失败"
+        );
+        debug_assert_eq!(
+            this.reverse_buckets.as_ptr() as usize % 64,
+            0,
+            "reverse_buckets 初始对齐失败"
+        );
         this
     }
 
@@ -284,14 +299,18 @@ impl AdjacencyBuckets {
         let buckets_ptr = self.buckets.as_ptr() as usize;
         let reverse_ptr = self.reverse_buckets.as_ptr() as usize;
         assert_eq!(
-            buckets_ptr % 64, 0,
+            buckets_ptr % 64,
+            0,
             "AdjacencyBuckets: buckets 未 64 字节对齐 (ptr={:#x}, mod={})",
-            buckets_ptr, buckets_ptr % 64
+            buckets_ptr,
+            buckets_ptr % 64
         );
         assert_eq!(
-            reverse_ptr % 64, 0,
+            reverse_ptr % 64,
+            0,
             "AdjacencyBuckets: reverse_buckets 未 64 字节对齐 (ptr={:#x}, mod={})",
-            reverse_ptr, reverse_ptr % 64
+            reverse_ptr,
+            reverse_ptr % 64
         );
     }
 
@@ -355,7 +374,10 @@ impl AdjacencyBuckets {
     }
 
     #[allow(dead_code)]
-    pub(crate) fn reverse_neighbors_raw(&self, node_index: usize) -> impl Iterator<Item = usize> + '_ {
+    pub(crate) fn reverse_neighbors_raw(
+        &self,
+        node_index: usize,
+    ) -> impl Iterator<Item = usize> + '_ {
         self.reverse_buckets
             .get(node_index)
             .into_iter()
@@ -363,10 +385,7 @@ impl AdjacencyBuckets {
             .map(move |(src_idx, _)| src_idx)
     }
 
-    pub(crate) fn edge_indices_iter(
-        &self,
-        node_index: usize,
-    ) -> impl Iterator<Item = usize> + '_ {
+    pub(crate) fn edge_indices_iter(&self, node_index: usize) -> impl Iterator<Item = usize> + '_ {
         self.buckets
             .get(node_index)
             .into_iter()
@@ -437,10 +456,13 @@ impl Default for AdjacencyBuckets {
 /// 使用缓存行对齐优化，减少 false sharing
 #[derive(Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "serde", serde(bound(
-    serialize = "T: Serialize, E: Serialize",
-    deserialize = "T: Deserialize<'de>, E: Deserialize<'de>"
-)))]
+#[cfg_attr(
+    feature = "serde",
+    serde(bound(
+        serialize = "T: Serialize, E: Serialize",
+        deserialize = "T: Deserialize<'de>, E: Deserialize<'de>"
+    ))
+)]
 pub struct Graph<T, E> {
     nodes: Vec<NodeSlot<T>>,
     edges: Vec<EdgeStorage<E>>,
@@ -513,7 +535,9 @@ impl<T, E> Graph<T, E> {
             if edge_idx < self.edges.len() {
                 let edge = &self.edges[edge_idx];
                 if edge.is_occupied() && edge.target == to {
-                    return edge.data().ok_or(GraphError::EdgeNotFound { index: edge_idx });
+                    return edge
+                        .data()
+                        .ok_or(GraphError::EdgeNotFound { index: edge_idx });
                 }
             }
         }
@@ -558,11 +582,15 @@ impl<T, E> GraphQuery for Graph<T, E> {
     #[inline]
     fn get_node(&self, index: NodeIndex) -> GraphResult<&T> {
         if index.index() >= self.nodes.len() {
-            return Err(GraphError::NodeNotFound { index: index.index() });
+            return Err(GraphError::NodeNotFound {
+                index: index.index(),
+            });
         }
         let slot = &self.nodes[index.index()];
         if !slot.is_occupied() {
-            return Err(GraphError::NodeNotFound { index: index.index() });
+            return Err(GraphError::NodeNotFound {
+                index: index.index(),
+            });
         }
         if slot.generation != index.generation() {
             return Err(GraphError::NodeDeleted {
@@ -571,17 +599,23 @@ impl<T, E> GraphQuery for Graph<T, E> {
                 current: slot.generation,
             });
         }
-        slot.data().ok_or(GraphError::NodeNotFound { index: index.index() })
+        slot.data().ok_or(GraphError::NodeNotFound {
+            index: index.index(),
+        })
     }
 
     #[inline]
     fn get_edge(&self, index: EdgeIndex) -> GraphResult<&E> {
         if index.index() >= self.edges.len() {
-            return Err(GraphError::EdgeNotFound { index: index.index() });
+            return Err(GraphError::EdgeNotFound {
+                index: index.index(),
+            });
         }
         let edge = &self.edges[index.index()];
         if !edge.is_occupied() {
-            return Err(GraphError::EdgeNotFound { index: index.index() });
+            return Err(GraphError::EdgeNotFound {
+                index: index.index(),
+            });
         }
         if edge.generation != index.generation() {
             return Err(GraphError::EdgeDeleted {
@@ -590,17 +624,23 @@ impl<T, E> GraphQuery for Graph<T, E> {
                 current: edge.generation,
             });
         }
-        edge.data().ok_or(GraphError::EdgeNotFound { index: index.index() })
+        edge.data().ok_or(GraphError::EdgeNotFound {
+            index: index.index(),
+        })
     }
 
     #[inline]
     fn edge_endpoints(&self, index: EdgeIndex) -> GraphResult<(NodeIndex, NodeIndex)> {
         if index.index() >= self.edges.len() {
-            return Err(GraphError::EdgeNotFound { index: index.index() });
+            return Err(GraphError::EdgeNotFound {
+                index: index.index(),
+            });
         }
         let edge = &self.edges[index.index()];
         if !edge.is_occupied() {
-            return Err(GraphError::EdgeNotFound { index: index.index() });
+            return Err(GraphError::EdgeNotFound {
+                index: index.index(),
+            });
         }
         if edge.generation != index.generation() {
             return Err(GraphError::EdgeDeleted {
@@ -639,11 +679,16 @@ impl<T, E> GraphQuery for Graph<T, E> {
     fn neighbors(&self, node: NodeIndex) -> impl Iterator<Item = NodeIndex> {
         let node_index = node.index();
         // 在创建时捕获邻居快照（包含 generation 信息）
-        let snapshot: Vec<(usize, u32)> = self.csr
+        let snapshot: Vec<(usize, u32)> = self
+            .csr
             .neighbors_snapshot(node_index)
             .into_iter()
             .map(|(target_idx, _edge_idx)| {
-                let generation = self.nodes.get(target_idx).map(|n| n.generation).unwrap_or(0);
+                let generation = self
+                    .nodes
+                    .get(target_idx)
+                    .map(|n| n.generation)
+                    .unwrap_or(0);
                 (target_idx, generation)
             })
             .collect();
@@ -677,7 +722,8 @@ impl<T, E> GraphQuery for Graph<T, E> {
     fn incident_edges(&self, node: NodeIndex) -> impl Iterator<Item = EdgeIndex> {
         let node_index = node.index();
         // 在创建时捕获边索引快照（包含 generation 信息）
-        let snapshot: Vec<(usize, u32)> = self.csr
+        let snapshot: Vec<(usize, u32)> = self
+            .csr
             .edge_indices_snapshot(node_index)
             .into_iter()
             .map(|edge_idx| {
@@ -696,7 +742,9 @@ impl<T, E> GraphQuery for Graph<T, E> {
     #[inline]
     fn out_degree(&self, node: NodeIndex) -> GraphResult<usize> {
         if !self.contains_node(node) {
-            return Err(GraphError::NodeNotFound { index: node.index() });
+            return Err(GraphError::NodeNotFound {
+                index: node.index(),
+            });
         }
         Ok(self.csr.degree(node.index()))
     }
@@ -704,7 +752,9 @@ impl<T, E> GraphQuery for Graph<T, E> {
     #[inline]
     fn in_degree(&self, node: NodeIndex) -> GraphResult<usize> {
         if !self.contains_node(node) {
-            return Err(GraphError::NodeNotFound { index: node.index() });
+            return Err(GraphError::NodeNotFound {
+                index: node.index(),
+            });
         }
         Ok(self.csr.in_degree(node.index()))
     }
@@ -718,38 +768,32 @@ impl<T, E> GraphQuery for Graph<T, E> {
 
     #[inline]
     fn nodes(&self) -> impl Iterator<Item = NodeRef<'_, T>> {
-        self.nodes
-            .iter()
-            .enumerate()
-            .filter_map(|(idx, slot)| {
-                if slot.is_occupied() {
-                    Some(NodeRef::new(
-                        NodeIndex::new(idx, slot.generation),
-                        slot.data()?,
-                    ))
-                } else {
-                    None
-                }
-            })
+        self.nodes.iter().enumerate().filter_map(|(idx, slot)| {
+            if slot.is_occupied() {
+                Some(NodeRef::new(
+                    NodeIndex::new(idx, slot.generation),
+                    slot.data()?,
+                ))
+            } else {
+                None
+            }
+        })
     }
 
     #[inline]
     fn edges(&self) -> impl Iterator<Item = EdgeRef<'_, E>> {
-        self.edges
-            .iter()
-            .enumerate()
-            .filter_map(|(idx, edge)| {
-                if edge.is_occupied() {
-                    Some(EdgeRef::new(
-                        EdgeIndex::new(idx, edge.generation),
-                        edge.source,
-                        edge.target,
-                        edge.data()?,
-                    ))
-                } else {
-                    None
-                }
-            })
+        self.edges.iter().enumerate().filter_map(|(idx, edge)| {
+            if edge.is_occupied() {
+                Some(EdgeRef::new(
+                    EdgeIndex::new(idx, edge.generation),
+                    edge.source,
+                    edge.target,
+                    edge.data()?,
+                ))
+            } else {
+                None
+            }
+        })
     }
 }
 
@@ -776,12 +820,16 @@ impl<T, E> GraphOps for Graph<T, E> {
     #[inline]
     fn remove_node(&mut self, index: NodeIndex) -> GraphResult<T> {
         if index.index() >= self.nodes.len() {
-            return Err(GraphError::NodeNotFound { index: index.index() });
+            return Err(GraphError::NodeNotFound {
+                index: index.index(),
+            });
         }
 
         let slot = &mut self.nodes[index.index()];
         if !slot.is_occupied() {
-            return Err(GraphError::NodeNotFound { index: index.index() });
+            return Err(GraphError::NodeNotFound {
+                index: index.index(),
+            });
         }
         if slot.generation != index.generation() {
             return Err(GraphError::NodeDeleted {
@@ -797,7 +845,8 @@ impl<T, E> GraphOps for Graph<T, E> {
             if edge_idx < self.edges.len() {
                 let edge = &self.edges[edge_idx];
                 if edge.is_occupied() {
-                    self.csr.mark_edge_deleted(index.index(), edge.target.index());
+                    self.csr
+                        .mark_edge_deleted(index.index(), edge.target.index());
                     let edge_slot = &mut self.edges[edge_idx];
                     edge_slot.data = None;
                     self.edge_count -= 1;
@@ -812,7 +861,8 @@ impl<T, E> GraphOps for Graph<T, E> {
             if edge_idx < self.edges.len() {
                 let edge = &self.edges[edge_idx];
                 if edge.is_occupied() {
-                    self.csr.mark_edge_deleted(edge.source.index(), index.index());
+                    self.csr
+                        .mark_edge_deleted(edge.source.index(), index.index());
                     let edge_slot = &mut self.edges[edge_idx];
                     edge_slot.data = None;
                     self.edge_count -= 1;
@@ -823,7 +873,9 @@ impl<T, E> GraphOps for Graph<T, E> {
 
         self.csr.compact();
 
-        let data = slot.data.take().ok_or(GraphError::NodeNotFound { index: index.index() })?;
+        let data = slot.data.take().ok_or(GraphError::NodeNotFound {
+            index: index.index(),
+        })?;
         self.node_count -= 1;
         self.free_nodes.push(index.index());
 
@@ -833,7 +885,9 @@ impl<T, E> GraphOps for Graph<T, E> {
     #[inline]
     fn add_edge(&mut self, from: NodeIndex, to: NodeIndex, data: E) -> GraphResult<EdgeIndex> {
         if !self.contains_node(from) {
-            return Err(GraphError::NodeNotFound { index: from.index() });
+            return Err(GraphError::NodeNotFound {
+                index: from.index(),
+            });
         }
         if !self.contains_node(to) {
             return Err(GraphError::NodeNotFound { index: to.index() });
@@ -847,7 +901,8 @@ impl<T, E> GraphOps for Graph<T, E> {
         } else {
             let index = self.edges.len();
             let generation = 1u32;
-            self.edges.push(EdgeStorage::new(from, to, data, generation));
+            self.edges
+                .push(EdgeStorage::new(from, to, data, generation));
             (index, generation)
         };
 
@@ -859,12 +914,16 @@ impl<T, E> GraphOps for Graph<T, E> {
     #[inline]
     fn remove_edge(&mut self, index: EdgeIndex) -> GraphResult<E> {
         if index.index() >= self.edges.len() {
-            return Err(GraphError::EdgeNotFound { index: index.index() });
+            return Err(GraphError::EdgeNotFound {
+                index: index.index(),
+            });
         }
 
         let edge = &mut self.edges[index.index()];
         if !edge.is_occupied() {
-            return Err(GraphError::EdgeNotFound { index: index.index() });
+            return Err(GraphError::EdgeNotFound {
+                index: index.index(),
+            });
         }
         if edge.generation != index.generation() {
             return Err(GraphError::EdgeDeleted {
@@ -878,7 +937,9 @@ impl<T, E> GraphOps for Graph<T, E> {
         let target_index = edge.target.index();
         self.csr.mark_edge_deleted(source_index, target_index);
 
-        let data = edge.data.take().ok_or(GraphError::EdgeNotFound { index: index.index() })?;
+        let data = edge.data.take().ok_or(GraphError::EdgeNotFound {
+            index: index.index(),
+        })?;
         self.edge_count -= 1;
         self.free_edges.push(index.index());
         self.csr.compact();
@@ -889,12 +950,16 @@ impl<T, E> GraphOps for Graph<T, E> {
     #[inline]
     fn update_node(&mut self, index: NodeIndex, data: T) -> GraphResult<T> {
         if index.index() >= self.nodes.len() {
-            return Err(GraphError::NodeNotFound { index: index.index() });
+            return Err(GraphError::NodeNotFound {
+                index: index.index(),
+            });
         }
 
         let slot = &mut self.nodes[index.index()];
         if !slot.is_occupied() {
-            return Err(GraphError::NodeNotFound { index: index.index() });
+            return Err(GraphError::NodeNotFound {
+                index: index.index(),
+            });
         }
         if slot.generation != index.generation() {
             return Err(GraphError::NodeDeleted {
@@ -905,18 +970,24 @@ impl<T, E> GraphOps for Graph<T, E> {
         }
 
         let old_data = slot.data.replace(data);
-        old_data.ok_or(GraphError::NodeNotFound { index: index.index() })
+        old_data.ok_or(GraphError::NodeNotFound {
+            index: index.index(),
+        })
     }
 
     #[inline]
     fn update_edge(&mut self, index: EdgeIndex, data: E) -> GraphResult<E> {
         if index.index() >= self.edges.len() {
-            return Err(GraphError::EdgeNotFound { index: index.index() });
+            return Err(GraphError::EdgeNotFound {
+                index: index.index(),
+            });
         }
 
         let edge = &mut self.edges[index.index()];
         if !edge.is_occupied() {
-            return Err(GraphError::EdgeNotFound { index: index.index() });
+            return Err(GraphError::EdgeNotFound {
+                index: index.index(),
+            });
         }
         if edge.generation != index.generation() {
             return Err(GraphError::EdgeDeleted {
@@ -927,7 +998,9 @@ impl<T, E> GraphOps for Graph<T, E> {
         }
 
         let old_data = edge.data.replace(data);
-        old_data.ok_or(GraphError::EdgeNotFound { index: index.index() })
+        old_data.ok_or(GraphError::EdgeNotFound {
+            index: index.index(),
+        })
     }
 
     #[inline]
@@ -1018,11 +1091,11 @@ mod tests {
     fn test_index_mut() {
         let mut graph = Graph::<String, f64>::directed();
         let idx = graph.add_node("initial".to_string()).unwrap();
-        
+
         // 使用 IndexMut 修改节点数据
         graph[idx] = "modified".to_string();
         assert_eq!(graph[idx], "modified");
-        
+
         // 修改多个节点
         let idx2 = graph.add_node("second".to_string()).unwrap();
         graph[idx2] = "second_modified".to_string();

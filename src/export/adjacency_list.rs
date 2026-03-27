@@ -1,7 +1,7 @@
 //! 邻接表格式导出
 
-use crate::graph::Graph;
 use crate::graph::traits::GraphQuery;
+use crate::graph::Graph;
 use std::fmt::Write;
 
 /// 将图导出为邻接表格式字符串

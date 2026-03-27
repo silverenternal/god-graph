@@ -2,10 +2,10 @@
 //!
 //! 提供各种图遍历迭代器
 
-use crate::node::NodeIndex;
 use crate::edge::EdgeIndex;
-pub use crate::graph::impl_::NeighborsIter;
 pub use crate::graph::impl_::IncidentEdgesIter;
+pub use crate::graph::impl_::NeighborsIter;
+use crate::node::NodeIndex;
 
 /// 节点迭代器
 #[allow(dead_code)]
@@ -64,7 +64,9 @@ impl<'a> Iterator for Neighbors<'a> {
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        self.indices.next().map(|idx| NodeIndex::new(self.col_indices[idx], 0))
+        self.indices
+            .next()
+            .map(|idx| NodeIndex::new(self.col_indices[idx], 0))
     }
 
     #[inline]
@@ -97,7 +99,9 @@ impl<'a> Iterator for IncidentEdges<'a> {
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        self.indices.next().map(|idx| EdgeIndex::new(self.edge_indices[idx], 0))
+        self.indices
+            .next()
+            .map(|idx| EdgeIndex::new(self.edge_indices[idx], 0))
     }
 
     #[inline]

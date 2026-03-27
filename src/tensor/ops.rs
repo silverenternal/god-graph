@@ -3,7 +3,7 @@
 //! 提供额外的 tensor 操作，包括激活函数、归一化等
 
 use crate::tensor::dense::DenseTensor;
-use crate::tensor::traits::{TensorOps, TensorBase};
+use crate::tensor::traits::{TensorBase, TensorOps};
 
 /// 激活函数实现
 pub mod activations {
@@ -34,11 +34,7 @@ pub mod activations {
         if tensor.ndim() == 1 {
             // 1D 情况：直接计算 softmax
             let max_val = tensor.max();
-            let exp_data: Vec<f64> = tensor
-                .data()
-                .iter()
-                .map(|&x| (x - max_val).exp())
-                .collect();
+            let exp_data: Vec<f64> = tensor.data().iter().map(|&x| (x - max_val).exp()).collect();
             let sum: f64 = exp_data.iter().sum();
             let data: Vec<f64> = exp_data.iter().map(|&x| x / sum).collect();
             DenseTensor::new(data, tensor.shape().to_vec())
@@ -56,7 +52,8 @@ pub mod activations {
                         col_data.push(tensor.data()[row * cols + col]);
                     }
                     let max_val = col_data.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
-                    let exp_data: Vec<f64> = col_data.iter().map(|&x| (x - max_val).exp()).collect();
+                    let exp_data: Vec<f64> =
+                        col_data.iter().map(|&x| (x - max_val).exp()).collect();
                     let sum: f64 = exp_data.iter().sum();
                     for row in 0..rows {
                         result[row * cols + col] = exp_data[row] / sum;
@@ -70,7 +67,8 @@ pub mod activations {
                     let row_start = row * cols;
                     let row_data = &tensor.data()[row_start..row_start + cols];
                     let max_val = row_data.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
-                    let exp_data: Vec<f64> = row_data.iter().map(|&x| (x - max_val).exp()).collect();
+                    let exp_data: Vec<f64> =
+                        row_data.iter().map(|&x| (x - max_val).exp()).collect();
                     let sum: f64 = exp_data.iter().sum();
                     for col in 0..cols {
                         result[row_start + col] = exp_data[col] / sum;
@@ -81,7 +79,10 @@ pub mod activations {
         } else {
             // N 维情况：简化处理，展平后计算
             // TODO: 实现完整的 N 维 softmax
-            panic!("Softmax for {}D tensors is not yet implemented", tensor.ndim());
+            panic!(
+                "Softmax for {}D tensors is not yet implemented",
+                tensor.ndim()
+            );
         }
     }
 
@@ -144,17 +145,26 @@ pub mod normalization {
         if tensor.ndim() == 1 {
             let mean = tensor.mean(None).data()[0];
             let centered = tensor.add_scalar(-mean);
-            let std = centered.data().iter().map(|&x| x * x).sum::<f64>().sqrt() / tensor.numel() as f64;
+            let std =
+                centered.data().iter().map(|&x| x * x).sum::<f64>().sqrt() / tensor.numel() as f64;
             centered.mul_scalar(1.0 / (std + epsilon))
         } else {
             // 对于高维张量，沿最后一个轴归一化
             // TODO: 实现完整的 N 维 LayerNorm
-            panic!("LayerNorm for {}D tensors is not yet implemented", tensor.ndim());
+            panic!(
+                "LayerNorm for {}D tensors is not yet implemented",
+                tensor.ndim()
+            );
         }
     }
 
     /// Batch Normalization（简化版）
-    pub fn batch_norm(tensor: &DenseTensor, mean: &DenseTensor, var: &DenseTensor, epsilon: f64) -> DenseTensor {
+    pub fn batch_norm(
+        tensor: &DenseTensor,
+        mean: &DenseTensor,
+        var: &DenseTensor,
+        epsilon: f64,
+    ) -> DenseTensor {
         let centered = tensor.sub(mean);
         let std = var.map(|v| (v + epsilon).sqrt());
         centered.div(&std)
@@ -165,7 +175,8 @@ pub mod normalization {
         // 对整个图的特征进行归一化
         let mean = tensor.mean(None).data()[0];
         let centered = tensor.add_scalar(-mean);
-        let std = centered.data().iter().map(|&x| x * x).sum::<f64>().sqrt() / tensor.numel() as f64;
+        let std =
+            centered.data().iter().map(|&x| x * x).sum::<f64>().sqrt() / tensor.numel() as f64;
         centered.mul_scalar(1.0 / (std + epsilon))
     }
 
@@ -315,7 +326,12 @@ pub mod matrix {
         for _ in 0..max_iter {
             // Av
             let av = tensor.matmul(&v);
-            let new_eigenvalue = v.data().iter().zip(av.data().iter()).map(|(&a, &b)| a * b).sum::<f64>();
+            let new_eigenvalue = v
+                .data()
+                .iter()
+                .zip(av.data().iter())
+                .map(|(&a, &b)| a * b)
+                .sum::<f64>();
 
             // 归一化
             v = av.normalize();
@@ -371,7 +387,9 @@ pub mod random {
     pub fn xavier_init(rows: usize, cols: usize) -> DenseTensor {
         let limit = (6.0 / (rows + cols) as f64).sqrt();
         let mut rng = rand::thread_rng();
-        let data: Vec<f64> = (0..rows * cols).map(|_| rng.gen_range(-limit..limit)).collect();
+        let data: Vec<f64> = (0..rows * cols)
+            .map(|_| rng.gen_range(-limit..limit))
+            .collect();
         DenseTensor::new(data, vec![rows, cols])
     }
 
@@ -379,12 +397,14 @@ pub mod random {
     pub fn he_init(rows: usize, cols: usize) -> DenseTensor {
         let std = (2.0 / rows as f64).sqrt();
         let mut rng = rand::thread_rng();
-        let data: Vec<f64> = (0..rows * cols).map(|_| {
-            // Box-Muller 变换生成正态分布
-            let u1: f64 = rng.gen_range(0.0..1.0);
-            let u2: f64 = rng.gen_range(0.0..1.0);
-            std * (-2.0 * u1.ln()).sqrt() * (2.0 * std::f64::consts::PI * u2).cos()
-        }).collect();
+        let data: Vec<f64> = (0..rows * cols)
+            .map(|_| {
+                // Box-Muller 变换生成正态分布
+                let u1: f64 = rng.gen_range(0.0..1.0);
+                let u2: f64 = rng.gen_range(0.0..1.0);
+                std * (-2.0 * u1.ln()).sqrt() * (2.0 * std::f64::consts::PI * u2).cos()
+            })
+            .collect();
         DenseTensor::new(data, vec![rows, cols])
     }
 
@@ -395,13 +415,7 @@ pub mod random {
         let data: Vec<f64> = tensor
             .data()
             .iter()
-            .map(|&x| {
-                if rng.gen::<f64>() < p {
-                    0.0
-                } else {
-                    x * scale
-                }
-            })
+            .map(|&x| if rng.gen::<f64>() < p { 0.0 } else { x * scale })
             .collect();
         DenseTensor::new(data, tensor.shape().to_vec())
     }

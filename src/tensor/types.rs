@@ -7,16 +7,16 @@ use core::fmt;
 use core::hash::{Hash, Hasher};
 use core::marker::PhantomData;
 
-use crate::node::NodeIndex;
 use crate::edge::EdgeIndex;
-use crate::tensor::traits::{TensorBase, TensorOps};
+use crate::node::NodeIndex;
 use crate::tensor::dense::DenseTensor;
+use crate::tensor::traits::{TensorBase, TensorOps};
 
 #[cfg(feature = "tensor-sparse")]
 use crate::tensor::sparse::SparseTensor;
 
 #[cfg(feature = "serde")]
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 /// Tensor 节点：带有 tensor 数据的节点包装器
 ///
@@ -170,7 +170,10 @@ impl<E: TensorBase> fmt::Debug for TensorEdge<E> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("TensorEdge")
             .field("index", &self.index)
-            .field("endpoints", &format!("({:?}, {:?})", self.source, self.target))
+            .field(
+                "endpoints",
+                &format!("({:?}, {:?})", self.source, self.target),
+            )
             .field("shape", &self.data.shape())
             .field("dtype", &self.data.dtype())
             .finish()
@@ -306,10 +309,7 @@ pub struct AdjacencyMatrix {
 impl AdjacencyMatrix {
     /// 从边列表创建邻接矩阵
     pub fn from_edges(edges: &[(usize, usize, f64)], num_nodes: usize) -> Self {
-        let tensor = SparseTensor::from_edges(
-            edges,
-            [num_nodes, num_nodes],
-        );
+        let tensor = SparseTensor::from_edges(edges, [num_nodes, num_nodes]);
         Self { tensor, num_nodes }
     }
 
@@ -364,13 +364,8 @@ impl DegreeMatrix {
 
     /// 计算 D^(-1/2)（用于图卷积的归一化）
     pub fn inverse_sqrt(&self, epsilon: f64) -> DenseTensor {
-        self.degrees.map(|d: f64| {
-            if d > epsilon {
-                1.0 / d.sqrt()
-            } else {
-                0.0
-            }
-        })
+        self.degrees
+            .map(|d: f64| if d > epsilon { 1.0 / d.sqrt() } else { 0.0 })
     }
 }
 
@@ -407,11 +402,7 @@ mod tests {
     #[test]
     #[cfg(feature = "tensor-sparse")]
     fn test_adjacency_matrix() {
-        let edges = vec![
-            (0, 1, 1.0),
-            (0, 2, 1.0),
-            (1, 2, 1.0),
-        ];
+        let edges = vec![(0, 1, 1.0), (0, 2, 1.0), (1, 2, 1.0)];
         let adj = AdjacencyMatrix::from_edges(&edges, 3);
 
         assert_eq!(adj.num_nodes, 3);
@@ -426,11 +417,7 @@ mod tests {
     #[test]
     #[cfg(feature = "tensor-sparse")]
     fn test_degree_matrix() {
-        let edges = vec![
-            (0, 1, 1.0),
-            (0, 2, 1.0),
-            (1, 2, 1.0),
-        ];
+        let edges = vec![(0, 1, 1.0), (0, 2, 1.0), (1, 2, 1.0)];
         let adj = AdjacencyMatrix::from_edges(&edges, 3);
         let degree = DegreeMatrix::from_adjacency(&adj);
 

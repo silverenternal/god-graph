@@ -18,7 +18,13 @@
       "Bash(rustc *)",
       "WebFetch(github.com)",
       "WebFetch(docs.dgl.ai)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git tag *)",
+      "Bash(cargo publish *)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(cargo clean)",
+      "Bash(curl *)"
     ]
   },
   "$version": 3

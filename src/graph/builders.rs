@@ -2,9 +2,9 @@
 //!
 //! 提供流式 API 用于构建图
 
-use crate::graph::Graph;
-use crate::graph::traits::GraphOps;
 use crate::errors::{GraphError, GraphResult};
+use crate::graph::traits::GraphOps;
+use crate::graph::Graph;
 
 /// 图构建器
 ///
@@ -85,7 +85,8 @@ where
                     bound: node_indices.len(),
                 });
             }
-            self.graph.add_edge(node_indices[from], node_indices[to], data)?;
+            self.graph
+                .add_edge(node_indices[from], node_indices[to], data)?;
         }
 
         Ok(self.graph)
@@ -135,7 +136,7 @@ mod tests {
     #[test]
     fn test_builder_with_edges() {
         use crate::graph::traits::GraphBase;
-        
+
         let graph = GraphBuilder::directed()
             .with_nodes(vec!["A", "B", "C"])
             .with_edges(vec![(0, 1, 1.0), (1, 2, 2.0), (0, 2, 3.0)])

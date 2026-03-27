@@ -55,22 +55,22 @@
 #[cfg(not(feature = "std"))]
 extern crate alloc;
 
+pub mod algorithms;
+pub mod edge;
 pub mod errors;
+pub mod export;
+pub mod generators;
 pub mod graph;
 pub mod node;
-pub mod edge;
-pub mod algorithms;
-pub mod generators;
-pub mod export;
-pub mod utils;
 pub mod prelude;
 pub mod tensor;
+pub mod utils;
 
 // 重新导出核心类型
+pub use edge::{EdgeIndex, EdgeRef};
 pub use errors::{GraphError, GraphResult};
 pub use graph::Graph;
 pub use node::{NodeIndex, NodeRef};
-pub use edge::{EdgeIndex, EdgeRef};
 
 /// 库版本号
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");

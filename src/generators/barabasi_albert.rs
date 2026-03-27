@@ -2,8 +2,8 @@
 //!
 //! 生成无标度网络，度分布服从幂律
 
-use crate::graph::Graph;
 use crate::graph::builders::GraphBuilder;
+use crate::graph::Graph;
 
 /// 生成 Barabási-Albert 无标度网络
 ///

@@ -97,12 +97,7 @@ impl Default for GradientConfig {
 
 impl GradientConfig {
     /// 创建新的梯度配置
-    pub fn new(
-        temperature: f64,
-        use_ste: bool,
-        edge_lr: f64,
-        node_lr: f64,
-    ) -> Self {
+    pub fn new(temperature: f64, use_ste: bool, edge_lr: f64, node_lr: f64) -> Self {
         Self {
             temperature,
             use_ste,
@@ -340,7 +335,8 @@ impl<T: Clone + Default> DifferentiableGraph<T> {
     /// 初始化节点
     pub fn init_nodes(&mut self, features: Option<T>) {
         for i in 0..self.num_nodes {
-            self.nodes.insert(i, DifferentiableNode::new(i, features.clone()));
+            self.nodes
+                .insert(i, DifferentiableNode::new(i, features.clone()));
         }
     }
 
@@ -409,11 +405,11 @@ impl<T: Clone + Default> DifferentiableGraph<T> {
     /// 用于后续梯度计算时修正梯度。
     pub fn discretize(&mut self) {
         self.ste_corrections.clear();
-        
+
         for (&(src, dst), edge) in &mut self.edges {
             let prob_before = edge.probability;
             edge.discretize(self.config.temperature, self.config.use_ste);
-            
+
             // 存储 STE 修正项
             if self.use_ste {
                 let hard = if edge.exists { 1.0 } else { 0.0 };
@@ -505,8 +501,7 @@ impl<T: Clone + Default> DifferentiableGraph<T> {
                 // L2 平滑正则化梯度
                 // ∂L_smooth/∂logits = 2 * λ_smooth * Σ_k (A_ij - A_ik)
                 let smooth_grad = if self.config.smoothness_weight > 0.0 {
-                    self.compute_smoothness_gradient(src, dst, prob)
-                        * self.config.smoothness_weight
+                    self.compute_smoothness_gradient(src, dst, prob) * self.config.smoothness_weight
                 } else {
                     0.0
                 };
@@ -524,23 +519,18 @@ impl<T: Clone + Default> DifferentiableGraph<T> {
     /// 考虑两种相邻关系：
     /// 1. 共享源节点的边：(src, dst) 和 (src, k)
     /// 2. 共享目标节点的边：(src, dst) 和 (k, dst)
-    fn compute_smoothness_gradient(
-        &self,
-        src: usize,
-        dst: usize,
-        prob: f64,
-    ) -> f64 {
+    fn compute_smoothness_gradient(&self, src: usize, dst: usize, prob: f64) -> f64 {
         let mut gradient = 0.0;
 
         // 遍历所有边，计算平滑梯度
         for (&(s, d), other_edge) in &self.edges {
             let other_prob = other_edge.probability;
-            
+
             // 共享源节点：(src, dst) 和 (src, k)
             if s == src && d != dst {
                 gradient += 2.0 * (prob - other_prob);
             }
-            
+
             // 共享目标节点：(src, dst) 和 (k, dst)
             if d == dst && s != src {
                 gradient += 2.0 * (prob - other_prob);
@@ -618,9 +608,10 @@ impl<T: Clone + Default> DifferentiableGraph<T> {
         use crate::graph::traits::GraphOps;
         use crate::graph::Graph;
         use crate::node::NodeIndex;
-        
-        let mut graph: crate::graph::Graph<usize, f64> = Graph::with_capacity(self.num_nodes, self.edges.len());
-        
+
+        let mut graph: crate::graph::Graph<usize, f64> =
+            Graph::with_capacity(self.num_nodes, self.edges.len());
+
         // 添加节点，使用索引作为节点数据
         // Graph 会内部管理 NodeIndex 的 generation
         let mut node_indices: Vec<NodeIndex> = Vec::with_capacity(self.num_nodes);
@@ -634,14 +625,14 @@ impl<T: Clone + Default> DifferentiableGraph<T> {
                 }
             }
         }
-        
+
         // 添加存在的边
         for (&(src, dst), edge) in &self.edges {
             if edge.exists && src < node_indices.len() && dst < node_indices.len() {
                 let _ = graph.add_edge(node_indices[src], node_indices[dst], 1.0);
             }
         }
-        
+
         graph
     }
 
@@ -666,10 +657,10 @@ impl<T: Clone + Default> DifferentiableGraph<T> {
         V: Clone,
     {
         use crate::graph::traits::{GraphBase, GraphQuery};
-        
+
         let num_nodes = graph.node_count();
         let mut diff_graph = DifferentiableGraph::new(num_nodes);
-        
+
         if let Some(probs) = init_probs {
             // 使用提供的概率初始化边
             for ((src, dst), &prob) in &probs {
@@ -685,7 +676,7 @@ impl<T: Clone + Default> DifferentiableGraph<T> {
                 }
             }
         }
-        
+
         diff_graph
     }
 
@@ -718,17 +709,21 @@ impl GumbelSoftmaxSampler {
     /// 其中 g_i ~ Gumbel(0, 1)
     pub fn sample_soft(&self, logits: &[f64]) -> Vec<f64> {
         let gumbel_noise: Vec<f64> = logits.iter().map(|_| self.gumbel_sample()).collect();
-        
-        let max_logit = logits.iter().zip(&gumbel_noise)
+
+        let max_logit = logits
+            .iter()
+            .zip(&gumbel_noise)
             .map(|(&l, &g)| l + g)
             .fold(f64::NEG_INFINITY, f64::max);
-        
-        let exp_logits: Vec<f64> = logits.iter().zip(&gumbel_noise)
+
+        let exp_logits: Vec<f64> = logits
+            .iter()
+            .zip(&gumbel_noise)
             .map(|(&l, &g)| ((l + g - max_logit) / self.temperature).exp())
             .collect();
-        
+
         let sum_exp: f64 = exp_logits.iter().sum();
-        
+
         exp_logits.iter().map(|&e| e / sum_exp).collect()
     }
 
@@ -736,16 +731,17 @@ impl GumbelSoftmaxSampler {
     pub fn sample_hard(&self, logits: &[f64]) -> Vec<f64> {
         let soft = self.sample_soft(logits);
         let mut result = vec![0.0; soft.len()];
-        
+
         // 取最大值位置为 1
-        if let Some(max_idx) = soft.iter()
+        if let Some(max_idx) = soft
+            .iter()
             .enumerate()
             .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap())
             .map(|(i, _)| i)
         {
             result[max_idx] = 1.0;
         }
-        
+
         result
     }
 
@@ -753,7 +749,7 @@ impl GumbelSoftmaxSampler {
     pub fn sample_ste(&self, logits: &[f64]) -> (Vec<f64>, Vec<f64>) {
         let hard = self.sample_hard(logits);
         let soft = self.sample_soft(logits);
-        
+
         // STE: gradient = hard - soft.detach() + soft = hard (因为 soft 会 detach)
         // 实际实现中，我们返回 (hard, soft) 用于后续梯度计算
         (hard, soft)
@@ -792,13 +788,20 @@ impl GumbelSoftmaxSampler {
     /// 使用自定义 RNG 的软采样
     #[cfg(feature = "rand")]
     pub fn sample_soft_with_rng(&self, logits: &[f64], rng: &mut impl Rng) -> Vec<f64> {
-        let gumbel_noise: Vec<f64> = logits.iter().map(|_| self.gumbel_sample_with_rng(rng)).collect();
+        let gumbel_noise: Vec<f64> = logits
+            .iter()
+            .map(|_| self.gumbel_sample_with_rng(rng))
+            .collect();
 
-        let max_logit = logits.iter().zip(&gumbel_noise)
+        let max_logit = logits
+            .iter()
+            .zip(&gumbel_noise)
             .map(|(&l, &g)| l + g)
             .fold(f64::NEG_INFINITY, f64::max);
 
-        let exp_logits: Vec<f64> = logits.iter().zip(&gumbel_noise)
+        let exp_logits: Vec<f64> = logits
+            .iter()
+            .zip(&gumbel_noise)
             .map(|(&l, &g)| ((l + g - max_logit) / self.temperature).exp())
             .collect();
 
@@ -812,10 +815,10 @@ impl GumbelSoftmaxSampler {
 pub trait EdgeEditPolicy: Send + Sync {
     /// 决定是否添加边
     fn should_add_edge(&self, gradient: f64, current_prob: f64) -> bool;
-    
+
     /// 决定是否删除边
     fn should_remove_edge(&self, gradient: f64, current_prob: f64) -> bool;
-    
+
     /// 计算新的边概率
     fn update_probability(&self, current_prob: f64, gradient: f64, learning_rate: f64) -> f64;
 }
@@ -904,13 +907,13 @@ impl GradientRecorder {
     }
 
     /// 应用经典动量
-    /// 
+    ///
     /// 使用经典动量公式：v_t = μ * v_{t-1} + g_t
     /// 其中：
     /// - v_t: t 时刻的速度（累积梯度）
     /// - μ: 动量系数 (0.9 常见)
     /// - g_t: t 时刻的原始梯度
-    /// 
+    ///
     /// 这与指数移动平均 (EMA) 不同：
     /// - EMA: g_ema = μ * g_ema + (1-μ) * g_t （会缩小梯度）
     /// - 经典动量：v_t = μ * v_{t-1} + g_t （保持梯度量级）
@@ -918,7 +921,11 @@ impl GradientRecorder {
         let mut momentum_gradients = HashMap::new();
 
         for ((src, dst), &grad) in &self.edge_gradients {
-            let last_velocity = self.edge_velocities.get(&(*src, *dst)).copied().unwrap_or(0.0);
+            let last_velocity = self
+                .edge_velocities
+                .get(&(*src, *dst))
+                .copied()
+                .unwrap_or(0.0);
             // 经典动量公式：v_t = μ * v_{t-1} + g_t
             let new_velocity = self.momentum * last_velocity + grad;
             self.edge_velocities.insert((*src, *dst), new_velocity);
@@ -980,7 +987,7 @@ impl<T: Clone + Default> GraphTransformer<T> {
                         gradient,
                         graph.config.edge_learning_rate,
                     );
-                    
+
                     let after = new_prob;
                     edge.probability = new_prob;
                     edge.exists = new_prob > 0.5;
@@ -999,7 +1006,7 @@ impl<T: Clone + Default> GraphTransformer<T> {
                         gradient,
                         graph.config.edge_learning_rate,
                     );
-                    
+
                     let after = new_prob;
                     edge.probability = new_prob;
                     edge.exists = new_prob > 0.5;
@@ -1018,7 +1025,7 @@ impl<T: Clone + Default> GraphTransformer<T> {
                         gradient,
                         graph.config.edge_learning_rate,
                     );
-                    
+
                     let after = new_prob;
                     edge.probability = new_prob;
                     edge.exists = new_prob > 0.5;
@@ -1051,12 +1058,12 @@ mod tests {
     #[test]
     fn test_differentiable_edge() {
         let mut edge = DifferentiableEdge::new(0, 1, 0.5);
-        
+
         assert_eq!(edge.src, 0);
         assert_eq!(edge.dst, 1);
         assert!((edge.logits - 0.0).abs() < 1e-6); // log(0.5/0.5) = 0
         assert!((edge.probability - 0.5).abs() < 1e-6);
-        
+
         // 更新 logits
         edge.update_logits(0.1, 0.01);
         assert!(edge.logits > 0.0);
@@ -1065,20 +1072,20 @@ mod tests {
     #[test]
     fn test_differentiable_graph() {
         let mut graph = DifferentiableGraph::<Vec<f64>>::new(4);
-        
+
         // 添加边
         graph.add_learnable_edge(0, 1, 0.5);
         graph.add_learnable_edge(1, 2, 0.8);
         graph.add_learnable_edge(2, 3, 0.3);
-        
+
         assert_eq!(graph.num_edges(), 3);
         assert_eq!(graph.num_nodes(), 4);
-        
+
         // 获取概率矩阵
         let prob_matrix = graph.get_probability_matrix();
         assert!((prob_matrix[0][1] - 0.5).abs() < 1e-6);
         assert!((prob_matrix[1][2] - 0.8).abs() < 1e-6);
-        
+
         // 离散化
         graph.discretize();
         // 0.5 概率时 exists=false (因为 0.5 > 0.5 为 false)
@@ -1117,17 +1124,17 @@ mod tests {
     fn test_gumbel_softmax_sampler() {
         let sampler = GumbelSoftmaxSampler::new(1.0);
         let logits = vec![1.0, 2.0, 3.0];
-        
+
         // 软采样
         let soft = sampler.sample_soft(&logits);
         assert_eq!(soft.len(), 3);
         assert!((soft.iter().sum::<f64>() - 1.0).abs() < 1e-5); // 和为 1
-        
+
         // 硬采样
         let hard = sampler.sample_hard(&logits);
         assert_eq!(hard.len(), 3);
         assert_eq!(hard.iter().filter(|&&x| x > 0.5).count(), 1); // 只有一个为 1
-        
+
         // STE 采样
         let (hard_ste, soft_ste) = sampler.sample_ste(&logits);
         assert_eq!(hard_ste.len(), 3);
@@ -1137,15 +1144,15 @@ mod tests {
     #[test]
     fn test_threshold_edit_policy() {
         let policy = ThresholdEditPolicy::default();
-        
+
         // 测试添加边决策
         assert!(policy.should_add_edge(0.2, 0.3)); // 梯度>阈值，概率<0.5
         assert!(!policy.should_add_edge(0.05, 0.3)); // 梯度<阈值
-        
+
         // 测试删除边决策
         assert!(policy.should_remove_edge(-0.2, 0.7)); // 梯度<阈值，概率>0.5
         assert!(!policy.should_remove_edge(-0.05, 0.7)); // 梯度>阈值
-        
+
         // 测试概率更新
         let new_prob = policy.update_probability(0.5, 0.1, 0.01);
         assert!((new_prob - 0.501).abs() < 1e-6);
@@ -1211,7 +1218,7 @@ mod tests {
         loss_gradients.insert((0, 1), 1.0);
 
         let gradients = graph.compute_structure_gradients(&loss_gradients);
-        
+
         // 梯度应该是有限的
         for (_, &grad) in &gradients {
             assert!(grad.is_finite(), "Gradient should be finite, got {}", grad);
@@ -1228,7 +1235,7 @@ mod tests {
         loss_gradients.insert((0, 1), 1.0);
 
         let gradients = graph.compute_structure_gradients(&loss_gradients);
-        
+
         // 梯度应该是有限的
         for (_, &grad) in &gradients {
             assert!(grad.is_finite(), "Gradient should be finite, got {}", grad);
@@ -1245,7 +1252,7 @@ mod tests {
         loss_gradients.insert((0, 1), 1.0);
 
         let gradients = graph.compute_structure_gradients(&loss_gradients);
-        
+
         // 梯度应该是有限的
         for (_, &grad) in &gradients {
             assert!(grad.is_finite(), "Gradient should be finite, got {}", grad);
@@ -1259,7 +1266,7 @@ mod tests {
             4,
             GradientConfig::new(1.0, true, 0.01, 0.01).with_smoothness(0.1),
         );
-        
+
         // 添加共享源节点的边
         graph.add_learnable_edge(0, 1, 0.8);
         graph.add_learnable_edge(0, 2, 0.2);
@@ -1287,7 +1294,7 @@ mod tests {
             3,
             GradientConfig::new(1.0, true, 0.01, 0.01).with_sparsity(0.1),
         );
-        
+
         graph.add_learnable_edge(0, 1, 0.5);
         graph.add_learnable_edge(1, 2, 0.5);
 
@@ -1321,7 +1328,7 @@ mod tests {
         graph.discretize();
 
         let corrections = graph.get_ste_corrections();
-        
+
         // (0, 1): hard=1, soft=0.6, correction=0.4
         assert!((corrections.get(&(0, 1)).unwrap() - 0.4).abs() < 0.01);
         // (1, 2): hard=0, soft=0.4, correction=-0.4
@@ -1358,7 +1365,7 @@ mod tests {
     fn test_graph_conversion() {
         // 测试：DifferentiableGraph 与 Graph 的转换
         use crate::graph::traits::{GraphBase, GraphQuery};
-        
+
         let mut diff_graph = DifferentiableGraph::<()>::new(4);
         diff_graph.add_learnable_edge(0, 1, 0.8);
         diff_graph.add_learnable_edge(1, 2, 0.3);
@@ -1377,13 +1384,13 @@ mod tests {
         // 使用 graph.nodes() 获取正确的 NodeIndex
         let nodes: Vec<_> = graph.nodes().collect();
         assert_eq!(nodes.len(), 4);
-        
+
         // nodes 按索引排序，所以 nodes[0] 对应索引 0，等等
         let n0 = nodes[0].index();
         let n1 = nodes[1].index();
         let n2 = nodes[2].index();
         let n3 = nodes[3].index();
-        
+
         // 检查边是否存在
         assert!(graph.has_edge(n0, n1)); // 0.8 > 0.5
         assert!(!graph.has_edge(n1, n2)); // 0.3 < 0.5
@@ -1394,7 +1401,7 @@ mod tests {
     fn test_from_graph() {
         // 测试：从普通 Graph 初始化
         use crate::graph::builders::GraphBuilder;
-        
+
         let graph = GraphBuilder::directed()
             .with_nodes(vec![(0, ()), (1, ()), (2, ()), (3, ())])
             .with_edges(vec![(0, 1, 1.0), (1, 2, 1.0), (2, 3, 1.0)])

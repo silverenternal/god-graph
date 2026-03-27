@@ -1,7 +1,7 @@
 //! 树生成器
 
-use crate::graph::Graph;
 use crate::graph::builders::GraphBuilder;
+use crate::graph::Graph;
 
 /// 生成随机树
 ///
@@ -20,8 +20,7 @@ where
         return Graph::undirected();
     }
 
-    let mut builder = GraphBuilder::undirected()
-        .with_nodes((0..n).map(|_| T::default()));
+    let mut builder = GraphBuilder::undirected().with_nodes((0..n).map(|_| T::default()));
 
     // 简单实现：生成一条路径
     for i in 0..n - 1 {
@@ -37,8 +36,7 @@ where
     T: Clone + Default,
 {
     let n = (1 << height) - 1; // 2^h - 1
-    let mut builder = GraphBuilder::undirected()
-        .with_nodes((0..n).map(|_| T::default()));
+    let mut builder = GraphBuilder::undirected().with_nodes((0..n).map(|_| T::default()));
 
     for i in 0..n {
         let left = 2 * i + 1;

@@ -13,16 +13,16 @@ use crate::tensor::traits::{DType, Device};
 pub trait TensorStorage: Clone + Send + Sync + Debug {
     /// 获取数据类型
     fn dtype(&self) -> DType;
-    
+
     /// 获取设备类型
     fn device(&self) -> Device;
-    
+
     /// 获取字节大小
     fn nbytes(&self) -> usize;
-    
+
     /// 检查是否连续存储
     fn is_contiguous(&self) -> bool;
-    
+
     /// 获取对齐字节数
     fn alignment(&self) -> usize;
 }
@@ -43,12 +43,12 @@ impl NdArrayStorage {
     pub fn new(data: Vec<f64>, dtype: DType) -> Self {
         Self { data, dtype }
     }
-    
+
     /// 获取数据切片
     pub fn data(&self) -> &[f64] {
         &self.data
     }
-    
+
     /// 获取可变数据切片
     pub fn data_mut(&mut self) -> &mut [f64] {
         &mut self.data
@@ -60,19 +60,19 @@ impl TensorStorage for NdArrayStorage {
     fn dtype(&self) -> DType {
         self.dtype
     }
-    
+
     fn device(&self) -> Device {
         Device::Cpu
     }
-    
+
     fn nbytes(&self) -> usize {
         self.data.len() * self.dtype.size_bytes()
     }
-    
+
     fn is_contiguous(&self) -> bool {
         true
     }
-    
+
     fn alignment(&self) -> usize {
         64 // Vec<f64> 默认对齐
     }
@@ -92,7 +92,7 @@ impl DfdxStorage {
     pub fn from_dfdx(tensor: dfdx::tensor::Tensor1D<f64>) -> Self {
         Self { inner: tensor }
     }
-    
+
     /// 获取内部 dfdx tensor
     pub fn inner(&self) -> &dfdx::tensor::Tensor1D<f64> {
         &self.inner
@@ -104,19 +104,19 @@ impl TensorStorage for DfdxStorage {
     fn dtype(&self) -> DType {
         DType::F64
     }
-    
+
     fn device(&self) -> Device {
         Device::Cuda(0) // 默认使用 GPU 0
     }
-    
+
     fn nbytes(&self) -> usize {
         self.inner.shape().0 * 8
     }
-    
+
     fn is_contiguous(&self) -> bool {
         true // dfdx tensors are contiguous
     }
-    
+
     fn alignment(&self) -> usize {
         128 // CUDA memory alignment
     }
@@ -136,7 +136,7 @@ impl CandleStorage {
     pub fn from_candle(tensor: candle_core::Tensor) -> Self {
         Self { inner: tensor }
     }
-    
+
     /// 获取内部 candle tensor
     pub fn inner(&self) -> &candle_core::Tensor {
         &self.inner
@@ -154,7 +154,7 @@ impl TensorStorage for CandleStorage {
             _ => DType::F64,
         }
     }
-    
+
     fn device(&self) -> Device {
         match self.inner.device() {
             candle_core::Device::Cpu => Device::Cpu,
@@ -162,15 +162,15 @@ impl TensorStorage for CandleStorage {
             candle_core::Device::Metal(_) => Device::Cpu, // Treat as CPU for now
         }
     }
-    
+
     fn nbytes(&self) -> usize {
         self.inner.elem_count() * self.dtype().size_bytes()
     }
-    
+
     fn is_contiguous(&self) -> bool {
         self.inner.is_contiguous()
     }
-    
+
     fn alignment(&self) -> usize {
         64
     }
@@ -207,7 +207,7 @@ impl TensorStorage for UnifiedStorage {
             UnifiedStorage::Candle(s) => s.dtype(),
         }
     }
-    
+
     fn device(&self) -> Device {
         match self {
             UnifiedStorage::NdArray(s) => s.device(),
@@ -217,7 +217,7 @@ impl TensorStorage for UnifiedStorage {
             UnifiedStorage::Candle(s) => s.device(),
         }
     }
-    
+
     fn nbytes(&self) -> usize {
         match self {
             UnifiedStorage::NdArray(s) => s.nbytes(),
@@ -227,7 +227,7 @@ impl TensorStorage for UnifiedStorage {
             UnifiedStorage::Candle(s) => s.nbytes(),
         }
     }
-    
+
     fn is_contiguous(&self) -> bool {
         match self {
             UnifiedStorage::NdArray(s) => s.is_contiguous(),
@@ -237,7 +237,7 @@ impl TensorStorage for UnifiedStorage {
             UnifiedStorage::Candle(s) => s.is_contiguous(),
         }
     }
-    
+
     fn alignment(&self) -> usize {
         match self {
             UnifiedStorage::NdArray(s) => s.alignment(),

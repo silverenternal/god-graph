@@ -1,19 +1,17 @@
 //! 中心性算法性能基准测试
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
-use god_gragh::graph::Graph;
-use god_gragh::graph::traits::{GraphOps, GraphQuery};
+use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use god_gragh::algorithms::centrality::{
-    degree_centrality, betweenness_centrality, closeness_centrality, pagerank
+    betweenness_centrality, closeness_centrality, degree_centrality, pagerank,
 };
 #[cfg(feature = "parallel")]
 use god_gragh::algorithms::parallel::{
-    par_pagerank, par_degree_centrality as par_degree_centrality_fn
+    par_degree_centrality as par_degree_centrality_fn, par_pagerank,
 };
 #[cfg(all(feature = "parallel", feature = "simd"))]
-use god_gragh::algorithms::parallel::{
-    par_pagerank_simd, par_degree_centrality_simd
-};
+use god_gragh::algorithms::parallel::{par_degree_centrality_simd, par_pagerank_simd};
+use god_gragh::graph::traits::{GraphOps, GraphQuery};
+use god_gragh::graph::Graph;
 
 /// 创建随机图
 fn create_random_graph(num_nodes: usize, edge_probability: f64, seed: u64) -> Graph<usize, f64> {
@@ -22,10 +20,8 @@ fn create_random_graph(num_nodes: usize, edge_probability: f64, seed: u64) -> Gr
 
     let mut rng = ChaCha8Rng::seed_from_u64(seed);
     let mut graph: Graph<usize, f64> = Graph::with_capacity(num_nodes, num_nodes * num_nodes / 2);
-    
-    let nodes: Vec<_> = (0..num_nodes)
-        .map(|i| graph.add_node(i).unwrap())
-        .collect();
+
+    let nodes: Vec<_> = (0..num_nodes).map(|i| graph.add_node(i).unwrap()).collect();
 
     for i in 0..num_nodes {
         for j in (i + 1)..num_nodes {
@@ -41,10 +37,8 @@ fn create_random_graph(num_nodes: usize, edge_probability: f64, seed: u64) -> Gr
 /// 创建星型图（用于测试度中心性）
 fn create_star_graph(num_nodes: usize) -> Graph<usize, f64> {
     let mut graph: Graph<usize, f64> = Graph::with_capacity(num_nodes, num_nodes - 1);
-    
-    let nodes: Vec<_> = (0..num_nodes)
-        .map(|i| graph.add_node(i).unwrap())
-        .collect();
+
+    let nodes: Vec<_> = (0..num_nodes).map(|i| graph.add_node(i).unwrap()).collect();
 
     // 中心节点连接到所有其他节点
     for i in 1..num_nodes {
@@ -57,10 +51,8 @@ fn create_star_graph(num_nodes: usize) -> Graph<usize, f64> {
 /// 创建线性图（用于测试介数中心性）
 fn create_linear_graph(num_nodes: usize) -> Graph<usize, f64> {
     let mut graph: Graph<usize, f64> = Graph::with_capacity(num_nodes, num_nodes - 1);
-    
-    let nodes: Vec<_> = (0..num_nodes)
-        .map(|i| graph.add_node(i).unwrap())
-        .collect();
+
+    let nodes: Vec<_> = (0..num_nodes).map(|i| graph.add_node(i).unwrap()).collect();
 
     for i in 0..num_nodes.saturating_sub(1) {
         graph.add_edge(nodes[i], nodes[i + 1], 1.0).unwrap();
@@ -203,7 +195,7 @@ fn bench_degree_centrality_star(c: &mut Criterion) {
 
             b.iter(|| {
                 let centrality = degree_centrality(&graph);
-                
+
                 // 验证：中心节点的度中心性应该最高
                 let center_idx = graph.nodes().next().unwrap().index();
                 let center_centrality = centrality.get(&center_idx).copied().unwrap_or(0.0);
@@ -264,41 +256,29 @@ fn bench_pagerank_simd_comparison(c: &mut Criterion) {
 
     let mut group = c.benchmark_group("pagerank_simd_comparison");
     for size in sizes {
-        group.bench_with_input(
-            BenchmarkId::new("serial", size),
-            &size,
-            |b, &size| {
-                let graph = create_random_graph(size, 0.05, 42);
-                b.iter(|| {
-                    let ranks = pagerank(&graph, 0.85, 20);
-                    black_box(ranks);
-                });
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("serial", size), &size, |b, &size| {
+            let graph = create_random_graph(size, 0.05, 42);
+            b.iter(|| {
+                let ranks = pagerank(&graph, 0.85, 20);
+                black_box(ranks);
+            });
+        });
 
-        group.bench_with_input(
-            BenchmarkId::new("parallel", size),
-            &size,
-            |b, &size| {
-                let graph = create_random_graph(size, 0.05, 42);
-                b.iter(|| {
-                    let ranks = par_pagerank(&graph, 0.85, 20);
-                    black_box(ranks);
-                });
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("parallel", size), &size, |b, &size| {
+            let graph = create_random_graph(size, 0.05, 42);
+            b.iter(|| {
+                let ranks = par_pagerank(&graph, 0.85, 20);
+                black_box(ranks);
+            });
+        });
 
-        group.bench_with_input(
-            BenchmarkId::new("simd", size),
-            &size,
-            |b, &size| {
-                let graph = create_random_graph(size, 0.05, 42);
-                b.iter(|| {
-                    let ranks = par_pagerank_simd(&graph, 0.85, 20);
-                    black_box(ranks);
-                });
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("simd", size), &size, |b, &size| {
+            let graph = create_random_graph(size, 0.05, 42);
+            b.iter(|| {
+                let ranks = par_pagerank_simd(&graph, 0.85, 20);
+                black_box(ranks);
+            });
+        });
     }
     group.finish();
 }

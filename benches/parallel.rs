@@ -1,16 +1,16 @@
 //! 并行算法性能基准测试
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
-use god_gragh::graph::Graph;
+use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use god_gragh::algorithms::parallel::{
+    par_connected_components, par_degree_centrality, par_pagerank,
+};
 use god_gragh::graph::traits::GraphOps;
-use god_gragh::algorithms::parallel::{par_pagerank, par_connected_components, par_degree_centrality};
+use god_gragh::graph::Graph;
 
 fn create_large_graph(num_nodes: usize, avg_degree: usize) -> Graph<usize, f64> {
     let mut graph: Graph<usize, f64> = Graph::with_capacity(num_nodes, num_nodes * avg_degree);
-    let nodes: Vec<_> = (0..num_nodes)
-        .map(|i| graph.add_node(i).unwrap())
-        .collect();
-    
+    let nodes: Vec<_> = (0..num_nodes).map(|i| graph.add_node(i).unwrap()).collect();
+
     // 添加随机边（确定性伪随机）
     let mut seed = 42u64;
     for i in 0..num_nodes {
@@ -23,12 +23,15 @@ fn create_large_graph(num_nodes: usize, avg_degree: usize) -> Graph<usize, f64> 
             }
         }
     }
-    
+
     graph
 }
 
 /// 创建稀疏的 disconnected 图（环状连接，避免内存爆炸）
-fn create_disconnected_graph_sparse(num_components: usize, nodes_per_component: usize) -> Graph<usize, f64> {
+fn create_disconnected_graph_sparse(
+    num_components: usize,
+    nodes_per_component: usize,
+) -> Graph<usize, f64> {
     let total_nodes = num_components * nodes_per_component;
     let total_edges = total_nodes * 2; // 每个节点约 2 条边
     let mut graph: Graph<usize, f64> = Graph::with_capacity(total_nodes, total_edges);
@@ -64,7 +67,7 @@ fn bench_par_pagerank(c: &mut Criterion) {
             &(num_nodes, avg_degree),
             |b, &(num_nodes, avg_degree)| {
                 let graph = create_large_graph(num_nodes, avg_degree);
-                
+
                 b.iter(|| {
                     let ranks = par_pagerank(&graph, 0.85, 20);
                     black_box(ranks);
@@ -106,7 +109,7 @@ fn bench_par_degree_centrality(c: &mut Criterion) {
     for size in sizes {
         group.bench_with_input(BenchmarkId::from_parameter(size), &size, |b, &size| {
             let graph = create_large_graph(size, 10);
-            
+
             b.iter(|| {
                 let centrality = par_degree_centrality(&graph);
                 black_box(centrality);

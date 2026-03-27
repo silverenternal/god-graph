@@ -2,8 +2,8 @@
 //!
 //! 包含连通性、二分性、环检测等图属性检查算法
 
-use crate::graph::Graph;
 use crate::graph::traits::{GraphBase, GraphQuery};
+use crate::graph::Graph;
 use crate::node::NodeIndex;
 use std::collections::{HashMap, VecDeque};
 
@@ -116,7 +116,8 @@ pub fn diameter<T>(graph: &Graph<T, impl Clone>) -> usize {
             let node_ni = NodeIndex::new(node_idx, 0);
             for neighbor in graph.neighbors(node_ni) {
                 let neighbor_idx = neighbor.index();
-                if let std::collections::hash_map::Entry::Vacant(e) = distances.entry(neighbor_idx) {
+                if let std::collections::hash_map::Entry::Vacant(e) = distances.entry(neighbor_idx)
+                {
                     e.insert(dist + 1);
                     queue.push_back(neighbor);
                 }
@@ -261,7 +262,7 @@ mod tests {
             .with_edges(vec![(0, 1, 1.0), (1, 2, 1.0), (2, 3, 1.0), (3, 4, 1.0)])
             .build()
             .unwrap();
-        
+
         // 线性图 A->B->C->D->E 的直径是 4
         let diam = diameter(&graph);
         assert_eq!(diam, 4);
@@ -274,7 +275,7 @@ mod tests {
             .with_edges(vec![(0, 1, 1.0), (1, 2, 1.0), (2, 0, 1.0)])
             .build()
             .unwrap();
-        
+
         // 三角形环的长度是 3
         let g = girth(&graph);
         assert_eq!(g, 3);
@@ -287,7 +288,7 @@ mod tests {
             .with_edges(vec![(0, 1, 1.0), (1, 2, 1.0)])
             .build()
             .unwrap();
-        
+
         // 无环图的 girth 是 0
         let g = girth(&graph);
         assert_eq!(g, 0);

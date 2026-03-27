@@ -7,11 +7,11 @@
 //! - Adjacency matrix extraction and reconstruction
 //! - Feature matrix extraction for GNN workflows
 
-use crate::graph::traits::{GraphBase, GraphQuery, GraphOps};
+use crate::graph::traits::{GraphBase, GraphOps, GraphQuery};
 use crate::graph::Graph;
-use crate::tensor::DenseTensor;
 use crate::tensor::error::TensorError;
 use crate::tensor::traits::TensorBase;
+use crate::tensor::DenseTensor;
 
 #[cfg(feature = "tensor-sparse")]
 use crate::tensor::{COOTensor, CSRTensor};
@@ -103,15 +103,15 @@ impl GraphAdjacencyMatrix {
     }
 
     /// Compute normalized adjacency matrix (for GCN)
-    /// 
+    ///
     /// Returns: D^(-1/2) * (A + I) * D^(-1/2)
     /// where D is the degree matrix and I is the identity matrix
     pub fn normalized_with_self_loops(&self) -> Result<Self, TensorError> {
         let n = self.num_nodes;
-        
+
         // Add self-loops
         let mut edges = Vec::new();
-        
+
         // Extract existing edges
         for i in 0..n {
             let start = self.csr.row_offsets()[i];
@@ -173,7 +173,7 @@ where
     }
 
     /// Extract node features as dense tensor
-    /// 
+    ///
     /// Each node's data is treated as a scalar feature
     pub fn extract_node_features_scalar<F>(&self, map_fn: F) -> Result<DenseTensor, TensorError>
     where
@@ -191,9 +191,13 @@ where
     }
 
     /// Extract node features as 2D tensor (nodes x features)
-    /// 
+    ///
     /// Requires node data to be convertible to feature vectors
-    pub fn extract_node_features<F>(&self, map_fn: F, num_features: usize) -> Result<DenseTensor, TensorError>
+    pub fn extract_node_features<F>(
+        &self,
+        map_fn: F,
+        num_features: usize,
+    ) -> Result<DenseTensor, TensorError>
     where
         F: for<'b> Fn(&'b T) -> &'b [f64],
     {
@@ -228,7 +232,7 @@ where
     /// Extract adjacency matrix as sparse tensor
     pub fn extract_adjacency(&self) -> Result<GraphAdjacencyMatrix, TensorError> {
         let mut edges: Vec<(usize, usize)> = Vec::new();
-        
+
         for node_idx in self.graph.nodes() {
             let src = node_idx.index().index();
             for neighbor in self.graph.neighbors(node_idx.index()) {
@@ -245,12 +249,16 @@ where
     }
 
     /// Extract complete graph as tensor representation
-    pub fn extract_all(&self, num_node_features: usize) -> Result<(DenseTensor, GraphAdjacencyMatrix), TensorError>
+    pub fn extract_all(
+        &self,
+        num_node_features: usize,
+    ) -> Result<(DenseTensor, GraphAdjacencyMatrix), TensorError>
     where
         T: AsRef<[f64]> + Clone,
         E: Clone,
     {
-        let node_features = self.extract_node_features(|data: &T| data.as_ref(), num_node_features)?;
+        let node_features =
+            self.extract_node_features(|data: &T| data.as_ref(), num_node_features)?;
         let adjacency = self.extract_adjacency()?;
 
         Ok((node_features, adjacency))
@@ -291,24 +299,23 @@ impl GraphReconstructor {
         // Create nodes
         for i in 0..n {
             let node = node_factory(i);
-            let idx = graph.add_node(node)
-                .map_err(|e| TensorError::SliceError { 
-                    description: format!("Failed to add node: {:?}", e)
-                })?;
+            let idx = graph.add_node(node).map_err(|e| TensorError::SliceError {
+                description: format!("Failed to add node: {:?}", e),
+            })?;
             node_indices.push(idx);
         }
 
         // Create edges from CSR
         let csr = adjacency.as_sparse_tensor();
-        
+
         for src in 0..n {
             let start = csr.row_offsets()[src];
             let end = csr.row_offsets()[src + 1];
-            
+
             for j in start..end {
                 let dst = csr.col_indices()[j];
                 let weight = csr.values().data()[j];
-                
+
                 if let (Some(src_idx), Some(dst_idx)) = (
                     node_indices.get(src).copied(),
                     node_indices.get(dst).copied(),
@@ -336,17 +343,14 @@ impl GraphReconstructor {
         // Convert COO to edge list
         let row_indices = coo.row_indices();
         let col_indices = coo.col_indices();
-        let edges: Vec<(usize, usize)> = row_indices.iter()
+        let edges: Vec<(usize, usize)> = row_indices
+            .iter()
             .zip(col_indices.iter())
             .map(|(&r, &c)| (r, c))
             .collect();
 
         let shape = coo.shape_array();
-        let adjacency = GraphAdjacencyMatrix::from_edge_list(
-            &edges,
-            shape[0],
-            self.directed,
-        )?;
+        let adjacency = GraphAdjacencyMatrix::from_edge_list(&edges, shape[0], self.directed)?;
 
         self.from_adjacency(&adjacency, node_factory, edge_factory)
     }
@@ -388,7 +392,7 @@ where
         } else {
             1
         };
-        
+
         extractor.extract_all(num_features)
     }
 
@@ -411,7 +415,7 @@ where
 }
 
 /// Batch multiple graphs into a single tensor representation
-/// 
+///
 /// Creates a batched tensor with shape [batch_size * max_nodes, num_features]
 /// and a batch adjacency matrix with appropriate offsets
 pub struct GraphBatch {
@@ -425,13 +429,15 @@ impl GraphBatch {
         T: AsRef<[f64]> + Clone,
         E: Clone,
     {
-        let mut batch = Self { graphs: Vec::with_capacity(graphs.len()) };
-        
+        let mut batch = Self {
+            graphs: Vec::with_capacity(graphs.len()),
+        };
+
         for graph in graphs {
             let (features, adjacency) = graph.to_tensor_representation()?;
             batch.graphs.push((features, adjacency));
         }
-        
+
         Ok(batch)
     }
 
@@ -442,12 +448,16 @@ impl GraphBatch {
         }
 
         // Find max nodes and features
-        let max_nodes = self.graphs.iter()
+        let max_nodes = self
+            .graphs
+            .iter()
             .map(|(_, adj)| adj.num_nodes)
             .max()
             .unwrap_or(0);
-        
-        let num_features = self.graphs.iter()
+
+        let num_features = self
+            .graphs
+            .iter()
             .map(|(feat, _)| feat.shape().get(1).copied().unwrap_or(1))
             .max()
             .unwrap_or(1);
@@ -503,8 +513,12 @@ impl GraphBatch {
         GraphAdjacencyMatrix::from_edge_list(
             &all_edges,
             total_nodes,
-            self.graphs.first().map(|(_, adj)| adj.is_directed).unwrap_or(false),
-        ).unwrap()
+            self.graphs
+                .first()
+                .map(|(_, adj)| adj.is_directed)
+                .unwrap_or(false),
+        )
+        .unwrap()
     }
 
     /// Get number of graphs in batch
@@ -532,7 +546,7 @@ mod tests {
     fn test_adjacency_matrix_creation() {
         let edges = vec![(0, 1), (1, 2), (2, 0)];
         let adj = GraphAdjacencyMatrix::from_edge_list(&edges, 3, true).unwrap();
-        
+
         assert_eq!(adj.num_nodes, 3);
         assert_eq!(adj.num_edges, 3);
         assert!(adj.is_directed);
@@ -541,17 +555,17 @@ mod tests {
     #[test]
     fn test_graph_to_tensor_conversion() {
         let mut graph = Graph::<Vec<f64>, f64>::directed();
-        
+
         let n0 = graph.add_node(vec![1.0, 0.0]).unwrap();
         let n1 = graph.add_node(vec![0.0, 1.0]).unwrap();
         let n2 = graph.add_node(vec![1.0, 1.0]).unwrap();
-        
+
         let _ = graph.add_edge(n0, n1, 1.0);
         let _ = graph.add_edge(n1, n2, 1.0);
         let _ = graph.add_edge(n2, n0, 1.0);
 
         let (features, adjacency) = graph.to_tensor_representation().unwrap();
-        
+
         assert_eq!(features.shape(), &[3, 2]);
         assert_eq!(adjacency.num_nodes, 3);
         assert_eq!(adjacency.num_edges, 3);
@@ -560,16 +574,18 @@ mod tests {
     #[test]
     fn test_feature_extractor() {
         let mut graph = Graph::<String, f64>::directed();
-        
+
         let n0 = graph.add_node("node0".to_string()).unwrap();
         let n1 = graph.add_node("node1".to_string()).unwrap();
         let _ = graph.add_edge(n0, n1, 1.0);
 
         let extractor = graph.feature_extractor();
-        
+
         // Extract scalar features (string length)
-        let features = extractor.extract_node_features_scalar(|s| s.len() as f64).unwrap();
-        
+        let features = extractor
+            .extract_node_features_scalar(|s| s.len() as f64)
+            .unwrap();
+
         assert_eq!(features.shape(), &[2, 1]);
     }
 
@@ -581,11 +597,7 @@ mod tests {
         let reconstructor = GraphReconstructor::new(true);
 
         let graph: Graph<usize, f64> = reconstructor
-            .from_adjacency(
-                &adj,
-                |i| i,
-                |_src, _dst, w| w,
-            )
+            .from_adjacency(&adj, |i| i, |_src, _dst, w| w)
             .unwrap();
 
         assert_eq!(graph.node_count(), 3);
@@ -596,9 +608,9 @@ mod tests {
     fn test_normalized_adjacency() {
         let edges = vec![(0, 1), (1, 0), (1, 2), (2, 1)];
         let adj = GraphAdjacencyMatrix::from_edge_list(&edges, 3, true).unwrap();
-        
+
         let normalized = adj.normalized_with_self_loops().unwrap();
-        
+
         // Should have self-loops added
         assert!(normalized.num_edges > adj.num_edges);
     }
@@ -616,7 +628,7 @@ mod tests {
         let _ = graph2.add_edge(n0, n1, 1.0);
 
         let batch = GraphBatch::new(&[graph1, graph2]).unwrap();
-        
+
         assert_eq!(batch.len(), 2);
         assert!(!batch.is_empty());
     }

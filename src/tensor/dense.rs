@@ -7,8 +7,8 @@ use core::fmt;
 #[cfg(feature = "tensor")]
 use ndarray::Array2;
 
-use crate::tensor::traits::{TensorBase, TensorOps, DType, Device};
 use crate::tensor::error::TensorError;
+use crate::tensor::traits::{DType, Device, TensorBase, TensorOps};
 
 /// 密集张量：N 维数组的高性能实现
 ///
@@ -33,17 +33,17 @@ impl DenseTensor {
     pub fn nbytes(&self) -> usize {
         self.data.len() * self.dtype.size_bytes()
     }
-    
+
     /// 检查是否连续存储
     pub fn is_contiguous(&self) -> bool {
         self.is_c_contiguous()
     }
-    
+
     /// 获取对齐字节数
     pub fn alignment(&self) -> usize {
         64 // Vec<f64> 默认对齐，可以优化为实际对齐
     }
-    
+
     /// 创建新的密集张量
     ///
     /// # Arguments
@@ -315,7 +315,12 @@ impl TensorBase for DenseTensor {
             }
 
             let values_tensor = DenseTensor::new(values.clone(), vec![values.len()]);
-            let csr = crate::tensor::sparse::CSRTensor::new(row_offsets, col_indices, values_tensor, [self.shape[0], self.shape[1]]);
+            let csr = crate::tensor::sparse::CSRTensor::new(
+                row_offsets,
+                col_indices,
+                values_tensor,
+                [self.shape[0], self.shape[1]],
+            );
             Some(crate::tensor::sparse::SparseTensor::CSR(csr))
         } else {
             None
@@ -407,11 +412,9 @@ impl TensorOps for DenseTensor {
             other.ndim()
         );
         assert_eq!(
-            self.shape[1],
-            other.shape[0],
+            self.shape[1], other.shape[0],
             "Shape mismatch for matmul: {:?} x {:?}",
-            self.shape,
-            other.shape
+            self.shape, other.shape
         );
 
         let m = self.shape[0];
@@ -457,11 +460,7 @@ impl TensorOps for DenseTensor {
             let default_axes: Vec<usize> = (0..self.ndim()).rev().collect();
             let axes = axes.unwrap_or(&default_axes);
 
-            assert_eq!(
-                axes.len(),
-                self.ndim(),
-                "Axes length must match ndim"
-            );
+            assert_eq!(axes.len(), self.ndim(), "Axes length must match ndim");
 
             let new_shape: Vec<usize> = axes.iter().map(|&a| self.shape[a]).collect();
             let mut result = vec![0.0; self.numel()];
@@ -576,16 +575,20 @@ impl TensorOps for DenseTensor {
     }
 
     fn slice(&self, axes: &[usize], ranges: &[core::ops::Range<usize>]) -> Self {
-        assert_eq!(
-            axes.len(),
-            ranges.len(),
-            "Axes and ranges length mismatch"
-        );
+        assert_eq!(axes.len(), ranges.len(), "Axes and ranges length mismatch");
 
         // 简化实现：仅支持 2D 切片
         if self.ndim() == 2 && axes.len() == 2 {
-            let row_range = if axes[0] == 0 { ranges[0].clone() } else { ranges[1].clone() };
-            let col_range = if axes[1] == 1 { ranges[1].clone() } else { ranges[0].clone() };
+            let row_range = if axes[0] == 0 {
+                ranges[0].clone()
+            } else {
+                ranges[1].clone()
+            };
+            let col_range = if axes[1] == 1 {
+                ranges[1].clone()
+            } else {
+                ranges[0].clone()
+            };
 
             let new_rows = row_range.len();
             let new_cols = col_range.len();
@@ -650,10 +653,7 @@ impl TensorOps for DenseTensor {
     }
 
     fn max(&self) -> f64 {
-        self.data
-            .iter()
-            .cloned()
-            .fold(f64::NEG_INFINITY, f64::max)
+        self.data.iter().cloned().fold(f64::NEG_INFINITY, f64::max)
     }
 
     fn min(&self) -> f64 {

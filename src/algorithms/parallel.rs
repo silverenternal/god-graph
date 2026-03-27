@@ -22,19 +22,16 @@ use std::sync::Arc;
 use crossbeam_queue::SegQueue;
 use rayon::prelude::*;
 
-use crate::graph::Graph;
-use crate::graph::traits::{GraphBase, GraphQuery};
-use crate::node::NodeIndex;
 use crate::errors::GraphResult;
+use crate::graph::traits::{GraphBase, GraphQuery};
+use crate::graph::Graph;
+use crate::node::NodeIndex;
 
 /// 并行 DFS（子树并行，无锁设计）
 ///
 /// 使用原子操作标记访问状态，避免 Mutex 锁竞争
-pub fn par_dfs<T, F>(
-    graph: &Graph<T, impl Clone + Send + Sync>,
-    start: NodeIndex,
-    visitor: F,
-) where
+pub fn par_dfs<T, F>(graph: &Graph<T, impl Clone + Send + Sync>, start: NodeIndex, visitor: F)
+where
     T: Clone + Send + Sync,
     F: Fn(NodeIndex) -> bool + Send + Sync,
 {
@@ -241,7 +238,7 @@ where
     T: Clone + Send + Sync,
 {
     use wide::f64x4;
-    
+
     let n = graph.node_count();
     if n == 0 {
         return HashMap::new();
@@ -288,7 +285,7 @@ where
 
                 let neighbors = &incoming[i];
                 let len = neighbors.len();
-                
+
                 // SIMD 批量处理：每 4 个邻居一组
                 let mut j = 0;
                 while j + 4 <= len {
@@ -299,7 +296,7 @@ where
                         neighbors[j + 2],
                         neighbors[j + 3],
                     ];
-                    
+
                     // 加载 4 个邻居的分数
                     let scores_array = [
                         scores[neighbor_indices[0]],
@@ -313,16 +310,24 @@ where
                     let inv_degrees = [
                         if out_degrees[neighbor_indices[0]] > 0 {
                             1.0 / out_degrees[neighbor_indices[0]] as f64
-                        } else { 0.0 },
+                        } else {
+                            0.0
+                        },
                         if out_degrees[neighbor_indices[1]] > 0 {
                             1.0 / out_degrees[neighbor_indices[1]] as f64
-                        } else { 0.0 },
+                        } else {
+                            0.0
+                        },
                         if out_degrees[neighbor_indices[2]] > 0 {
                             1.0 / out_degrees[neighbor_indices[2]] as f64
-                        } else { 0.0 },
+                        } else {
+                            0.0
+                        },
                         if out_degrees[neighbor_indices[3]] > 0 {
                             1.0 / out_degrees[neighbor_indices[3]] as f64
-                        } else { 0.0 },
+                        } else {
+                            0.0
+                        },
                     ];
                     let inv_degrees_simd = f64x4::new(inv_degrees);
 
@@ -332,10 +337,10 @@ where
                     // 水平求和：将 4 个贡献值相加
                     let sum: [f64; 4] = contributions.into();
                     rank += sum[0] + sum[1] + sum[2] + sum[3];
-                    
+
                     j += 4;
                 }
-                
+
                 // 处理剩余不足 4 个的邻居
                 while j < len {
                     let neighbor_pos = neighbors[j];
@@ -399,21 +404,15 @@ where
         .collect();
 
     // 转换回 HashMap
-    node_indices
-        .into_iter()
-        .zip(centralities)
-        .collect()
+    node_indices.into_iter().zip(centralities).collect()
 }
 
 /// 并行 BFS（分层并行，无锁设计）
 ///
 /// 每层节点并行处理，层间同步
 /// 使用线程局部收集 + 合并策略避免 Mutex 锁竞争
-pub fn par_bfs<T, F>(
-    graph: &Graph<T, impl Clone + Send + Sync>,
-    start: NodeIndex,
-    visitor: F,
-) where
+pub fn par_bfs<T, F>(graph: &Graph<T, impl Clone + Send + Sync>, start: NodeIndex, visitor: F)
+where
     T: Clone + Send + Sync,
     F: Fn(NodeIndex, usize) -> bool + Send + Sync,
 {
@@ -466,12 +465,12 @@ pub fn par_bfs<T, F>(
 }
 
 /// 并行连通分量（基于并查集）
-/// 
+///
 /// 注意：由于并行并查集的实现复杂性，这里使用简化版本：
 /// 1. 边的处理是并行的
 /// 2. 但 union 操作使用原子操作保证安全性
 /// 3. find 操作使用迭代而非递归避免栈溢出
-/// 
+///
 /// 注意：此实现在多核上可能不会带来显著加速，因为并查集本质上是串行的
 pub fn par_connected_components<T>(
     graph: &Graph<T, impl Clone + Send + Sync>,
@@ -506,11 +505,7 @@ where
     }
 
     // 合并两个集合（使用原子 CAS 操作）
-    fn union_atomic(
-        parent: &[AtomicUsize],
-        i: usize,
-        j: usize,
-    ) {
+    fn union_atomic(parent: &[AtomicUsize], i: usize, j: usize) {
         let root_i = find(parent, i);
         let root_j = find(parent, j);
 
@@ -530,7 +525,7 @@ where
             old_root,
             new_root,
             Ordering::SeqCst,
-            Ordering::Relaxed
+            Ordering::Relaxed,
         );
     }
 
@@ -814,9 +809,11 @@ mod tests {
         let graph = GraphBuilder::directed()
             .with_nodes(vec!["A", "B", "C", "D", "E", "F"])
             .with_edges(vec![
-                (0, 1, 1.0), (0, 2, 1.0), (0, 3, 1.0),  // A -> B, C, D
-                (1, 4, 1.0),                              // B -> E
-                (2, 5, 1.0),                              // C -> F
+                (0, 1, 1.0),
+                (0, 2, 1.0),
+                (0, 3, 1.0), // A -> B, C, D
+                (1, 4, 1.0), // B -> E
+                (2, 5, 1.0), // C -> F
             ])
             .build()
             .unwrap();
@@ -872,7 +869,8 @@ mod tests {
     #[test]
     fn test_par_dijkstra_empty_graph() {
         let graph: Graph<i32, f64> = GraphBuilder::directed().build().unwrap();
-        let distances = par_dijkstra(&graph, NodeIndex::new(0, 1), |_, _, _: &f64| 1.0, 1.0).unwrap();
+        let distances =
+            par_dijkstra(&graph, NodeIndex::new(0, 1), |_, _, _: &f64| 1.0, 1.0).unwrap();
         assert!(distances.is_empty());
     }
 }

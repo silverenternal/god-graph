@@ -103,10 +103,18 @@ impl fmt::Display for TensorError {
                 write!(f, "Shape mismatch: expected {:?}, got {:?}", expected, got)
             }
             TensorError::IndexOutOfBounds { index, dim, size } => {
-                write!(f, "Index {} out of bounds for dimension {} (size {})", index, dim, size)
+                write!(
+                    f,
+                    "Index {} out of bounds for dimension {} (size {})",
+                    index, dim, size
+                )
             }
             TensorError::DimensionMismatch { expected, got } => {
-                write!(f, "Dimension mismatch: expected {}D, got {}D", expected, got)
+                write!(
+                    f,
+                    "Dimension mismatch: expected {}D, got {}D",
+                    expected, got
+                )
             }
             TensorError::UnsupportedDType { dtype, operation } => {
                 write!(f, "Unsupported dtype {} for operation {}", dtype, operation)
@@ -120,8 +128,16 @@ impl fmt::Display for TensorError {
             TensorError::BlasError { code, description } => {
                 write!(f, "BLAS error (code {}): {}", code, description)
             }
-            TensorError::SparseFormatError { from, to, description } => {
-                write!(f, "Sparse format error converting {} to {}: {}", from, to, description)
+            TensorError::SparseFormatError {
+                from,
+                to,
+                description,
+            } => {
+                write!(
+                    f,
+                    "Sparse format error converting {} to {}: {}",
+                    from, to, description
+                )
             }
             TensorError::BroadcastError { shape1, shape2 } => {
                 write!(f, "Cannot broadcast shapes {:?} and {:?}", shape1, shape2)
@@ -129,8 +145,16 @@ impl fmt::Display for TensorError {
             TensorError::SliceError { description } => {
                 write!(f, "Slice error: {}", description)
             }
-            TensorError::DeviceTransferError { from, to, description } => {
-                write!(f, "Device transfer error from {} to {}: {}", from, to, description)
+            TensorError::DeviceTransferError {
+                from,
+                to,
+                description,
+            } => {
+                write!(
+                    f,
+                    "Device transfer error from {} to {}: {}",
+                    from, to, description
+                )
             }
         }
     }

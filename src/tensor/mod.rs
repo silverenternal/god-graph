@@ -67,19 +67,19 @@ pub mod differentiable;
 
 // 重新导出核心类型
 #[cfg(feature = "tensor")]
-pub use traits::{TensorBase, TensorOps, DType, Device, SparseTensorOps, COOView};
+pub use traits::{COOView, DType, Device, SparseTensorOps, TensorBase, TensorOps};
 
 #[cfg(feature = "tensor")]
 pub use dense::DenseTensor;
 
 #[cfg(feature = "tensor-sparse")]
-pub use sparse::{SparseTensor, COOTensor, CSRTensor};
+pub use sparse::{COOTensor, CSRTensor, SparseTensor};
 
 #[cfg(feature = "tensor")]
 pub use error::TensorError;
 
 #[cfg(feature = "tensor")]
-pub use types::{TensorNode, TensorEdge, NodeFeatures, EdgeFeatures};
+pub use types::{EdgeFeatures, NodeFeatures, TensorEdge, TensorNode};
 
 #[cfg(feature = "tensor-sparse")]
 pub use types::AdjacencyMatrix;
@@ -88,45 +88,28 @@ pub use types::AdjacencyMatrix;
 pub use types::DegreeMatrix;
 
 #[cfg(feature = "tensor")]
-pub use backend::{TensorStorage, NdArrayStorage, UnifiedStorage};
+pub use backend::{NdArrayStorage, TensorStorage, UnifiedStorage};
 
 #[cfg(feature = "tensor-pool")]
-pub use pool::{TensorPool, PoolConfig, PoolStats, PooledTensor};
+pub use pool::{PoolConfig, PoolStats, PooledTensor, TensorPool};
 
 #[cfg(feature = "tensor-autograd")]
 pub use pool::GradientCheckpoint;
 
 #[cfg(feature = "tensor-gnn")]
 pub use gnn::{
-    MessageFunction, Aggregator, UpdateFunction,
-    SumAggregator, MeanAggregator, MaxAggregator,
-    IdentityMessage, LinearMessage,
-    MessagePassingLayer,
-    GCNConv, GATConv, GraphSAGE,
+    Aggregator, GATConv, GCNConv, GraphSAGE, IdentityMessage, LinearMessage, MaxAggregator,
+    MeanAggregator, MessageFunction, MessagePassingLayer, SumAggregator, UpdateFunction,
 };
 
 #[cfg(feature = "tensor")]
 pub use graph_tensor::{
-    GraphAdjacencyMatrix,
-    GraphFeatureExtractor,
-    GraphReconstructor,
-    GraphTensorExt,
-    GraphBatch,
+    GraphAdjacencyMatrix, GraphBatch, GraphFeatureExtractor, GraphReconstructor, GraphTensorExt,
 };
 
 #[cfg(feature = "tensor")]
 pub use differentiable::{
-    DifferentiableGraph,
-    DifferentiableEdge,
-    DifferentiableNode,
-    GradientConfig,
-    GumbelSoftmaxSampler,
-    EdgeEditPolicy,
-    ThresholdEditPolicy,
-    GradientRecorder,
-    GraphTransformer,
-    StructureEdit,
-    EditOperation,
-    EdgeEditOp,
-    NodeEditOp,
+    DifferentiableEdge, DifferentiableGraph, DifferentiableNode, EdgeEditOp, EdgeEditPolicy,
+    EditOperation, GradientConfig, GradientRecorder, GraphTransformer, GumbelSoftmaxSampler,
+    NodeEditOp, StructureEdit, ThresholdEditPolicy,
 };

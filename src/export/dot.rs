@@ -16,8 +16,8 @@
 //! println!("{}", dot);
 //! ```
 
-use crate::graph::Graph;
 use crate::graph::traits::GraphQuery;
+use crate::graph::Graph;
 use std::fmt::Write;
 
 /// DOT 格式导出选项
@@ -114,7 +114,7 @@ where
     E: std::fmt::Display,
 {
     let mut output = String::new();
-    
+
     // 图声明：digraph（有向）或 graph（无向）
     let graph_type = "digraph";
     let name = options.graph_name.as_deref().unwrap_or("G");
@@ -154,7 +154,7 @@ where
     // 导出节点
     for node in graph.nodes() {
         let idx = node.index();
-        
+
         // 构建节点标签
         let label = if options.show_node_labels && options.show_node_indices {
             format!("{}: {}", idx, node.data())
@@ -179,7 +179,7 @@ where
     for edge in graph.edges() {
         let source = edge.source().index();
         let target = edge.target().index();
-        
+
         let edge_def = if options.show_edge_labels {
             format!(" [label=\"{}\"]", escape_dot(&format!("{}", edge.data())))
         } else {
@@ -202,15 +202,26 @@ where
     E: std::fmt::Display,
 {
     let mut output = String::new();
-    
+
     writeln!(&mut output, "graph G {{").unwrap();
-    writeln!(&mut output, "  node [shape=circle, style=filled, fillcolor=lightblue];").unwrap();
+    writeln!(
+        &mut output,
+        "  node [shape=circle, style=filled, fillcolor=lightblue];"
+    )
+    .unwrap();
     writeln!(&mut output).unwrap();
 
     // 导出节点
     for node in graph.nodes() {
         let idx = node.index();
-        writeln!(&mut output, "  {} [label=\"{}: {}\"];", idx, idx, node.data()).unwrap();
+        writeln!(
+            &mut output,
+            "  {} [label=\"{}: {}\"];",
+            idx,
+            idx,
+            node.data()
+        )
+        .unwrap();
     }
 
     writeln!(&mut output).unwrap();
@@ -219,7 +230,14 @@ where
     for edge in graph.edges() {
         let source = edge.source().index();
         let target = edge.target().index();
-        writeln!(&mut output, "  {} -- {} [label=\"{}\"];", source, target, edge.data()).unwrap();
+        writeln!(
+            &mut output,
+            "  {} -- {} [label=\"{}\"];",
+            source,
+            target,
+            edge.data()
+        )
+        .unwrap();
     }
 
     writeln!(&mut output, "}}").unwrap();
@@ -275,10 +293,8 @@ mod tests {
             .build()
             .unwrap();
 
-        let options = DotOptions::new()
-            .with_name("MyGraph")
-            .hide_edge_labels();
-        
+        let options = DotOptions::new().with_name("MyGraph").hide_edge_labels();
+
         let dot = to_dot_with_options(&graph, &options);
         assert!(dot.contains("digraph MyGraph"));
         // 边标签已隐藏，但节点标签仍然存在
@@ -296,9 +312,7 @@ mod tests {
 
     #[test]
     fn test_dot_empty_graph() {
-        let graph = GraphBuilder::<String, f64>::directed()
-            .build()
-            .unwrap();
+        let graph = GraphBuilder::<String, f64>::directed().build().unwrap();
 
         let dot = to_dot(&graph);
         assert!(dot.contains("digraph"));

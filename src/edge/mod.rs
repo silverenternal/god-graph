@@ -8,7 +8,7 @@ use core::hash::{Hash, Hasher};
 use crate::node::NodeIndex;
 
 #[cfg(feature = "serde")]
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 /// 边索引：稳定引用边的句柄
 ///
@@ -157,10 +157,10 @@ where
 /// 使用 64 字节对齐，避免 false sharing
 #[derive(Debug)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "serde", serde(bound(
-    serialize = "E: Serialize",
-    deserialize = "E: Deserialize<'de>"
-)))]
+#[cfg_attr(
+    feature = "serde",
+    serde(bound(serialize = "E: Serialize", deserialize = "E: Deserialize<'de>"))
+)]
 #[repr(align(64))]
 pub(crate) struct EdgeStorage<E> {
     /// 源节点索引
@@ -259,9 +259,9 @@ mod tests {
         let source = NodeIndex::new(0, 1);
         let target = NodeIndex::new(1, 1);
         let edge_idx = EdgeIndex::new(0, 1);
-        
+
         let edge_ref = EdgeRef::new(edge_idx, source, target, &42.0);
-        
+
         assert_eq!(edge_ref.index(), edge_idx);
         assert_eq!(edge_ref.source(), source);
         assert_eq!(edge_ref.target(), target);

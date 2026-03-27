@@ -3,8 +3,8 @@
 //! 包含最大匹配算法：Hopcroft-Karp（二分图）、Blossom（一般图）
 
 use crate::edge::EdgeIndex;
-use crate::graph::Graph;
 use crate::graph::traits::{GraphBase, GraphQuery};
+use crate::graph::Graph;
 use std::collections::VecDeque;
 
 /// Hopcroft-Karp 二分图最大匹配算法
@@ -117,9 +117,7 @@ pub fn hopcroft_karp<T>(
     ) -> bool {
         for &v in &adj[u] {
             if let Some(next) = pair_right.get(v).and_then(|&x| x) {
-                if dist[next] == dist[u] + 1
-                    && dfs(next, adj, pair_left, pair_right, dist)
-                {
+                if dist[next] == dist[u] + 1 && dfs(next, adj, pair_left, pair_right, dist) {
                     pair_left[u] = Some(v);
                     pair_right[v] = Some(u);
                     return true;
@@ -388,11 +386,7 @@ mod tests {
         // 路径图：4 个节点的线性链
         let graph: Graph<i32, f64> = GraphBuilder::undirected()
             .with_nodes(vec![1, 2, 3, 4])
-            .with_edges(vec![
-                (0, 1, 1.0),
-                (1, 2, 1.0),
-                (2, 3, 1.0),
-            ])
+            .with_edges(vec![(0, 1, 1.0), (1, 2, 1.0), (2, 3, 1.0)])
             .build()
             .unwrap();
 
@@ -406,8 +400,11 @@ mod tests {
         let graph: Graph<i32, f64> = GraphBuilder::undirected()
             .with_nodes(vec![1, 2, 3, 4])
             .with_edges(vec![
-                (0, 1, 1.0), (0, 2, 1.0), (0, 3, 1.0),
-                (1, 2, 1.0), (1, 3, 1.0),
+                (0, 1, 1.0),
+                (0, 2, 1.0),
+                (0, 3, 1.0),
+                (1, 2, 1.0),
+                (1, 3, 1.0),
                 (2, 3, 1.0),
             ])
             .build()

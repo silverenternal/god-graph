@@ -11,8 +11,8 @@
 //!
 //! 对于稠密图（E ≈ V²），可考虑使用邻接矩阵实现（未提供）。
 
-use crate::graph::Graph;
 use crate::graph::traits::{GraphBase, GraphQuery};
+use crate::graph::Graph;
 use crate::node::NodeIndex;
 use std::collections::{HashMap, VecDeque};
 
@@ -156,7 +156,7 @@ where
         while v != source_pos {
             let (u, edge_idx) = parent[v];
             let u = u as usize;
-            
+
             // 更新正向边
             if let Some(neighbors) = adj.get_mut(&u) {
                 if let Some((_target, cap)) = neighbors.get_mut(edge_idx) {
@@ -164,7 +164,9 @@ where
                     let target_val = *_target;
                     // 找到反向边并更新
                     if let Some(reverse_neighbors) = adj.get_mut(&v) {
-                        if let Some((_, rev_cap)) = reverse_neighbors.iter_mut().find(|(t, _)| *t == target_val) {
+                        if let Some((_, rev_cap)) =
+                            reverse_neighbors.iter_mut().find(|(t, _)| *t == target_val)
+                        {
                             *rev_cap += path_flow;
                         }
                     }
@@ -224,7 +226,11 @@ where
                 index_to_pos.get(&tgt.index()),
             ) {
                 let cap = capacity(src, tgt, edge.data());
-                if !residual.get(&u).map(|m| m.contains_key(&v)).unwrap_or(false) {
+                if !residual
+                    .get(&u)
+                    .map(|m| m.contains_key(&v))
+                    .unwrap_or(false)
+                {
                     adj[u].push(v);
                 }
                 residual.entry(u).or_default().insert(v, cap);
@@ -253,7 +259,11 @@ where
         while let Some(u) = queue.pop_front() {
             if let Some(neighbors) = adj.get(u) {
                 for &v in neighbors {
-                    let cap = residual.get(&u).and_then(|m| m.get(&v)).copied().unwrap_or(0.0);
+                    let cap = residual
+                        .get(&u)
+                        .and_then(|m| m.get(&v))
+                        .copied()
+                        .unwrap_or(0.0);
                     if level[v] == -1 && cap > 1e-9 {
                         level[v] = level[u] + 1;
                         if v == sink_pos {
@@ -285,17 +295,13 @@ where
         for i in start..adj[u].len() {
             ptr[u] = i;
             let v = adj[u][i];
-            let cap = residual.get(&u).and_then(|m| m.get(&v)).copied().unwrap_or(0.0);
+            let cap = residual
+                .get(&u)
+                .and_then(|m| m.get(&v))
+                .copied()
+                .unwrap_or(0.0);
             if level[v] == level[u] + 1 && cap > 1e-9 {
-                let pushed = dfs_block(
-                    v,
-                    flow.min(cap),
-                    sink_pos,
-                    adj,
-                    residual,
-                    level,
-                    ptr,
-                );
+                let pushed = dfs_block(v, flow.min(cap), sink_pos, adj, residual, level, ptr);
                 if pushed > 1e-9 {
                     *residual.entry(u).or_default().get_mut(&v).unwrap() -= pushed;
                     *residual.entry(v).or_default().entry(u).or_insert(0.0) += pushed;
@@ -431,8 +437,16 @@ where
     for &v in &adj[source_pos] {
         if let Some(cap) = residual.get(&source_pos).and_then(|m| m.get(&v)).copied() {
             if cap > 1e-9 {
-                *residual.entry(source_pos).or_default().entry(v).or_insert(0.0) = 0.0;
-                *residual.entry(v).or_default().entry(source_pos).or_insert(0.0) = cap;
+                *residual
+                    .entry(source_pos)
+                    .or_default()
+                    .entry(v)
+                    .or_insert(0.0) = 0.0;
+                *residual
+                    .entry(v)
+                    .or_default()
+                    .entry(source_pos)
+                    .or_insert(0.0) = cap;
                 excess[v] = cap;
                 excess[source_pos] -= cap;
             }
@@ -462,7 +476,11 @@ where
         let mut pushed = false;
         if let Some(neighbors) = adj.get(u) {
             for &v in neighbors {
-                let cap = residual.get(&u).and_then(|m| m.get(&v)).copied().unwrap_or(0.0);
+                let cap = residual
+                    .get(&u)
+                    .and_then(|m| m.get(&v))
+                    .copied()
+                    .unwrap_or(0.0);
                 if cap > 1e-9 && height[u] == height[v] + 1 {
                     let delta = excess[u].min(cap);
                     *residual.entry(u).or_default().entry(v).or_insert(0.0) -= delta;
@@ -488,7 +506,11 @@ where
             let mut min_height = usize::MAX;
             if let Some(neighbors) = adj.get(u) {
                 for &v in neighbors {
-                    let cap = residual.get(&u).and_then(|m| m.get(&v)).copied().unwrap_or(0.0);
+                    let cap = residual
+                        .get(&u)
+                        .and_then(|m| m.get(&v))
+                        .copied()
+                        .unwrap_or(0.0);
                     if cap > 1e-9 && height[v] < min_height {
                         min_height = height[v];
                     }
@@ -511,7 +533,11 @@ where
     let mut max_flow = 0.0;
     if let Some(neighbors) = adj.get(source_pos) {
         for &v in neighbors {
-            let cap = residual.get(&v).and_then(|m| m.get(&source_pos)).copied().unwrap_or(0.0);
+            let cap = residual
+                .get(&v)
+                .and_then(|m| m.get(&source_pos))
+                .copied()
+                .unwrap_or(0.0);
             if cap > 1e-9 {
                 max_flow += cap;
             }

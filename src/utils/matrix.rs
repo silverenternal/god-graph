@@ -3,8 +3,8 @@
 //! 提供图的矩阵表示和线性代数集成
 //! 需要启用 `matrix` 特性
 
-use crate::graph::Graph;
 use crate::graph::traits::{GraphBase, GraphQuery};
+use crate::graph::Graph;
 use crate::node::NodeIndex;
 use nalgebra::{DMatrix, DVector};
 
@@ -149,9 +149,7 @@ where
     }
 
     // 初始化随机向量
-    let mut v = DVector::from_fn(n, |i, _| {
-        (i as f64 * 0.1).sin()
-    });
+    let mut v = DVector::from_fn(n, |i, _| (i as f64 * 0.1).sin());
     v.normalize_mut();
 
     // 减去与全 1 向量平行的分量（对应零特征值）
@@ -257,9 +255,12 @@ mod tests {
         let graph = GraphBuilder::directed()
             .with_nodes(vec!["A", "B", "C"])
             .with_edges(vec![
-                (0, 1, 1.0), (1, 0, 1.0),  // A-B
-                (1, 2, 1.0), (2, 1, 1.0),  // B-C
-                (2, 0, 1.0), (0, 2, 1.0),  // C-A
+                (0, 1, 1.0),
+                (1, 0, 1.0), // A-B
+                (1, 2, 1.0),
+                (2, 1, 1.0), // B-C
+                (2, 0, 1.0),
+                (0, 2, 1.0), // C-A
             ])
             .build()
             .unwrap();

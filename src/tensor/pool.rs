@@ -45,13 +45,13 @@ impl PoolConfig {
             ..Default::default()
         }
     }
-    
+
     /// 设置预分配
     pub fn with_preallocate(mut self, preallocate: bool) -> Self {
         self.preallocate = preallocate;
         self
     }
-    
+
     /// 设置对齐
     pub fn with_alignment(mut self, alignment: usize) -> Self {
         self.alignment = alignment;
@@ -107,14 +107,14 @@ impl TensorPool {
 
         pool
     }
-    
+
     /// 预分配池容量
     pub fn preallocate(&mut self) {
         for _ in 0..self.config.initial_capacity {
             self.free_list.push(DenseTensor::zeros(vec![1]));
         }
     }
-    
+
     /// 从池中获取张量
     pub fn acquire(&mut self, shape: Vec<usize>) -> PooledTensor<'_> {
         self.stats.total_allocations += 1;
@@ -135,7 +135,7 @@ impl TensorPool {
             if self.stats.current_used > self.stats.peak_used {
                 self.stats.peak_used = self.stats.current_used;
             }
-            
+
             PooledTensor::new(tensor, self)
         } else {
             // 池为空，直接分配
@@ -144,11 +144,11 @@ impl TensorPool {
             if self.stats.current_used > self.stats.peak_used {
                 self.stats.peak_used = self.stats.current_used;
             }
-            
+
             PooledTensor::new(DenseTensor::zeros(shape), self)
         }
     }
-    
+
     /// 回收张量到池中
     fn recycle(&mut self, mut tensor: DenseTensor) {
         if self.free_list.len() < self.config.max_capacity {
@@ -159,22 +159,22 @@ impl TensorPool {
             self.free_list.push(tensor);
         }
         // 否则让 tensor 自然 Drop
-        
+
         self.stats.current_used = self.stats.current_used.saturating_sub(1);
     }
-    
+
     /// 获取统计信息
     pub fn stats(&self) -> &PoolStats {
         &self.stats
     }
-    
+
     /// 清空池
     pub fn clear(&mut self) {
         self.free_list.clear();
         self.allocated.clear();
         self.stats = PoolStats::default();
     }
-    
+
     /// 获取池使用率
     pub fn utilization(&self) -> f64 {
         if self.config.max_capacity == 0 {
@@ -241,17 +241,17 @@ impl<'pool> PooledTensor<'pool> {
             _marker: PhantomData,
         }
     }
-    
+
     /// 获取内部张量引用
     pub fn tensor(&self) -> &DenseTensor {
         &self.tensor
     }
-    
+
     /// 获取内部张量可变引用
     pub fn tensor_mut(&mut self) -> &mut DenseTensor {
         &mut self.tensor
     }
-    
+
     /// 消耗包装器并返回内部张量（不回收）
     pub fn into_inner(mut self) -> DenseTensor {
         let tensor = core::mem::take(&mut self.tensor);
@@ -263,7 +263,7 @@ impl<'pool> PooledTensor<'pool> {
 #[cfg(feature = "tensor-pool")]
 impl<'pool> core::ops::Deref for PooledTensor<'pool> {
     type Target = DenseTensor;
-    
+
     fn deref(&self) -> &Self::Target {
         &self.tensor
     }
@@ -293,10 +293,7 @@ impl<'pool> Drop for PooledTensor<'pool> {
 impl<'pool> Clone for PooledTensor<'pool> {
     fn clone(&self) -> Self {
         // Clone 不涉及池，直接克隆内部 tensor
-        PooledTensor::new(
-            self.tensor.clone(),
-            unsafe { &mut *self.pool }
-        )
+        PooledTensor::new(self.tensor.clone(), unsafe { &mut *self.pool })
     }
 }
 
@@ -324,28 +321,28 @@ impl GradientCheckpoint {
             memory_budget,
         }
     }
-    
+
     /// 保存张量
     pub fn save(&mut self, id: usize, tensor: DenseTensor) {
         let size = tensor.nbytes();
-        
+
         // 检查内存预算
         if self.memory_used + size > self.memory_budget {
             // 触发重新计算策略（简化：移除最旧的）
             self.evict_oldest();
         }
-        
+
         if self.saved_tensors.len() < self.max_saved {
             self.memory_used += size;
             self.saved_tensors.insert(id, tensor);
         }
     }
-    
+
     /// 获取保存的张量
     pub fn get(&self, id: usize) -> Option<&DenseTensor> {
         self.saved_tensors.get(&id)
     }
-    
+
     /// 移除并返回张量
     pub fn take(&mut self, id: usize) -> Option<DenseTensor> {
         if let Some(tensor) = self.saved_tensors.remove(&id) {
@@ -355,28 +352,28 @@ impl GradientCheckpoint {
             None
         }
     }
-    
+
     /// 清除所有保存的张量
     pub fn clear(&mut self) {
         self.saved_tensors.clear();
         self.memory_used = 0;
     }
-    
+
     /// 获取内存使用量
     pub fn memory_used(&self) -> usize {
         self.memory_used
     }
-    
+
     /// 获取保存的张量数量
     pub fn len(&self) -> usize {
         self.saved_tensors.len()
     }
-    
+
     /// 检查是否为空
     pub fn is_empty(&self) -> bool {
         self.saved_tensors.is_empty()
     }
-    
+
     /// 移除最旧的张量（简化实现：随机移除）
     fn evict_oldest(&mut self) {
         if let Some((&id, _)) = self.saved_tensors.iter().next() {
@@ -393,22 +390,22 @@ mod tests {
     fn test_pool_creation() {
         let config = PoolConfig::new(8, 64);
         let pool = TensorPool::new(config);
-        
+
         assert_eq!(pool.free_list.len(), 0);
         assert_eq!(pool.stats.total_allocations, 0);
     }
-    
+
     #[test]
     fn test_pool_acquire() {
         let config = PoolConfig::new(4, 16);
         let mut pool = TensorPool::new(config);
-        
+
         // 获取张量
         {
             let tensor = pool.acquire(vec![10]);
             assert_eq!(tensor.shape(), &[10]);
         } // tensor 在这里被 drop 并回收
-        
+
         // 池中应该有 1 个回收的张量
         assert_eq!(pool.free_list.len(), 1);
         assert_eq!(pool.stats.total_allocations, 1);

@@ -119,7 +119,11 @@ impl Display for GraphError {
             GraphError::NodeNotFound { index } => {
                 write!(f, "节点不存在：索引 {} 无效或超出范围", index)
             }
-            GraphError::NodeDeleted { index, provided, current } => {
+            GraphError::NodeDeleted {
+                index,
+                provided,
+                current,
+            } => {
                 write!(
                     f,
                     "节点已删除：索引 {} 的 generation 不匹配 (provided: {}, current: {})",
@@ -129,7 +133,11 @@ impl Display for GraphError {
             GraphError::EdgeNotFound { index } => {
                 write!(f, "边不存在：索引 {} 无效或超出范围", index)
             }
-            GraphError::EdgeDeleted { index, provided, current } => {
+            GraphError::EdgeDeleted {
+                index,
+                provided,
+                current,
+            } => {
                 write!(
                     f,
                     "边已删除：索引 {} 的 generation 不匹配 (provided: {}, current: {})",
@@ -143,11 +151,7 @@ impl Display for GraphError {
                 write!(f, "不允许自环：节点 {} 不能作为自身的边端点", node)
             }
             GraphError::GraphCapacityExceeded { current, max } => {
-                write!(
-                    f,
-                    "超过最大容量：当前 {}，最大 {}",
-                    current, max
-                )
+                write!(f, "超过最大容量：当前 {}，最大 {}", current, max)
             }
             GraphError::MemoryAllocationFailed { requested } => {
                 write!(f, "内存分配失败：请求 {} 字节", requested)

@@ -7,16 +7,16 @@
 //! - 内存池性能
 //! - Graph-Tensor 转换
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
-use god_gragh::tensor::dense::DenseTensor;
-use god_gragh::tensor::sparse::{SparseTensor, COOTensor};
-use god_gragh::tensor::gnn::{SumAggregator, MeanAggregator, GCNConv};
-use god_gragh::tensor::pool::{TensorPool, PoolConfig};
-use god_gragh::tensor::graph_tensor::{GraphAdjacencyMatrix, GraphFeatureExtractor};
-use god_gragh::tensor::traits::TensorOps;
-use god_gragh::tensor::gnn::Aggregator;
-use god_gragh::graph::Graph;
+use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use god_gragh::graph::traits::GraphOps;
+use god_gragh::graph::Graph;
+use god_gragh::tensor::dense::DenseTensor;
+use god_gragh::tensor::gnn::Aggregator;
+use god_gragh::tensor::gnn::{GCNConv, MeanAggregator, SumAggregator};
+use god_gragh::tensor::graph_tensor::{GraphAdjacencyMatrix, GraphFeatureExtractor};
+use god_gragh::tensor::pool::{PoolConfig, TensorPool};
+use god_gragh::tensor::sparse::{COOTensor, SparseTensor};
+use god_gragh::tensor::traits::TensorOps;
 
 /// 稠密张量基础操作性能测试
 fn bench_dense_tensor_ops(c: &mut Criterion) {
@@ -34,15 +34,13 @@ fn bench_dense_tensor_ops(c: &mut Criterion) {
         group.bench_with_input(
             BenchmarkId::new("matmul", size),
             &(&tensor_a, &tensor_b),
-            |b, (ta, tb)| b.iter(|| black_box(ta.matmul(tb)))
+            |b, (ta, tb)| b.iter(|| black_box(ta.matmul(tb))),
         );
 
         // 转置（使用 matrix::transpose）
-        group.bench_with_input(
-            BenchmarkId::new("transpose", size),
-            &tensor_a,
-            |b, t| b.iter(|| black_box(god_gragh::tensor::ops::matrix::transpose(t)))
-        );
+        group.bench_with_input(BenchmarkId::new("transpose", size), &tensor_a, |b, t| {
+            b.iter(|| black_box(god_gragh::tensor::ops::matrix::transpose(t)))
+        });
     }
     group.finish();
 }
@@ -55,38 +53,36 @@ fn bench_sparse_tensor_ops(c: &mut Criterion) {
     let mut group = c.benchmark_group("sparse_tensor_ops");
     for size in sizes {
         let nnz = ((size as f64) * (size as f64) * sparsity) as usize;
-        
+
         // 生成随机稀疏数据
         let mut row_indices = Vec::with_capacity(nnz);
         let mut col_indices = Vec::with_capacity(nnz);
         let mut values = Vec::with_capacity(nnz);
-        
+
         for _ in 0..nnz {
             row_indices.push(rand::random::<usize>() % size);
             col_indices.push(rand::random::<usize>() % size);
             values.push(rand::random::<f64>());
         }
-        
+
         let sparse = SparseTensor::COO(COOTensor::new(
             row_indices.clone(),
             col_indices.clone(),
             DenseTensor::new(values.clone(), vec![nnz]),
             [size, size],
         ));
-        
+
         // COO 转 CSR
-        group.bench_with_input(
-            BenchmarkId::new("coo_to_csr", size),
-            &sparse,
-            |b, s| b.iter(|| black_box(s.to_csr()))
-        );
-        
+        group.bench_with_input(BenchmarkId::new("coo_to_csr", size), &sparse, |b, s| {
+            b.iter(|| black_box(s.to_csr()))
+        });
+
         // 稀疏 - 稠密矩阵向量乘法
         let dense_vec = DenseTensor::new(vec![1.0; size], vec![size]);
         group.bench_with_input(
             BenchmarkId::new("spmv", size),
             &(&sparse, &dense_vec),
-            |b, (s, v)| b.iter(|| black_box(s.spmv(v).unwrap()))
+            |b, (s, v)| b.iter(|| black_box(s.spmv(v).unwrap())),
         );
     }
     group.finish();
@@ -97,13 +93,13 @@ fn bench_gnn_primitives(c: &mut Criterion) {
     let num_nodes = vec![50, 100, 200, 500];
     let in_features = 16;
     let out_features = 8;
-    
+
     let mut group = c.benchmark_group("gnn_primitives");
     for n in num_nodes {
         // 准备节点特征
         let features_data: Vec<f64> = (0..n * in_features).map(|i| (i as f64) * 0.1).collect();
         let features = DenseTensor::new(features_data, vec![n, in_features]);
-        
+
         // 准备边列表（随机图）
         let num_edges = n * 3; // 平均度数为 6
         let mut edges = Vec::with_capacity(num_edges);
@@ -114,22 +110,22 @@ fn bench_gnn_primitives(c: &mut Criterion) {
             edges.push((src, dst, 1.0));
             edge_values.push(1.0);
         }
-        
+
         let adjacency = SparseTensor::COO(COOTensor::new(
             edges.iter().map(|(s, _, _)| *s).collect(),
             edges.iter().map(|(_, d, _)| *d).collect(),
             DenseTensor::new(edge_values, vec![num_edges]),
             [n, n],
         ));
-        
+
         // GCN 前向传播
         let gcn = GCNConv::new(in_features, out_features);
         group.bench_with_input(
             BenchmarkId::new("gcn_forward", n),
             &(&features, &adjacency),
-            |b, (feat, adj)| b.iter(|| black_box(gcn.forward(feat, adj)))
+            |b, (feat, adj)| b.iter(|| black_box(gcn.forward(feat, adj))),
         );
-        
+
         // 聚合器（模拟消息聚合）
         let num_messages = 10;
         let message_shape = vec![in_features];
@@ -146,17 +142,13 @@ fn bench_gnn_primitives(c: &mut Criterion) {
         group.bench_with_input(
             BenchmarkId::new("sum_aggregator", n),
             &messages,
-            |b, msgs| b.iter(|| {
-                black_box(sum_agg.aggregate(msgs))
-            })
+            |b, msgs| b.iter(|| black_box(sum_agg.aggregate(msgs))),
         );
 
         group.bench_with_input(
             BenchmarkId::new("mean_aggregator", n),
             &messages,
-            |b, msgs| b.iter(|| {
-                black_box(mean_agg.aggregate(msgs))
-            })
+            |b, msgs| b.iter(|| black_box(mean_agg.aggregate(msgs))),
         );
     }
     group.finish();
@@ -174,24 +166,18 @@ fn bench_memory_pool(c: &mut Criterion) {
         group.bench_with_input(
             BenchmarkId::new("traditional_alloc", size),
             &shape,
-            |b, s| b.iter(|| {
-                black_box(DenseTensor::zeros(s.clone()))
-            })
+            |b, s| b.iter(|| black_box(DenseTensor::zeros(s.clone()))),
         );
 
         // 内存池分配（预创建池，模拟复用场景）
-        group.bench_with_input(
-            BenchmarkId::new("pool_alloc", size),
-            &shape,
-            |b, s| {
-                let config = PoolConfig::new(8, size * size * 2);
-                let mut pool = TensorPool::new(config);
-                b.iter(|| {
-                    let _tensor = black_box(pool.acquire(s.clone()));
-                    // 立即回收
-                })
-            }
-        );
+        group.bench_with_input(BenchmarkId::new("pool_alloc", size), &shape, |b, s| {
+            let config = PoolConfig::new(8, size * size * 2);
+            let mut pool = TensorPool::new(config);
+            b.iter(|| {
+                let _tensor = black_box(pool.acquire(s.clone()));
+                // 立即回收
+            })
+        });
     }
     group.finish();
 }
@@ -205,39 +191,37 @@ fn bench_memory_pool_reduction(c: &mut Criterion) {
     let tensor_size = 128; // 128x128 张量
 
     let mut group = c.benchmark_group("memory_pool_reduction");
-    
+
     for &iters in &iterations {
         let shape = vec![tensor_size, tensor_size];
-        
+
         // 场景 1: 传统分配 - 每次迭代都新分配
         group.bench_with_input(
             BenchmarkId::new("traditional_iterative", iters),
             &shape,
-            |b, s| b.iter(|| {
-                let mut allocations = 0usize;
-                for _ in 0..iters {
-                    let _tensor = black_box(DenseTensor::zeros(s.clone()));
-                    allocations += 1;
-                }
-                allocations // 防止优化
-            })
+            |b, s| {
+                b.iter(|| {
+                    let mut allocations = 0usize;
+                    for _ in 0..iters {
+                        let _tensor = black_box(DenseTensor::zeros(s.clone()));
+                        allocations += 1;
+                    }
+                    allocations // 防止优化
+                })
+            },
         );
 
         // 场景 2: 内存池分配 - 复用已分配内存
-        group.bench_with_input(
-            BenchmarkId::new("pool_iterative", iters),
-            &shape,
-            |b, s| {
-                let config = PoolConfig::new(iters, iters * 2);
-                let mut pool = TensorPool::new(config);
-                b.iter(|| {
-                    for _ in 0..iters {
-                        let _tensor = black_box(pool.acquire(s.clone()));
-                        // 立即回收
-                    }
-                });
-            }
-        );
+        group.bench_with_input(BenchmarkId::new("pool_iterative", iters), &shape, |b, s| {
+            let config = PoolConfig::new(iters, iters * 2);
+            let mut pool = TensorPool::new(config);
+            b.iter(|| {
+                for _ in 0..iters {
+                    let _tensor = black_box(pool.acquire(s.clone()));
+                    // 立即回收
+                }
+            });
+        });
     }
     group.finish();
 }
@@ -252,37 +236,39 @@ fn bench_memory_pool_hitrate(c: &mut Criterion) {
         (64, 256, "large"),
         (256, 1024, "xlarge"),
     ];
-    
+
     let tensor_size = 64;
     let shape = vec![tensor_size, tensor_size];
     let iterations = 100;
 
     let mut group = c.benchmark_group("memory_pool_hitrate");
-    
+
     for (initial, max, name) in pool_configs {
         group.bench_with_input(
             BenchmarkId::new("hitrate", name),
             &(initial, max),
-            |b, &(init, max)| b.iter(|| {
-                let config = PoolConfig::new(init, max);
-                let mut pool = TensorPool::new(config);
-                
-                // 模拟迭代工作负载
-                for _ in 0..iterations {
-                    let tensor = pool.acquire(shape.clone());
-                    // 模拟使用后立即释放
-                    drop(tensor);
-                }
-                
-                // 返回命中率统计
-                let stats = pool.stats();
-                let hit_rate = if stats.total_allocations > 0 {
-                    stats.pool_hits as f64 / stats.total_allocations as f64
-                } else {
-                    0.0
-                };
-                hit_rate
-            })
+            |b, &(init, max)| {
+                b.iter(|| {
+                    let config = PoolConfig::new(init, max);
+                    let mut pool = TensorPool::new(config);
+
+                    // 模拟迭代工作负载
+                    for _ in 0..iterations {
+                        let tensor = pool.acquire(shape.clone());
+                        // 模拟使用后立即释放
+                        drop(tensor);
+                    }
+
+                    // 返回命中率统计
+                    let stats = pool.stats();
+                    let hit_rate = if stats.total_allocations > 0 {
+                        stats.pool_hits as f64 / stats.total_allocations as f64
+                    } else {
+                        0.0
+                    };
+                    hit_rate
+                })
+            },
         );
     }
     group.finish();
@@ -296,48 +282,53 @@ fn bench_memory_allocation_savings(c: &mut Criterion) {
     let iterations = 50;
 
     let mut group = c.benchmark_group("memory_allocation_savings");
-    
+
     for &size in &tensor_sizes {
         let shape = vec![size, size];
         let _numel = size * size;
-        
+
         // 传统方法：每次迭代新分配
         group.bench_with_input(
             BenchmarkId::new("traditional_total_allocs", size),
             &shape,
-            |b, s| b.iter(|| {
-                let mut total_bytes = 0usize;
-                for _ in 0..iterations {
-                    let tensor = DenseTensor::zeros(s.clone());
-                    total_bytes += tensor.nbytes();
-                }
-                total_bytes
-            })
+            |b, s| {
+                b.iter(|| {
+                    let mut total_bytes = 0usize;
+                    for _ in 0..iterations {
+                        let tensor = DenseTensor::zeros(s.clone());
+                        total_bytes += tensor.nbytes();
+                    }
+                    total_bytes
+                })
+            },
         );
 
         // 内存池方法：首次分配后复用
         group.bench_with_input(
             BenchmarkId::new("pool_total_allocs", size),
             &shape,
-            |b, s| b.iter(|| {
-                let config = PoolConfig::new(iterations, iterations * 2);
-                let mut pool = TensorPool::new(config);
-                let mut total_bytes = 0usize;
-                
-                for _ in 0..iterations {
-                    let tensor = pool.acquire(s.clone());
-                    total_bytes += tensor.nbytes();
-                    // 模拟使用后立即释放以触发回收
-                    drop(tensor);
-                }
-                
-                // 计算实际新分配次数（pool_misses 表示未命中池，需要新分配）
-                let actual_allocations = pool.stats().pool_misses;
-                let theoretical_allocations = iterations;
-                let reduction = 1.0 - (actual_allocations as f64 / theoretical_allocations as f64);
-                
-                (total_bytes, reduction, pool.stats().pool_hits)
-            })
+            |b, s| {
+                b.iter(|| {
+                    let config = PoolConfig::new(iterations, iterations * 2);
+                    let mut pool = TensorPool::new(config);
+                    let mut total_bytes = 0usize;
+
+                    for _ in 0..iterations {
+                        let tensor = pool.acquire(s.clone());
+                        total_bytes += tensor.nbytes();
+                        // 模拟使用后立即释放以触发回收
+                        drop(tensor);
+                    }
+
+                    // 计算实际新分配次数（pool_misses 表示未命中池，需要新分配）
+                    let actual_allocations = pool.stats().pool_misses;
+                    let theoretical_allocations = iterations;
+                    let reduction =
+                        1.0 - (actual_allocations as f64 / theoretical_allocations as f64);
+
+                    (total_bytes, reduction, pool.stats().pool_hits)
+                })
+            },
         );
     }
     group.finish();
@@ -369,20 +360,26 @@ fn bench_graph_tensor_conversion(c: &mut Criterion) {
         group.bench_with_input(
             BenchmarkId::new("adjacency_matrix", n),
             &(edge_list.clone(), n),
-            |b, (edges, num_nodes)| b.iter(|| {
-                black_box(GraphAdjacencyMatrix::from_edge_list(edges, *num_nodes, false))
-            })
+            |b, (edges, num_nodes)| {
+                b.iter(|| {
+                    black_box(GraphAdjacencyMatrix::from_edge_list(
+                        edges, *num_nodes, false,
+                    ))
+                })
+            },
         );
 
         // 特征提取（使用 extract_node_features_scalar）
-        group.bench_with_input(
-            BenchmarkId::new("feature_extraction", n),
-            &graph,
-            |b, g| b.iter(|| {
+        group.bench_with_input(BenchmarkId::new("feature_extraction", n), &graph, |b, g| {
+            b.iter(|| {
                 let extractor = GraphFeatureExtractor::new(g);
-                black_box(extractor.extract_node_features_scalar(|node_data| *node_data as f64).unwrap())
+                black_box(
+                    extractor
+                        .extract_node_features_scalar(|node_data| *node_data as f64)
+                        .unwrap(),
+                )
             })
-        );
+        });
     }
     group.finish();
 }

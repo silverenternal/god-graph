@@ -1,7 +1,7 @@
 //! 网格图生成器
 
-use crate::graph::Graph;
 use crate::graph::builders::GraphBuilder;
+use crate::graph::Graph;
 
 /// 生成 2D 网格图
 ///
@@ -17,8 +17,7 @@ where
     T: Clone + Default,
 {
     let n = rows * cols;
-    let mut builder = GraphBuilder::undirected()
-        .with_nodes((0..n).map(|_| T::default()));
+    let mut builder = GraphBuilder::undirected().with_nodes((0..n).map(|_| T::default()));
 
     for r in 0..rows {
         for c in 0..cols {
