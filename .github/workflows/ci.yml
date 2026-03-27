@@ -1,0 +1,227 @@
+# CI/CD 流水线
+# 包含测试、代码检查、基准测试和文档构建
+
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  schedule:
+    # 每周运行一次完整检查
+    - cron: '0 0 * * 0'
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: "-D warnings"
+  RUSTDOCFLAGS: "-D warnings"
+
+jobs:
+  # ============================================
+  # 代码格式化检查
+  # ============================================
+  fmt:
+    name: Code Formatting
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+  # ============================================
+  # Clippy 静态分析
+  # ============================================
+  clippy:
+    name: Clippy Lints
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - name: Run Clippy (default features)
+        run: cargo clippy --all-targets --all-features -- -D warnings
+
+      - name: Run Clippy (no default features)
+        run: cargo clippy --all-targets --no-default-features -- -D warnings
+
+  # ============================================
+  # 测试套件
+  # ============================================
+  test:
+    name: Test Suite
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        rust:
+          - stable
+          - beta
+          - "1.85" # MSRV
+        features:
+          - "--all-features"
+          - "--no-default-features"
+          - "--features parallel"
+          - "--features serde"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@${{ matrix.rust }}
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ matrix.rust }}-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Run tests
+        run: cargo test ${{ matrix.features }} --lib --tests
+
+      - name: Run doctests
+        run: cargo test ${{ matrix.features }} --doc
+
+  # ============================================
+  # 基准测试（仅在 main 分支或定时任务运行）
+  # ============================================
+  benchmark:
+    name: Benchmarks
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.event_name == 'schedule'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-bench-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Run benchmarks
+        run: cargo bench --all-features --no-fail-fast
+
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: target/criterion/
+
+  # ============================================
+  # 文档构建检查
+  # ============================================
+  docs:
+    name: Documentation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Check documentation
+        env:
+          RUSTDOCFLAGS: -D warnings
+        run: cargo doc --all-features --no-deps
+
+  # ============================================
+  # 覆盖率检查（可选，需要 tarpaulin）
+  # ============================================
+  coverage:
+    name: Code Coverage
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install cargo-tarpaulin
+        run: cargo install cargo-tarpaulin
+
+      - name: Generate coverage report
+        run: cargo tarpaulin --all-features --out xml --fail-on-uncovered
+
+      - name: Check coverage threshold (minimum 70%)
+        run: |
+          # 解析覆盖率报告并检查阈值
+          COVERAGE=$(grep -oP 'line-rate="\K[0-9.]+' cobertura.xml || echo "0")
+          COVERAGE_PERCENT=$(echo "$COVERAGE * 100" | bc)
+          echo "📊 当前覆盖率：${COVERAGE_PERCENT}%"
+          if (( $(echo "$COVERAGE_PERCENT < 70" | bc -l) )); then
+            echo "❌ 覆盖率低于 70% 阈值 (${COVERAGE_PERCENT}%)"
+            exit 1
+          fi
+          echo "✅ 覆盖率通过阈值检查 (${COVERAGE_PERCENT}% >= 70%)"
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./cobertura.xml
+          fail_ci_if_error: true
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+  # ============================================
+  # docs.rs 构建检查
+  # ============================================
+  docs-rs:
+    name: docs.rs Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rust-docs
+
+      - name: Simulate docs.rs build
+        env:
+          RUSTDOCFLAGS: --cfg docsrs
+        run: cargo doc --all-features --no-deps
+
+  # ============================================
+  # 发布检查（仅在创建 tag 时运行）
+  # ============================================
+  release-check:
+    name: Release Check
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build release
+        run: cargo build --release --all-features
+
+      - name: Verify package
+        run: cargo package --allow-dirty

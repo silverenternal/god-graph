@@ -1,0 +1,120 @@
+[package]
+name = "god-gragh"
+version = "0.3.1-beta"
+edition = "2021"
+rust-version = "1.85"
+authors = ["silverenternal <3147264070@qq.com>"]
+description = "A high-performance, feature-rich Rust graph operations library with comprehensive algorithm support and parallel processing capabilities"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/silverenternal/god-graph"
+homepage = "https://github.com/silverenternal/god-graph"
+documentation = "https://docs.rs/god-gragh"
+readme = "README.md"
+keywords = ["graph", "algorithms", "data-structures", "parallel", "performance"]
+categories = ["data-structures", "algorithms", "science"]
+exclude = [".github/", "benches/", "tests/", "examples/", "ROADMAP.json"]
+
+[features]
+default = ["std"]
+
+# 标准库支持（始终启用）
+std = []
+
+# 并行算法支持
+parallel = ["dep:rayon", "dep:crossbeam-queue"]
+
+# 序列化支持
+serde = ["dep:serde"]
+
+# Rayon 集成（并行迭代器）
+rayon-support = ["dep:rayon"]
+
+# DOT 格式导出（Graphviz 可视化）
+dot = []
+
+# 矩阵表示和线性代数集成
+matrix = ["dep:nalgebra"]
+
+# 随机图生成
+rand = ["dep:rand", "dep:rand_chacha"]
+
+# 夜间 Rust 特性（实验性）
+unstable = []
+
+# SIMD 向量化支持（实验性）
+# 使用 wide crate 实现 SIMD，支持 stable Rust
+simd = ["dep:wide"]
+
+[dependencies]
+# 可选依赖
+rayon = { version = "1.10", optional = true }
+serde = { version = "1.0", features = ["derive"], optional = true }
+nalgebra = { version = "0.33", optional = true }
+rand = { version = "0.8", optional = true }
+rand_chacha = { version = "0.3", optional = true }
+crossbeam-queue = { version = "0.3", optional = true }
+
+# SIMD 支持（stable Rust 使用 wide crate）
+wide = { version = "0.7", optional = true }
+
+[dev-dependencies]
+# 基准测试
+criterion = { version = "0.5", features = ["html_reports"] }
+
+# 属性测试
+proptest = "1.5"
+
+# 随机数生成（测试用）
+rand = "0.8"
+rand_chacha = "0.3"
+
+# 测试工具
+rand_xorshift = "0.3"
+
+# 用于性能对比
+petgraph = "0.6"
+
+[[bench]]
+name = "traversal"
+harness = false
+
+[[bench]]
+name = "shortest_path"
+harness = false
+
+[[bench]]
+name = "construction"
+harness = false
+
+[[bench]]
+name = "parallel"
+harness = false
+required-features = ["parallel"]
+
+[[bench]]
+name = "centrality"
+harness = false
+required-features = ["rand"]
+
+[[bench]]
+name = "comparison"
+harness = false
+
+[[bench]]
+name = "speedup"
+harness = false
+required-features = ["parallel"]
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+
+[profile.bench]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]

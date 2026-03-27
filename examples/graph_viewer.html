@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>God-Graph 可视化</title>
+    <style>
+        :root {
+            --bg-color: #1a202c;
+            --text-color: #e2e8f0;
+            --panel-bg: #2d3748;
+            --border-color: #4a5568;
+            --accent-color: #4299e1;
+            --accent-hover: #3182ce;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            background-color: var(--panel-bg);
+            padding: 1rem 2rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        header h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        header .stats {
+            display: flex;
+            gap: 2rem;
+            font-size: 0.875rem;
+        }
+
+        header .stats span {
+            color: var(--accent-color);
+            font-weight: 500;
+        }
+
+        main {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+
+        #svg-container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+            overflow: auto;
+        }
+
+        #svg-container svg {
+            max-width: 100%;
+            max-height: 100%;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        #controls {
+            width: 300px;
+            background-color: var(--panel-bg);
+            border-left: 1px solid var(--border-color);
+            padding: 1.5rem;
+            overflow-y: auto;
+        }
+
+        #controls h2 {
+            font-size: 1.125rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .control-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .control-group label {
+            display: block;
+            font-size: 0.875rem;
+            margin-bottom: 0.5rem;
+            color: #a0aec0;
+        }
+
+        .control-group input[type="range"] {
+            width: 100%;
+            margin-bottom: 0.5rem;
+        }
+
+        .control-group input[type="color"] {
+            width: 100%;
+            height: 2.5rem;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .control-group select {
+            width: 100%;
+            padding: 0.5rem;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button {
+            width: 100%;
+            padding: 0.75rem;
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: var(--accent-hover);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .button-group button {
+            flex: 1;
+        }
+
+        #node-list {
+            margin-top: 1rem;
+            max-height: 200px;
+            overflow-y: auto;
+            font-size: 0.875rem;
+        }
+
+        #node-list div {
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            margin-bottom: 0.25rem;
+            background-color: var(--bg-color);
+        }
+
+        .info-section {
+            margin-top: 2rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .info-section h3 {
+            font-size: 0.875rem;
+            margin-bottom: 0.5rem;
+            color: #a0aec0;
+        }
+
+        #file-input {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>🕸️ God-Graph 可视化</h1>
+        <div class="stats">
+            <div>节点数：<span id="node-count">0</span></div>
+            <div>边数：<span id="edge-count">0</span></div>
+        </div>
+    </header>
+
+    <main>
+        <div id="svg-container">
+            <!-- SVG will be loaded here -->
+        </div>
+
+        <div id="controls">
+            <h2>控制面板</h2>
+
+            <div class="control-group">
+                <label for="layout-select">布局算法</label>
+                <select id="layout-select">
+                    <option value="force">力导向布局</option>
+                    <option value="circular">圆形布局</option>
+                    <option value="hierarchical">层次布局</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label for="node-radius">节点半径：<span id="node-radius-value">20</span>px</label>
+                <input type="range" id="node-radius" min="10" max="50" value="20">
+            </div>
+
+            <div class="control-group">
+                <label for="node-color">节点颜色</label>
+                <input type="color" id="node-color" value="#4A90D9">
+            </div>
+
+            <div class="control-group">
+                <label for="edge-color">边颜色</label>
+                <input type="color" id="edge-color" value="#A0AEC0">
+            </div>
+
+            <div class="control-group">
+                <label>
+                    <input type="checkbox" id="show-labels" checked>
+                    显示节点标签
+                </label>
+            </div>
+
+            <div class="control-group">
+                <label>
+                    <input type="checkbox" id="show-weights">
+                    显示边权重
+                </label>
+            </div>
+
+            <div class="button-group">
+                <button id="btn-zoom-in">🔍 放大</button>
+                <button id="btn-zoom-out">🔍 缩小</button>
+            </div>
+
+            <button id="btn-reset" style="margin-top: 0.5rem;">🔄 重置视图</button>
+            <button id="btn-download" style="margin-top: 0.5rem;">💾 下载 SVG</button>
+            <button id="btn-upload" style="margin-top: 0.5rem;">📂 加载 SVG 文件</button>
+            <input type="file" id="file-input" accept=".svg">
+
+            <div class="info-section">
+                <h3>节点列表</h3>
+                <div id="node-list"></div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // 状态
+        let currentSvg = null;
+        let scale = 1;
+        let translateX = 0;
+        let translateY = 0;
+
+        // DOM 元素
+        const svgContainer = document.getElementById('svg-container');
+        const nodeCountEl = document.getElementById('node-count');
+        const edgeCountEl = document.getElementById('edge-count');
+        const nodeListEl = document.getElementById('node-list');
+        const layoutSelect = document.getElementById('layout-select');
+        const nodeRadiusSlider = document.getElementById('node-radius');
+        const nodeRadiusValue = document.getElementById('node-radius-value');
+        const nodeColorInput = document.getElementById('node-color');
+        const edgeColorInput = document.getElementById('edge-color');
+        const showLabelsCheckbox = document.getElementById('show-labels');
+        const showWeightsCheckbox = document.getElementById('show-weights');
+
+        // 页面加载时尝试加载默认的 graph.svg
+        window.addEventListener('DOMContentLoaded', () => {
+            fetch('graph.svg')
+                .then(response => {
+                    if (response.ok) {
+                        return response.text();
+                    }
+                    throw new Error('No default SVG found');
+                })
+                .then(svgText => {
+                    loadSvg(svgText);
+                })
+                .catch(err => {
+                    console.log('No default SVG found, waiting for user upload...');
+                    svgContainer.innerHTML = '<p style="color: #a0aec0; text-align: center;">拖拽 SVG 文件到此处，或点击"加载 SVG 文件"按钮</p>';
+                });
+        });
+
+        // 加载 SVG
+        function loadSvg(svgText) {
+            svgContainer.innerHTML = svgText;
+            currentSvg = svgContainer.querySelector('svg');
+
+            if (currentSvg) {
+                // 启用平移和缩放
+                currentSvg.style.cursor = 'grab';
+                currentSvg.addEventListener('wheel', handleWheel);
+
+                // 统计节点和边
+                const circles = currentSvg.querySelectorAll('circle');
+                const lines = currentSvg.querySelectorAll('line');
+
+                nodeCountEl.textContent = circles.length;
+                edgeCountEl.textContent = lines.length;
+
+                // 更新节点列表
+                nodeListEl.innerHTML = '';
+                circles.forEach((circle, i) => {
+                    const text = currentSvg.querySelectorAll('text')[i];
+                    const label = text ? text.textContent : `Node ${i}`;
+                    const div = document.createElement('div');
+                    div.textContent = label;
+                    nodeListEl.appendChild(div);
+                });
+            }
+        }
+
+        // 缩放处理
+        function handleWheel(e) {
+            e.preventDefault();
+            const delta = e.deltaY > 0 ? 0.9 : 1.1;
+            scale *= delta;
+            scale = Math.max(0.1, Math.min(5, scale));
+            updateTransform();
+        }
+
+        // 更新变换
+        function updateTransform() {
+            if (currentSvg) {
+                currentSvg.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+            }
+        }
+
+        // 控制面板事件
+        nodeRadiusSlider.addEventListener('input', (e) => {
+            nodeRadiusValue.textContent = e.target.value;
+            if (currentSvg) {
+                currentSvg.querySelectorAll('circle').forEach(circle => {
+                    circle.setAttribute('r', e.target.value);
+                });
+            }
+        });
+
+        nodeColorInput.addEventListener('input', (e) => {
+            if (currentSvg) {
+                currentSvg.querySelectorAll('circle').forEach(circle => {
+                    circle.setAttribute('fill', e.target.value);
+                });
+            }
+        });
+
+        edgeColorInput.addEventListener('input', (e) => {
+            if (currentSvg) {
+                currentSvg.querySelectorAll('line, polygon').forEach(el => {
+                    el.setAttribute('stroke', e.target.value);
+                    if (el.tagName === 'polygon') {
+                        el.setAttribute('fill', e.target.value);
+                    }
+                });
+            }
+        });
+
+        showLabelsCheckbox.addEventListener('change', (e) => {
+            if (currentSvg) {
+                currentSvg.querySelectorAll('text').forEach(text => {
+                    text.style.display = e.target.checked ? 'block' : 'none';
+                });
+            }
+        });
+
+        // 缩放按钮
+        document.getElementById('btn-zoom-in').addEventListener('click', () => {
+            scale *= 1.2;
+            scale = Math.min(5, scale);
+            updateTransform();
+        });
+
+        document.getElementById('btn-zoom-out').addEventListener('click', () => {
+            scale /= 1.2;
+            scale = Math.max(0.1, scale);
+            updateTransform();
+        });
+
+        document.getElementById('btn-reset').addEventListener('click', () => {
+            scale = 1;
+            translateX = 0;
+            translateY = 0;
+            updateTransform();
+        });
+
+        // 下载 SVG
+        document.getElementById('btn-download').addEventListener('click', () => {
+            if (!currentSvg) return;
+
+            const svgData = currentSvg.outerHTML;
+            const blob = new Blob([svgData], { type: 'image/svg+xml' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'graph.svg';
+            link.click();
+            URL.revokeObjectURL(url);
+        });
+
+        // 上传 SVG
+        document.getElementById('btn-upload').addEventListener('click', () => {
+            document.getElementById('file-input').click();
+        });
+
+        document.getElementById('file-input').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                loadSvg(e.target.result);
+            };
+            reader.readAsText(file);
+        });
+
+        // 拖拽上传
+        svgContainer.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            svgContainer.style.opacity = '0.5';
+        });
+
+        svgContainer.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            svgContainer.style.opacity = '1';
+        });
+
+        svgContainer.addEventListener('drop', (e) => {
+            e.preventDefault();
+            svgContainer.style.opacity = '1';
+
+            const file = e.dataTransfer.files[0];
+            if (file && file.type === 'image/svg+xml') {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    loadSvg(e.target.result);
+                };
+                reader.readAsText(file);
+            }
+        });
+    </script>
+</body>
+</html>

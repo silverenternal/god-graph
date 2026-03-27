@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cargo check)",
+      "Bash(cargo build)",
+      "Bash(cargo test)",
+      "Bash(cargo test *)",
+      "Bash(cargo check *)",
+      "Bash(cargo build *)",
+      "Bash(cargo clippy *)",
+      "Bash(cargo bench *)",
+      "Bash(sed *)",
+      "Bash(timeout *)",
+      "Bash(cargo doc *)",
+      "Bash(grep *)",
+      "Bash(cargo clippy)",
+      "Bash(python3 *)",
+      "Bash(rustc *)"
+    ]
+  },
+  "$version": 3
+}
