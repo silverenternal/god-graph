@@ -74,7 +74,7 @@ jobs:
           - beta
           - "1.85" # MSRV
         features:
-          - "--no-default-features"
+          - "--features std"
           - "--features parallel"
           - "--features serde"
           - "--features \"std,parallel,serde,dot,matrix,rand,simd,tensor,tensor-sparse,tensor-gnn,tensor-pool,tensor-batch\""

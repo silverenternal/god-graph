@@ -9,12 +9,12 @@
 //! - 遍历算法访问所有可达节点
 
 use proptest::prelude::*;
-use std::collections::{HashSet, BTreeSet};
+use std::collections::{BTreeSet, HashSet};
 
-use god_gragh::graph::Graph;
-use god_gragh::graph::traits::{GraphBase, GraphQuery, GraphOps};
-use god_gragh::algorithms::traversal::{dfs, bfs};
 use god_gragh::algorithms::shortest_path::dijkstra;
+use god_gragh::algorithms::traversal::{bfs, dfs};
+use god_gragh::graph::traits::{GraphBase, GraphOps, GraphQuery};
+use god_gragh::graph::Graph;
 
 // ============================================
 // 图操作不变量测试
@@ -118,14 +118,14 @@ proptest! {
                 edge_indices.push(edge_idx);
             }
         }
-        
+
         if !edge_indices.is_empty() && edge_idx < edge_indices.len() {
             let removed_edge_idx = edge_indices[edge_idx];
             let _ = graph.remove_edge(removed_edge_idx);
-            
+
             // 删除后不应再包含该边
             prop_assert!(!graph.contains_edge(removed_edge_idx));
-            
+
             // 尝试访问应该返回错误
             prop_assert!(graph.get_edge(removed_edge_idx).is_err());
         }
@@ -299,7 +299,7 @@ proptest! {
             // 应该找到路径
             if let Ok(distances) = result {
                 // 距离应该非负
-                for (_, dist) in &distances {
+                for dist in distances.values() {
                     prop_assert!(*dist >= 0.0);
                 }
                 // 应该包含 end 节点的距离
@@ -410,7 +410,7 @@ proptest! {
                 expected_degree += 1;
             }
         }
-        
+
         let out_degree = graph.out_degree(center).unwrap_or(0);
         prop_assert_eq!(out_degree, expected_degree);
     }
@@ -469,7 +469,7 @@ proptest! {
 
         // 添加大量节点
         for i in 0..100 {
-            let _ = graph.add_node(i as i32);
+            let _ = graph.add_node(i);
         }
 
         prop_assert_eq!(graph.node_count(), 100);
