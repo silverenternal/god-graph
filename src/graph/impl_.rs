@@ -8,7 +8,7 @@
 //!
 //! | 特性 | 传统 CSR | 本实现（桶式邻接表） |
 //! |------|----------|---------------------|
-//! | 结构 | row_offsets + col_indices | Vec<AdjBucket>，每个 bucket 含独立 Vec |
+//! | 结构 | row_offsets + col_indices | `Vec<AdjBucket>`，每个 bucket 含独立 Vec |
 //! | 增量更新 | ❌ 不支持（需 O(V+E) 重建） | ✅ O(1) 插入 |
 //! | 空间效率 | ✅ 最优（无额外开销） | ⚠️ 略高（每节点一个 Vec 头） |
 //! | 适用场景 | 静态图 | 动态图（频繁增删边） |

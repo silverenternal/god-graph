@@ -193,5 +193,6 @@ lto = "thin"
 codegen-units = 1
 
 [package.metadata.docs.rs]
-all-features = true
+# 启用除 GPU 外的所有特性（GPU 需要 CUDA，docs.rs 不支持）
+features = ["std", "parallel", "serde", "dot", "matrix", "rand", "simd", "tensor", "tensor-sparse", "tensor-gnn", "tensor-pool", "tensor-batch"]
 rustdoc-args = ["--cfg", "docsrs"]
