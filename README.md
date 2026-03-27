@@ -41,7 +41,7 @@ Add dependency to `Cargo.toml`:
 
 ```toml
 [dependencies]
-god-gragh = "0.3.1-beta"
+god-gragh = "0.4.0-beta"
 ```
 
 ### Basic Usage
@@ -200,7 +200,7 @@ Enable `parallel` feature to use parallel algorithms:
 
 ```toml
 [dependencies]
-god-gragh = { version = "0.3.1-beta", features = ["parallel"] }
+god-gragh = { version = "0.4.0-beta", features = ["parallel"] }
 ```
 
 ```rust
@@ -222,7 +222,7 @@ Enable `simd` feature for SIMD vectorization (supports stable Rust):
 
 ```toml
 [dependencies]
-god-gragh = { version = "0.3.1-beta", features = ["simd"] }
+god-gragh = { version = "0.4.0-beta", features = ["simd"] }
 ```
 
 ```rust
@@ -245,7 +245,7 @@ Enable tensor features for Graph Neural Network workflows:
 
 ```toml
 [dependencies]
-god-gragh = { version = "0.3.1-beta", features = ["tensor", "tensor-gnn"] }
+god-gragh = { version = "0.4.0-beta", features = ["tensor", "tensor-gnn"] }
 ```
 
 ### Basic Tensor Operations
@@ -612,7 +612,7 @@ See [ROADMAP.json](ROADMAP.json) for detailed roadmap.
 - [x] v0.1.0-alpha: Core graph structure, basic CRUD, DFS/BFS
 - [x] v0.2.0-alpha: Complete algorithm suite, random graph generators
 - [x] v0.3.0-beta: Performance reports, migration guide, parallel algorithms
-- [x] **v0.3.1-beta**: SIMD vectorization, SVG export, coverage integration
+- [x] **v0.4.0-beta**: Tensor/GNN integration, memory pool optimization, differentiable graph
 - [ ] v0.4.0-tensor-alpha: Tensor/GNN integration, multi-backend support
 - [ ] v0.5.0-rc: Serde support, API stabilization
 - [ ] v1.0.0-stable: Production-ready
