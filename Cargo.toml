@@ -12,7 +12,7 @@ documentation = "https://docs.rs/god-gragh"
 readme = "README.md"
 keywords = ["graph", "algorithms", "data-structures", "parallel", "performance"]
 categories = ["data-structures", "algorithms", "science"]
-exclude = [".github/", "benches/", "tests/", "examples/", "ROADMAP.json"]
+exclude = [".github/", "benches/", "tests/", "examples/", "ROADMAP.json", ".qwen/"]
 
 [features]
 default = ["std"]
