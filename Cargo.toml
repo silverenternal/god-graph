@@ -45,6 +45,63 @@ unstable = []
 # 使用 wide crate 实现 SIMD，支持 stable Rust
 simd = ["dep:wide"]
 
+# Tensor 核心支持（启用 ndarray 后端）
+tensor = ["dep:ndarray"]
+
+# Sparse Tensor 格式（COO, CSR, BSR）
+tensor-sparse = ["tensor"]
+
+# GPU 加速（通过 dfdx，需要 CUDA）
+tensor-gpu = ["tensor", "dep:dfdx"]
+
+# Candle 后端（Hugging Face 的轻量级 tensor 库）
+tensor-candle = ["tensor", "dep:candle-core"]
+
+# 自动微分支持
+tensor-autograd = ["tensor", "dep:dfdx"]
+
+# Tensor 序列化
+tensor-serde = ["tensor", "dep:serde"]
+
+# GNN 层（GCN, GAT, GraphSAGE 等）
+tensor-gnn = ["tensor", "tensor-sparse", "dep:rand_distr", "rand"]
+
+# 内存池优化
+tensor-pool = ["tensor", "dep:bitvec"]
+
+# 批量图处理
+tensor-batch = ["tensor", "tensor-sparse"]
+
+# ============================================
+# 元特性（Meta-Features）- 简化用户配置
+# ============================================
+
+# 启用所有 tensor 功能（ndarray + sparse + GNN + pool + batch）
+tensor-full = [
+    "tensor",
+    "tensor-sparse",
+    "tensor-gnn",
+    "tensor-pool",
+    "tensor-batch",
+]
+
+# GNN 推理专用（sparse + GNN 层，适合生产推理场景）
+tensor-inference = [
+    "tensor",
+    "tensor-sparse",
+    "tensor-gnn",
+]
+
+# 机器学习完整支持（GNN + autograd，适合训练场景）
+# 注意：需要集成 dfdx/candle 实现完整训练循环
+tensor-ml = [
+    "tensor",
+    "tensor-sparse",
+    "tensor-gnn",
+    "tensor-autograd",
+    "tensor-pool",
+]
+
 [dependencies]
 # 可选依赖
 rayon = { version = "1.10", optional = true }
@@ -56,6 +113,21 @@ crossbeam-queue = { version = "0.3", optional = true }
 
 # SIMD 支持（stable Rust 使用 wide crate）
 wide = { version = "0.7", optional = true }
+
+# Tensor 支持（Phase 2 核心 tensor 基础设施）
+ndarray = { version = "0.15", optional = true }
+
+# GPU 加速后端
+dfdx = { version = "0.13", optional = true, features = ["cuda"] }
+
+# Candle 后端（Hugging Face）
+candle-core = { version = "0.8", optional = true }
+
+# 内存池支持
+bitvec = { version = "1.0", optional = true, default-features = false, features = ["alloc"] }
+
+# GNN 支持
+rand_distr = { version = "0.4", optional = true }
 
 [dev-dependencies]
 # 基准测试
@@ -104,6 +176,11 @@ harness = false
 name = "speedup"
 harness = false
 required-features = ["parallel"]
+
+[[bench]]
+name = "tensor_ops"
+harness = false
+required-features = ["tensor", "tensor-sparse", "tensor-gnn", "tensor-pool"]
 
 [profile.release]
 opt-level = 3

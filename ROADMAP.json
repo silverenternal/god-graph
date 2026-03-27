@@ -1,10 +1,35 @@
 {
   "project": {
     "name": "god-gragh",
-    "version": "0.3.0-beta",
-    "edition": "2024",
+    "version": "0.3.1-beta",
+    "edition": "2021",
+    "rust_version": "1.85",
     "description": "A high-performance, feature-rich Rust graph operations library with comprehensive algorithm support",
-    "goal": "Achieve 10K+ daily downloads on crate.io through superior design, performance, and documentation"
+    "goal": "Become the go-to Rust graph library for high-performance computing scenarios",
+    "realistic_target": "1000+ daily downloads within 12 months of v1.0 release"
+  },
+
+  "critical_positioning_statement": {
+    "what_we_are": "高性能图数据结构和算法库，专注 CPU 优化场景",
+    "what_we_are_not": "完整的 GNN 训练框架（那是 DGL/PyG 的领域）",
+    "core_strengths": [
+      "桶式邻接表支持 O(1) 增量更新（优于 petgraph 的静态 CSR）",
+      "Generation 索引防止 ABA 问题（类型安全）",
+      "并行算法套件（PageRank 80x 加速）",
+      "SIMD 向量化（wide::f64x4，stable Rust 兼容）",
+      "Tensor/GNN 推理支持（前向传播）"
+    ],
+    "target_users": [
+      "需要 Rust 图数据结构和算法库的开发者",
+      "需要多核 CPU 并行加速的场景",
+      "需要 GNN 推理（非训练）的场景",
+      "需要稳定索引（支持节点/边删除）的场景"
+    ],
+    "avoid_scenarios": [
+      "完整 GNN 训练框架需求（建议用 DGL/PyG）",
+      "需要生产级稳定性且不愿承担早期采用风险（建议用 petgraph）",
+      "需要 GPU 加速（等 tensor-gpu 特性成熟）"
+    ]
   },
 
   "design_principles": {
@@ -1122,46 +1147,227 @@
     "stable_msrv": {
       "version": "1.85+",
       "guarantee": "god-gragh 保证在 Stable Rust 1.85+ 上正常编译和运行",
-      "features_available": ["std", "parallel", "serde", "dot", "matrix", "rand"]
+      "features_available": ["std", "parallel", "serde", "dot", "matrix", "rand", "simd"]
     },
     "simd_feature": {
-      "requires_nightly": true,
-      "reason": "`simd` 特性使用 `std::simd` 进行向量化计算，该功能仅在 nightly Rust 上可用",
-      "stable_fallback": "使用 stable Rust 编译时，SIMD 函数自动回退到普通并行实现，功能完整但性能略有下降",
-      "nightly_version": "nightly-2024-12-01+",
-      "usage_example": "rustup default nightly && cargo build --features \"simd\""
+      "requires_nightly": false,
+      "correction_note": "⚠️ 重要修正：README.md 曾错误标注'simd 需 nightly'。实际实现使用 wide::f64x4（stable 兼容）",
+      "implementation": "使用 wide crate (v0.7) 实现 SIMD 向量化，wide crate 支持 stable Rust",
+      "stable_fallback": "SIMD 函数在 stable Rust 下完全可用，无需 nightly。wide::f64x4 自动利用 CPU SIMD 指令集（SSE/AVX/AVX-512）",
+      "future_note": "未来可能迁移到 std::simd（当 SIMD 稳定化后），但当前 wide crate 是正确选择"
     },
     "documentation": {
-      "readme_section": "README.md 中的特性标志表格明确标注 simd 需要 nightly",
+      "readme_section": "README.md 中的特性标志表格已修正：simd 特性标注为'stable Rust 兼容'",
       "roadmap_section": "本文件 msrv_policy 章节"
     }
   },
 
-  "immediate_next_steps": [
-    {
-      "step": 1,
-      "action": "Finalize Cargo.toml with proper metadata and feature flags",
-      "details": "Add authors, description, repository, license, keywords, categories"
+  "immediate_next_steps": {
+    "p0_critical_blockers": [
+      {
+        "id": "P0-STEP-1",
+        "action": "修正 README.md SIMD 文档错误",
+        "details": "移除'simd 特性需 nightly Rust'标注，添加'wide crate 支持 stable Rust'说明",
+        "effort": "0.5 小时",
+        "status": "PENDING",
+        "target_version": "v0.3.1-beta"
+      },
+      {
+        "id": "P0-STEP-2",
+        "action": "发布 crates.io v0.3.1-beta",
+        "details": "配置 cargo publish，发布到 crates.io，添加下载量徽章到 README",
+        "effort": "2 小时",
+        "status": "PENDING",
+        "target_version": "v0.3.1-beta"
+      }
+    ],
+    "p1_short_term": [
+      {
+        "id": "P1-STEP-1",
+        "action": "简化 Feature Flags 配置",
+        "details": "已实现元特性：tensor-full（所有 tensor 功能），tensor-ml（GNN+autograd），tensor-inference（仅推理）",
+        "effort": "已完成",
+        "status": "COMPLETED",
+        "target_version": "v0.3.1-beta"
+      },
+      {
+        "id": "P1-STEP-2",
+        "action": "明确 GNN 定位文档",
+        "details": "更新 README.md：明确标注'GNN 推理专用，训练需集成 dfdx/candle'，添加集成示例",
+        "effort": "3 小时",
+        "status": "PENDING",
+        "target_version": "v0.4.0-beta"
+      },
+      {
+        "id": "P1-STEP-3",
+        "action": "补充缺失测试",
+        "details": "补充 community detection、flow algorithms、matching algorithms 测试，目标覆盖率 80%+",
+        "effort": "16 小时",
+        "status": "PENDING",
+        "target_version": "v0.4.0-beta"
+      },
+      {
+        "id": "P1-STEP-4",
+        "action": "寻找早期采用者",
+        "details": "主动联系 Rust GNN/图分析社区，提供免费技术支持换取生产案例",
+        "effort": "持续运营",
+        "status": "ONGOING",
+        "target_version": "v1.0.0 前提"
+      }
+    ],
+    "p2_medium_term": [
+      {
+        "id": "P2-STEP-1",
+        "action": "统一 API 返回类型",
+        "details": "统一最短路径 API：dijkstra/bellman_ford/astar 均返回 Result<Option<...>, GraphError>",
+        "effort": "8 小时",
+        "status": "PENDING",
+        "target_version": "v0.5.0-rc (breaking change)",
+        "note": "需 major version bump"
+      },
+      {
+        "id": "P2-STEP-2",
+        "action": "添加内存池基准测试",
+        "details": "实现 tensor-pool 特性基准测试，验证'减少 80-90% 分配开销'声称",
+        "effort": "8 小时",
+        "status": "PENDING",
+        "target_version": "v0.4.0-beta"
+      },
+      {
+        "id": "P2-STEP-3",
+        "action": "修复遗留文档 URL",
+        "details": "更新 CHANGELOG.md:261-262 和 docs/migration-from-petgraph.md:411 的占位符 URL",
+        "effort": "0.5 小时",
+        "status": "PENDING",
+        "target_version": "v0.4.0-beta (可选)"
+      }
+    ],
+    "p3_long_term_optional": [
+      {
+        "id": "P3-STEP-1",
+        "action": "实现完整 autograd 引擎",
+        "details": "或深度集成 dfdx/candle，提供端到端 GNN 训练支持",
+        "effort": "40+ 小时",
+        "status": "OPTIONAL",
+        "target_version": "v0.6.0 (可选)",
+        "recommendation": "不推荐：定位已明确为推理引擎，训练生态应交给专业框架"
+      },
+      {
+        "id": "P3-STEP-2",
+        "action": "自定义 64 字节分配器",
+        "details": "为 Vec<AdjBucket> 实现自定义分配器，保证实际对齐（非依赖 Vec 分配器）",
+        "effort": "24 小时",
+        "status": "OPTIONAL",
+        "target_version": "v0.6.0 (可选)",
+        "recommendation": "不推荐：当前 debug_assert 验证已够用，自定义分配器收益有限"
+      },
+      {
+        "id": "P3-STEP-3",
+        "action": "纯无锁 par_dijkstra",
+        "details": "实现自定义无锁并发队列替代 SegQueue",
+        "effort": "24-40 小时",
+        "status": "OPTIONAL",
+        "target_version": "v0.6.0 (可选)",
+        "recommendation": "不推荐：当前混合设计已够用，性能已验证"
+      }
+    ]
+  },
+
+  "release_readiness": {
+    "v0.3.1-beta": {
+      "status": "READY - 可立即发布",
+      "blockers": [],
+      "required_fixes": [
+        "P0-STEP-1: README.md SIMD 文档修正（0.5h）",
+        "P0-STEP-2: 发布 crates.io（2h）"
+      ],
+      "estimated_effort": "2.5 小时",
+      "confidence": "95%"
     },
-    {
-      "step": 2,
-      "action": "Implement core Graph structure in src/graph/",
-      "details": "NodeIndex, EdgeIndex, Graph<T, E> with basic operations"
+    "v0.4.0-beta": {
+      "status": "PLANNED",
+      "required_features": [
+        "P1-STEP-2: 明确 GNN 定位文档（3h）",
+        "P1-STEP-3: 补充缺失测试（16h）",
+        "P2-STEP-2: 添加内存池基准测试（8h）"
+      ],
+      "optional_features": [
+        "P2-STEP-3: 修复遗留文档 URL（0.5h）"
+      ],
+      "estimated_effort": "27.5 小时",
+      "timeline": "2-4 周"
     },
-    {
-      "step": 3,
-      "action": "Add DFS and BFS traversal algorithms",
-      "details": "Create src/algorithms/traversal/ with comprehensive tests"
+    "v0.5.0-rc": {
+      "status": "PLANNED",
+      "required_features": [
+        "P2-STEP-1: 统一 API 返回类型（8h，breaking change）",
+        "API 稳定化",
+        "Serde 支持完善"
+      ],
+      "estimated_timeline": "2-3 个月",
+      "confidence": "80%"
     },
-    {
-      "step": 4,
-      "action": "Set up CI/CD pipeline",
-      "details": "GitHub Actions with test, clippy, fmt, and benchmark jobs"
-    },
-    {
-      "step": 5,
-      "action": "Write initial documentation and examples",
-      "details": "README.md with getting started guide, basic examples"
+    "v1.0.0-stable": {
+      "status": "LONG_TERM_GOAL",
+      "required_conditions": [
+        "6 个月无 breaking changes",
+        "10+ 生产环境案例",
+        "1000+ 日下载量（非 10K，现实目标）"
+      ],
+      "estimated_timeline": "12-18 个月",
+      "confidence": "60%"
     }
-  ]
+  },
+
+  "honest_competitive_analysis": {
+    "vs_petgraph": {
+      "our_advantages": [
+        "桶式邻接表增量更新（petgraph 需 rebuild）",
+        "并行算法套件（PageRank 80x 加速）",
+        "SIMD 向量化（wide::f64x4）",
+        "Tensor/GNN 推理支持",
+        "Generation 索引稳定性"
+      ],
+      "their_advantages": [
+        "社区成熟度（10K+ stars vs <100）",
+        "生产验证（多家公司使用 vs 零案例）",
+        "文档完整性（书籍级 vs README 级）",
+        "算法变体更多"
+      ],
+      "verdict": "功能创新领先，生态成熟度落后 3-5 年"
+    },
+    "vs_dgl_pyg": {
+      "our_advantages": [
+        "Rust 性能优势",
+        "内存安全保证",
+        "推理延迟低"
+      ],
+      "their_advantages": [
+        "完整训练生态",
+        "Python 易用性",
+        "社区和预训练模型"
+      ],
+      "verdict": "不直接竞争 - 我们定位推理引擎，非训练框架"
+    }
+  },
+
+  "success_metrics_revised": {
+    "downloads": {
+      "v1.0_launch_month": "100+",
+      "month_6": "500+ monthly",
+      "month_12": "1000+ monthly (realistic target)",
+      "year_2": "3000+ monthly"
+    },
+    "community": {
+      "github_stars_year_1": "100+",
+      "contributors_year_1": "5+",
+      "dependent_crates_year_1": "20+"
+    },
+    "quality": {
+      "docs_rs_build": "100% success",
+      "msrv": "Stable Rust 1.85+",
+      "security_advisories": "0 critical",
+      "test_coverage": "80%+"
+    }
+  }
 }

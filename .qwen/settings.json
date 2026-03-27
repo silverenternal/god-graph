@@ -15,7 +15,10 @@
       "Bash(grep *)",
       "Bash(cargo clippy)",
       "Bash(python3 *)",
-      "Bash(rustc *)"
+      "Bash(rustc *)",
+      "WebFetch(github.com)",
+      "WebFetch(docs.dgl.ai)",
+      "Bash(git add *)"
     ]
   },
   "$version": 3

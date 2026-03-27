@@ -284,6 +284,47 @@ mod tests {
     }
 
     #[test]
+    fn test_connected_components_empty_graph() {
+        let graph: Graph<i32, f64> = GraphBuilder::undirected()
+            .with_nodes(vec![1, 2, 3])
+            .build()
+            .unwrap();
+
+        let components = connected_components(&graph);
+        assert_eq!(components.len(), 3); // 每个节点独立一个分量
+        assert!(components.iter().all(|c| c.len() == 1));
+    }
+
+    #[test]
+    fn test_connected_components_single_node() {
+        let graph: Graph<i32, f64> = GraphBuilder::undirected()
+            .with_nodes(vec![1])
+            .build()
+            .unwrap();
+
+        let components = connected_components(&graph);
+        assert_eq!(components.len(), 1);
+        assert_eq!(components[0].len(), 1);
+    }
+
+    #[test]
+    fn test_connected_components_fully_connected() {
+        let graph: Graph<i32, f64> = GraphBuilder::undirected()
+            .with_nodes(vec![1, 2, 3, 4])
+            .with_edges(vec![
+                (0, 1, 1.0), (0, 2, 1.0), (0, 3, 1.0),
+                (1, 2, 1.0), (1, 3, 1.0),
+                (2, 3, 1.0),
+            ])
+            .build()
+            .unwrap();
+
+        let components = connected_components(&graph);
+        assert_eq!(components.len(), 1);
+        assert_eq!(components[0].len(), 4);
+    }
+
+    #[test]
     fn test_strongly_connected_components() {
         let graph = GraphBuilder::directed()
             .with_nodes(vec![1, 2, 3, 4])
@@ -297,6 +338,31 @@ mod tests {
     }
 
     #[test]
+    fn test_strongly_connected_single_node() {
+        let graph: Graph<i32, f64> = GraphBuilder::directed()
+            .with_nodes(vec![1])
+            .build()
+            .unwrap();
+
+        let components = strongly_connected_components(&graph);
+        assert_eq!(components.len(), 1);
+        assert_eq!(components[0].len(), 1);
+    }
+
+    #[test]
+    fn test_strongly_connected_dag() {
+        // DAG 没有强连通分量（除了单个节点）
+        let graph: Graph<i32, f64> = GraphBuilder::directed()
+            .with_nodes(vec![1, 2, 3, 4])
+            .with_edges(vec![(0, 1, 1.0), (1, 2, 1.0), (2, 3, 1.0)])
+            .build()
+            .unwrap();
+
+        let components = strongly_connected_components(&graph);
+        assert_eq!(components.len(), 4); // 每个节点独立
+    }
+
+    #[test]
     fn test_label_propagation() {
         let graph = GraphBuilder::undirected()
             .with_nodes(vec![1, 2, 3, 4])
@@ -306,5 +372,53 @@ mod tests {
 
         let labels = label_propagation(&graph, 10);
         assert_eq!(labels.len(), 4);
+    }
+
+    #[test]
+    fn test_label_propagation_empty_graph() {
+        let graph: Graph<i32, f64> = GraphBuilder::undirected()
+            .with_nodes(vec![1, 2, 3])
+            .build()
+            .unwrap();
+
+        let labels = label_propagation(&graph, 10);
+        // 空图中每个节点保持自己的标签
+        assert_eq!(labels.len(), 3);
+    }
+
+    #[test]
+    fn test_label_propagation_single_node() {
+        let graph: Graph<i32, f64> = GraphBuilder::undirected()
+            .with_nodes(vec![1])
+            .build()
+            .unwrap();
+
+        let labels = label_propagation(&graph, 10);
+        assert_eq!(labels.len(), 1);
+    }
+
+    #[test]
+    fn test_louvain_basic() {
+        let graph: Graph<i32, f64> = GraphBuilder::undirected()
+            .with_nodes(vec![1, 2, 3, 4])
+            .with_edges(vec![(0, 1, 1.0), (1, 2, 1.0), (2, 3, 1.0)])
+            .build()
+            .unwrap();
+
+        let communities = louvain(&graph, 1.0);
+        assert!(!communities.is_empty());
+        assert_eq!(communities.len(), 4);
+    }
+
+    #[test]
+    fn test_louvain_empty_graph() {
+        let graph: Graph<i32, f64> = GraphBuilder::undirected()
+            .with_nodes(vec![1, 2, 3])
+            .build()
+            .unwrap();
+
+        let communities = louvain(&graph, 1.0);
+        // 空图中每个节点独立一个社区
+        assert_eq!(communities.len(), 3);
     }
 }

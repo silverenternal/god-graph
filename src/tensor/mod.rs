@@ -1,0 +1,132 @@
+//! Tensor 模块：为图神经网络和高性能计算提供张量支持
+//!
+//! 本模块实现了 God-Graph 的 tensor 基础设施，包括：
+//! - Dense tensor（密集张量）：基于 ndarray 的 N 维数组
+//! - Sparse tensor（稀疏张量）：COO, CSR, BSR 格式
+//! - Tensor 操作：矩阵乘法、转置、归约等
+//! - 多后端支持：NdArray, Dfdx (GPU), Candle
+//! - 内存池优化：减少分配开销
+//! - 梯度检查点：降低反向传播内存占用
+//!
+//! ## 特性
+//!
+//! - **后端抽象**：通过 trait 系统支持多种 backend（ndarray, dfdx, candle）
+//! - **稀疏格式**：COO（坐标格式）、CSR（压缩稀疏行）、BSR（块稀疏行）
+//! - **SIMD 优化**：使用 wide crate 实现 SIMD 向量化
+//! - **内存对齐**：64 字节缓存行对齐，避免 false sharing
+//! - **内存池**：可复用的张量分配，适用于迭代算法
+//!
+//! ## 示例
+//!
+//! ```
+//! # #[cfg(feature = "tensor")]
+//! # {
+//! use god_gragh::tensor::{DenseTensor, TensorBase};
+//!
+//! // 创建 2x3 密集张量
+//! let data = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
+//! let tensor = DenseTensor::from_vec(data, vec![2, 3]);
+//!
+//! assert_eq!(tensor.shape(), &[2, 3]);
+//! assert_eq!(tensor.ndim(), 2);
+//! # }
+//! ```
+
+#[cfg(feature = "tensor")]
+pub mod traits;
+
+#[cfg(feature = "tensor")]
+pub mod dense;
+
+#[cfg(feature = "tensor-sparse")]
+pub mod sparse;
+
+#[cfg(feature = "tensor")]
+pub mod ops;
+
+#[cfg(feature = "tensor")]
+pub mod error;
+
+#[cfg(feature = "tensor")]
+pub mod types;
+
+#[cfg(feature = "tensor")]
+pub mod backend;
+
+#[cfg(feature = "tensor-pool")]
+pub mod pool;
+
+#[cfg(feature = "tensor-gnn")]
+pub mod gnn;
+
+#[cfg(feature = "tensor")]
+pub mod graph_tensor;
+
+#[cfg(feature = "tensor")]
+pub mod differentiable;
+
+// 重新导出核心类型
+#[cfg(feature = "tensor")]
+pub use traits::{TensorBase, TensorOps, DType, Device, SparseTensorOps, COOView};
+
+#[cfg(feature = "tensor")]
+pub use dense::DenseTensor;
+
+#[cfg(feature = "tensor-sparse")]
+pub use sparse::{SparseTensor, COOTensor, CSRTensor};
+
+#[cfg(feature = "tensor")]
+pub use error::TensorError;
+
+#[cfg(feature = "tensor")]
+pub use types::{TensorNode, TensorEdge, NodeFeatures, EdgeFeatures};
+
+#[cfg(feature = "tensor-sparse")]
+pub use types::AdjacencyMatrix;
+
+#[cfg(feature = "tensor")]
+pub use types::DegreeMatrix;
+
+#[cfg(feature = "tensor")]
+pub use backend::{TensorStorage, NdArrayStorage, UnifiedStorage};
+
+#[cfg(feature = "tensor-pool")]
+pub use pool::{TensorPool, PoolConfig, PoolStats, PooledTensor};
+
+#[cfg(feature = "tensor-autograd")]
+pub use pool::GradientCheckpoint;
+
+#[cfg(feature = "tensor-gnn")]
+pub use gnn::{
+    MessageFunction, Aggregator, UpdateFunction,
+    SumAggregator, MeanAggregator, MaxAggregator,
+    IdentityMessage, LinearMessage,
+    MessagePassingLayer,
+    GCNConv, GATConv, GraphSAGE,
+};
+
+#[cfg(feature = "tensor")]
+pub use graph_tensor::{
+    GraphAdjacencyMatrix,
+    GraphFeatureExtractor,
+    GraphReconstructor,
+    GraphTensorExt,
+    GraphBatch,
+};
+
+#[cfg(feature = "tensor")]
+pub use differentiable::{
+    DifferentiableGraph,
+    DifferentiableEdge,
+    DifferentiableNode,
+    GradientConfig,
+    GumbelSoftmaxSampler,
+    EdgeEditPolicy,
+    ThresholdEditPolicy,
+    GradientRecorder,
+    GraphTransformer,
+    StructureEdit,
+    EditOperation,
+    EdgeEditOp,
+    NodeEditOp,
+};

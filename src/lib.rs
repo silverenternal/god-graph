@@ -64,6 +64,7 @@ pub mod generators;
 pub mod export;
 pub mod utils;
 pub mod prelude;
+pub mod tensor;
 
 // 重新导出核心类型
 pub use errors::{GraphError, GraphResult};

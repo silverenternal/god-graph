@@ -952,6 +952,30 @@ impl<T, E> core::ops::Index<NodeIndex> for Graph<T, E> {
     }
 }
 
+/// # Safety
+///
+/// 此实现使用 `panic!` 而非 `Result`，因为 `IndexMut` trait 不允许返回 `Result`。
+/// 对于需要安全访问的场景，请使用 `get_node_mut()` 方法。
+///
+/// # Panics
+///
+/// Panics if:
+/// - 节点索引超出范围 (`index.index() >= self.nodes.len()`)
+/// - 节点已被删除 (`slot.is_occupied() == false`)
+/// - Generation 不匹配，索引已失效
+///
+/// # 示例
+///
+/// ```rust,should_panic
+/// use god_gragh::graph::{Graph, traits::GraphOps};
+///
+/// let mut graph = Graph::<i32, f64>::directed();
+/// let node = graph.add_node(42).unwrap();
+/// graph.remove_node(node).unwrap();
+///
+/// // 这将 panic，因为节点已被删除
+/// graph[node] = 100;
+/// ```
 impl<T, E> core::ops::IndexMut<NodeIndex> for Graph<T, E> {
     #[inline]
     fn index_mut(&mut self, index: NodeIndex) -> &mut Self::Output {

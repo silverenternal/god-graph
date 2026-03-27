@@ -172,6 +172,8 @@ impl<T: Default> Default for Padded<T> {
 #[inline]
 pub fn prefetch_read<T>(data: &T) {
     #[cfg(target_arch = "x86_64")]
+    // SAFETY: `_mm_prefetch` 是 CPU 内置指令，仅读取缓存不修改内存，
+    // 指针由 Rust 引用转换而来，保证有效且对齐
     unsafe {
         core::arch::x86_64::_mm_prefetch(
             data as *const T as *const i8,
@@ -182,6 +184,8 @@ pub fn prefetch_read<T>(data: &T) {
     #[cfg(not(target_arch = "x86_64"))]
     {
         #[cfg(feature = "std")]
+        // SAFETY: `prefetch_read_data` 仅预取数据到缓存，不修改内存，
+        // 指针有效且大小正确
         unsafe {
             std::hint::prefetch_read_data(
                 data as *const T as *const _,
@@ -217,6 +221,8 @@ pub fn prefetch_read<T>(data: &T) {
 #[inline]
 pub fn prefetch_write<T>(data: &mut T) {
     #[cfg(target_arch = "x86_64")]
+    // SAFETY: `_mm_prefetch` 是 CPU 内置指令，预取到缓存用于后续写入，
+    // 可变引用保证指针有效且独占访问
     unsafe {
         core::arch::x86_64::_mm_prefetch(
             data as *mut T as *const i8,

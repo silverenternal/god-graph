@@ -288,8 +288,49 @@ mod tests {
     }
 
     #[test]
+    fn test_hopcroft_karp_empty() {
+        let graph: Graph<&str, f64> = GraphBuilder::undirected()
+            .with_nodes(vec!["L1", "R1"])
+            .build()
+            .unwrap();
+
+        let left = vec![0];
+        let right = vec![1];
+        let matching = hopcroft_karp(&graph, &left, &right);
+        assert!(matching.is_empty()); // 没有边，匹配为空
+    }
+
+    #[test]
+    fn test_hopcroft_karp_perfect_matching() {
+        // 完美匹配：每个左部节点都匹配到一个右部节点
+        let graph: Graph<&str, f64> = GraphBuilder::undirected()
+            .with_nodes(vec!["L1", "L2", "R1", "R2"])
+            .with_edges(vec![(0, 2, 1.0), (1, 3, 1.0)])
+            .build()
+            .unwrap();
+
+        let left = vec![0, 1];
+        let right = vec![2, 3];
+        let matching = hopcroft_karp(&graph, &left, &right);
+        assert_eq!(matching.len(), 2); // 完美匹配
+    }
+
+    #[test]
+    fn test_hopcroft_karp_single_node() {
+        let graph: Graph<&str, f64> = GraphBuilder::undirected()
+            .with_nodes(vec!["L1"])
+            .build()
+            .unwrap();
+
+        let left = vec![0];
+        let right = vec![];
+        let matching = hopcroft_karp(&graph, &left, &right);
+        assert!(matching.is_empty());
+    }
+
+    #[test]
     fn test_blossom_basic() {
-        let graph = GraphBuilder::undirected()
+        let graph: Graph<&str, f64> = GraphBuilder::undirected()
             .with_nodes(vec!["A", "B", "C", "D"])
             .with_edges(vec![(0, 1, 1.0), (2, 3, 1.0)])
             .build()
@@ -297,5 +338,82 @@ mod tests {
 
         let matching = blossom(&graph);
         assert!(!matching.is_empty());
+    }
+
+    #[test]
+    fn test_blossom_odd_cycle() {
+        // 测试花算法处理奇环的能力
+        // 5 个节点的环：最大匹配应该是 2 条边
+        let graph: Graph<i32, f64> = GraphBuilder::undirected()
+            .with_nodes(vec![1, 2, 3, 4, 5])
+            .with_edges(vec![
+                (0, 1, 1.0),
+                (1, 2, 1.0),
+                (2, 3, 1.0),
+                (3, 4, 1.0),
+                (4, 0, 1.0),
+            ])
+            .build()
+            .unwrap();
+
+        let matching = blossom(&graph);
+        assert_eq!(matching.len(), 2); // 5 个节点的环最大匹配为 2
+    }
+
+    #[test]
+    fn test_blossom_empty_graph() {
+        let graph: Graph<&str, f64> = GraphBuilder::undirected()
+            .with_nodes(vec!["A", "B", "C"])
+            .build()
+            .unwrap();
+
+        let matching = blossom(&graph);
+        assert!(matching.is_empty());
+    }
+
+    #[test]
+    fn test_blossom_single_edge() {
+        let graph: Graph<&str, f64> = GraphBuilder::undirected()
+            .with_nodes(vec!["A", "B"])
+            .with_edges(vec![(0, 1, 1.0)])
+            .build()
+            .unwrap();
+
+        let matching = blossom(&graph);
+        assert_eq!(matching.len(), 1);
+    }
+
+    #[test]
+    fn test_blossom_path() {
+        // 路径图：4 个节点的线性链
+        let graph: Graph<i32, f64> = GraphBuilder::undirected()
+            .with_nodes(vec![1, 2, 3, 4])
+            .with_edges(vec![
+                (0, 1, 1.0),
+                (1, 2, 1.0),
+                (2, 3, 1.0),
+            ])
+            .build()
+            .unwrap();
+
+        let matching = blossom(&graph);
+        assert_eq!(matching.len(), 2); // 路径最大匹配为 2 条边
+    }
+
+    #[test]
+    fn test_blossom_complete_graph() {
+        // 完全图 K4：4 个节点，每对节点之间都有边
+        let graph: Graph<i32, f64> = GraphBuilder::undirected()
+            .with_nodes(vec![1, 2, 3, 4])
+            .with_edges(vec![
+                (0, 1, 1.0), (0, 2, 1.0), (0, 3, 1.0),
+                (1, 2, 1.0), (1, 3, 1.0),
+                (2, 3, 1.0),
+            ])
+            .build()
+            .unwrap();
+
+        let matching = blossom(&graph);
+        assert_eq!(matching.len(), 2); // K4 最大匹配为 2 条边
     }
 }

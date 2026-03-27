@@ -610,4 +610,107 @@ mod tests {
 
         assert_eq!(max_flow, 15.0);
     }
+
+    #[test]
+    fn test_edmonds_karp_no_path() {
+        // 源点和汇点不连通
+        let mut graph = GraphBuilder::directed()
+            .with_nodes(vec!["S", "A", "B", "T"])
+            .with_edges(vec![
+                (0, 1, 10.0), // S->A
+                (2, 3, 5.0),  // B->T (不连通)
+            ])
+            .build()
+            .unwrap();
+
+        let source = NodeIndex::new(0, 1);
+        let sink = NodeIndex::new(3, 1);
+        let max_flow = edmonds_karp(&mut graph, source, sink, |_, _, cap| *cap);
+
+        assert_eq!(max_flow, 0.0);
+    }
+
+    #[test]
+    fn test_dinic_no_path() {
+        let mut graph = GraphBuilder::directed()
+            .with_nodes(vec!["S", "A", "B", "T"])
+            .with_edges(vec![
+                (0, 1, 10.0), // S->A
+                (2, 3, 5.0),  // B->T (不连通)
+            ])
+            .build()
+            .unwrap();
+
+        let source = NodeIndex::new(0, 1);
+        let sink = NodeIndex::new(3, 1);
+        let max_flow = dinic(&mut graph, source, sink, |_, _, cap| *cap);
+
+        assert_eq!(max_flow, 0.0);
+    }
+
+    #[test]
+    fn test_edmonds_karp_single_edge() {
+        let mut graph = GraphBuilder::directed()
+            .with_nodes(vec!["S", "T"])
+            .with_edges(vec![(0, 1, 42.0)])
+            .build()
+            .unwrap();
+
+        let source = NodeIndex::new(0, 1);
+        let sink = NodeIndex::new(1, 1);
+        let max_flow = edmonds_karp(&mut graph, source, sink, |_, _, cap| *cap);
+
+        assert_eq!(max_flow, 42.0);
+    }
+
+    #[test]
+    fn test_dinic_single_edge() {
+        let mut graph = GraphBuilder::directed()
+            .with_nodes(vec!["S", "T"])
+            .with_edges(vec![(0, 1, 42.0)])
+            .build()
+            .unwrap();
+
+        let source = NodeIndex::new(0, 1);
+        let sink = NodeIndex::new(1, 1);
+        let max_flow = dinic(&mut graph, source, sink, |_, _, cap| *cap);
+
+        assert_eq!(max_flow, 42.0);
+    }
+
+    #[test]
+    fn test_push_relabel_no_path() {
+        let mut graph = GraphBuilder::directed()
+            .with_nodes(vec!["S", "A", "B", "T"])
+            .with_edges(vec![
+                (0, 1, 10.0), // S->A
+                (2, 3, 5.0),  // B->T (不连通)
+            ])
+            .build()
+            .unwrap();
+
+        let source = NodeIndex::new(0, 1);
+        let sink = NodeIndex::new(3, 1);
+        let max_flow = push_relabel(&mut graph, source, sink, |_, _, cap| *cap);
+
+        assert_eq!(max_flow, 0.0);
+    }
+
+    #[test]
+    fn test_edmonds_karp_zero_capacity() {
+        let mut graph = GraphBuilder::directed()
+            .with_nodes(vec!["S", "A", "T"])
+            .with_edges(vec![
+                (0, 1, 0.0), // S->A (零容量)
+                (1, 2, 5.0), // A->T
+            ])
+            .build()
+            .unwrap();
+
+        let source = NodeIndex::new(0, 1);
+        let sink = NodeIndex::new(2, 1);
+        let max_flow = edmonds_karp(&mut graph, source, sink, |_, _, cap| *cap);
+
+        assert_eq!(max_flow, 0.0);
+    }
 }
