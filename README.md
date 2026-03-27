@@ -41,7 +41,7 @@ Add dependency to `Cargo.toml`:
 
 ```toml
 [dependencies]
-god-gragh = "0.4.0-beta"
+god-gragh = "0.4.1-beta"
 ```
 
 ### Basic Usage
@@ -200,7 +200,7 @@ Enable `parallel` feature to use parallel algorithms:
 
 ```toml
 [dependencies]
-god-gragh = { version = "0.4.0-beta", features = ["parallel"] }
+god-gragh = { version = "0.4.1-beta", features = ["parallel"] }
 ```
 
 ```rust
@@ -222,7 +222,7 @@ Enable `simd` feature for SIMD vectorization (supports stable Rust):
 
 ```toml
 [dependencies]
-god-gragh = { version = "0.4.0-beta", features = ["simd"] }
+god-gragh = { version = "0.4.1-beta", features = ["simd"] }
 ```
 
 ```rust
@@ -245,7 +245,7 @@ Enable tensor features for Graph Neural Network workflows:
 
 ```toml
 [dependencies]
-god-gragh = { version = "0.4.0-beta", features = ["tensor", "tensor-gnn"] }
+god-gragh = { version = "0.4.1-beta", features = ["tensor", "tensor-gnn"] }
 ```
 
 ### Basic Tensor Operations
