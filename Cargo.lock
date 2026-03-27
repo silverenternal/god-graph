@@ -313,6 +313,7 @@ dependencies = [
  "rand_xorshift 0.3.0",
  "rayon",
  "serde",
+ "serde_json",
  "wide",
 ]
 

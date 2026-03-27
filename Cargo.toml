@@ -20,6 +20,9 @@ default = ["std"]
 # 标准库支持（始终启用）
 std = []
 
+# 进程服务器支持（JSON 协议通过 stdin/stdout）
+server = ["dep:serde_json"]
+
 # 并行算法支持
 parallel = ["dep:rayon", "dep:crossbeam-queue"]
 
@@ -56,6 +59,9 @@ crossbeam-queue = { version = "0.3", optional = true }
 
 # SIMD 支持（stable Rust 使用 wide crate）
 wide = { version = "0.7", optional = true }
+
+# 进程服务器（JSON 协议）
+serde_json = { version = "1.0", optional = true }
 
 [dev-dependencies]
 # 基准测试
@@ -104,6 +110,11 @@ harness = false
 name = "speedup"
 harness = false
 required-features = ["parallel"]
+
+[[bin]]
+name = "god-graph-server"
+path = "src/bin/server.rs"
+required-features = ["server"]
 
 [profile.release]
 opt-level = 3
