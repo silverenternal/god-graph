@@ -1220,7 +1220,7 @@ mod tests {
         let gradients = graph.compute_structure_gradients(&loss_gradients);
 
         // 梯度应该是有限的
-        for (_, &grad) in &gradients {
+        for &grad in gradients.values() {
             assert!(grad.is_finite(), "Gradient should be finite, got {}", grad);
         }
     }
@@ -1237,7 +1237,7 @@ mod tests {
         let gradients = graph.compute_structure_gradients(&loss_gradients);
 
         // 梯度应该是有限的
-        for (_, &grad) in &gradients {
+        for &grad in gradients.values() {
             assert!(grad.is_finite(), "Gradient should be finite, got {}", grad);
         }
     }
@@ -1254,7 +1254,7 @@ mod tests {
         let gradients = graph.compute_structure_gradients(&loss_gradients);
 
         // 梯度应该是有限的
-        for (_, &grad) in &gradients {
+        for &grad in gradients.values() {
             assert!(grad.is_finite(), "Gradient should be finite, got {}", grad);
         }
     }

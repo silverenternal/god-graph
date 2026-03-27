@@ -273,19 +273,16 @@ mod differentiable_graph_example {
 
             println!("\nRound {} 的编辑操作:", round + 1);
             for edit in &edits {
-                match &edit.operation {
-                    god_gragh::tensor::differentiable::EditOperation::EdgeEdit(src, dst, op) => {
-                        let op_str = match op {
-                            god_gragh::tensor::differentiable::EdgeEditOp::Add => "添加",
-                            god_gragh::tensor::differentiable::EdgeEditOp::Remove => "删除",
-                            god_gragh::tensor::differentiable::EdgeEditOp::Modify => "修改",
-                        };
-                        println!(
-                            "  {}→{}: {} (P: {:.3}→{:.3}, ∇: {:.4})",
-                            src, dst, op_str, edit.before, edit.after, edit.gradient
-                        );
-                    }
-                    _ => {}
+                if let god_gragh::tensor::differentiable::EditOperation::EdgeEdit(src, dst, op) = &edit.operation {
+                    let op_str = match op {
+                        god_gragh::tensor::differentiable::EdgeEditOp::Add => "添加",
+                        god_gragh::tensor::differentiable::EdgeEditOp::Remove => "删除",
+                        god_gragh::tensor::differentiable::EdgeEditOp::Modify => "修改",
+                    };
+                    println!(
+                        "  {}→{}: {} (P: {:.3}→{:.3}, ∇: {:.4})",
+                        src, dst, op_str, edit.before, edit.after, edit.gradient
+                    );
                 }
             }
         }

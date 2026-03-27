@@ -261,12 +261,11 @@ fn bench_memory_pool_hitrate(c: &mut Criterion) {
 
                     // 返回命中率统计
                     let stats = pool.stats();
-                    let hit_rate = if stats.total_allocations > 0 {
+                    if stats.total_allocations > 0 {
                         stats.pool_hits as f64 / stats.total_allocations as f64
                     } else {
                         0.0
-                    };
-                    hit_rate
+                    }
                 })
             },
         );
