@@ -176,13 +176,16 @@ jobs:
         run: |
           # 解析覆盖率报告并检查阈值
           COVERAGE=$(grep -oP 'line-rate="\K[0-9.]+' cobertura.xml || echo "0")
-          COVERAGE_PERCENT=$(echo "$COVERAGE * 100" | bc)
+          COVERAGE_PERCENT=$(python3 -c "print(f'{$COVERAGE * 100:.2f}')")
           echo "📊 当前覆盖率：${COVERAGE_PERCENT}%"
-          if (( $(echo "$COVERAGE_PERCENT < 70" | bc -l) )); then
-            echo "❌ 覆盖率低于 70% 阈值 (${COVERAGE_PERCENT}%)"
-            exit 1
-          fi
-          echo "✅ 覆盖率通过阈值检查 (${COVERAGE_PERCENT}% >= 70%)"
+          python3 -c "
+import sys
+coverage = float('$COVERAGE') * 100
+if coverage < 70:
+    print(f'❌ 覆盖率低于 70% 阈值 ({coverage:.2f}%)')
+    sys.exit(1)
+print(f'✅ 覆盖率通过阈值检查 ({coverage:.2f}% >= 70%)')
+"
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
