@@ -2,7 +2,7 @@
 
 [![Crates.io](https://img.shields.io/crates/v/god-gragh.svg)](https://crates.io/crates/god-gragh)
 [![Documentation](https://docs.rs/god-gragh/badge.svg)](https://docs.rs/god-gragh)
-[![License](https://img.shields.io/crates/l/god-gragh.svg)](LICENSE)
+[![License](https://img.shields.io/crates/l/god-gragh.svg)](https://github.com/silverenternal/god-graph?tab=License-1-ov-file#readme)
 [![Build Status](https://github.com/silverenternal/god-graph/workflows/CI/badge.svg)](https://github.com/silverenternal/god-graph/actions)
 [![Coverage Status](https://codecov.io/gh/silverenternal/god-graph/branch/main/graph/badge.svg)](https://codecov.io/gh/silverenternal/god-graph)
 
