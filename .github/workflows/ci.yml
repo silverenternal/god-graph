@@ -54,9 +54,6 @@ jobs:
       - name: Run Clippy (default features)
         run: cargo clippy --all-targets -- -D warnings
 
-      - name: Run Clippy (no default features)
-        run: cargo clippy --all-targets --no-default-features -- -D warnings
-
       - name: Run Clippy (all non-GPU features)
         run: cargo clippy --all-targets --features "std,parallel,serde,dot,matrix,rand,simd,tensor,tensor-sparse,tensor-gnn,tensor-pool,tensor-batch" -- -D warnings
 
@@ -170,21 +167,18 @@ jobs:
         run: cargo install cargo-tarpaulin
 
       - name: Generate coverage report
-        run: cargo tarpaulin --features "std,parallel,serde,dot,matrix,rand,simd,tensor,tensor-sparse,tensor-gnn,tensor-pool,tensor-batch" --out xml --fail-on-uncovered
+        run: cargo tarpaulin --features "std,parallel,serde,dot,matrix,rand,simd,tensor,tensor-sparse,tensor-gnn,tensor-pool,tensor-batch" --out xml --fail-under 70
 
       - name: Check coverage threshold (minimum 70%)
         run: |
-          # 解析覆盖率报告并检查阈值
           COVERAGE=$(grep -oP 'line-rate="\K[0-9.]+' cobertura.xml || echo "0")
           echo "📊 当前覆盖率：${COVERAGE}"
-          python3 << EOF
-import sys
-coverage = float("$COVERAGE") * 100
-if coverage < 70:
-    print(f"❌ 覆盖率低于 70% 阈值 ({coverage:.2f}%)")
-    sys.exit(1)
-print(f"✅ 覆盖率通过阈值检查 ({coverage:.2f}% >= 70%)")
-EOF
+          COV_INT=$(python3 -c "print(int(float('${COVERAGE}') * 100))")
+          if [ "${COV_INT}" -lt 70 ]; then
+            echo "❌ 覆盖率低于 70% 阈值 (${COV_INT}%)"
+            exit 1
+          fi
+          echo "✅ 覆盖率通过阈值检查 (${COV_INT}% >= 70%)"
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4

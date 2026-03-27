@@ -4,12 +4,12 @@ use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criteri
 use god_gragh::algorithms::centrality::{
     betweenness_centrality, closeness_centrality, degree_centrality, pagerank,
 };
+#[cfg(all(feature = "parallel", feature = "simd"))]
+use god_gragh::algorithms::parallel::par_pagerank_simd;
 #[cfg(feature = "parallel")]
 use god_gragh::algorithms::parallel::{
     par_degree_centrality as par_degree_centrality_fn, par_pagerank,
 };
-#[cfg(all(feature = "parallel", feature = "simd"))]
-use god_gragh::algorithms::parallel::{par_pagerank_simd};
 use god_gragh::graph::traits::{GraphOps, GraphQuery};
 use god_gragh::graph::Graph;
 
