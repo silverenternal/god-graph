@@ -5,12 +5,12 @@
 
 pub mod compute_graph;
 pub mod op;
-pub mod tensor;
 pub mod optimizer;
+pub mod tensor;
 
-pub use compute_graph::{ComputeGraph, OpId, TensorId, OpType};
+pub use compute_graph::{ComputeGraph, OpId, OpType, TensorId};
+pub use optimizer::{Adam, Optimizer, Sgd};
 pub use tensor::DifferentiableTensor;
-pub use optimizer::{Optimizer, Adam, Sgd};
 
 /// Type alias for operations
 pub type Op = OpType;

@@ -691,15 +691,21 @@ impl DenseTensor {
             let x3 = x * x2;
             let tanh_arg = SQRT_2_OVER_PI * (x + COEF * x3);
             let tanh_val = tanh_arg.tanh();
-            0.5 * (1.0 + tanh_val) + x * 0.5 * (1.0 - tanh_val * tanh_val) * SQRT_2_OVER_PI * (1.0 + 3.0 * COEF * x2)
+            0.5 * (1.0 + tanh_val)
+                + x * 0.5 * (1.0 - tanh_val * tanh_val) * SQRT_2_OVER_PI * (1.0 + 3.0 * COEF * x2)
         })
     }
 
     /// Mean along a specific dimension
     pub fn mean_dim(&self, dim: isize) -> Self {
         let ndim = self.ndim();
-        let axis = if dim < 0 { (ndim as isize + dim) as usize } else { dim as usize };
+        let axis = if dim < 0 {
+            (ndim as isize + dim) as usize
+        } else {
+            dim as usize
+        };
 
+        #[allow(clippy::needless_range_loop)]
         if ndim == 2 && axis == 0 {
             // Mean along rows (result: [cols])
             let cols = self.shape[1];
@@ -719,7 +725,8 @@ impl DenseTensor {
             let mut result = vec![0.0; rows];
             for row in 0..rows {
                 let row_start = row * cols;
-                result[row] = self.data[row_start..row_start + cols].iter().sum::<f64>() / cols as f64;
+                result[row] =
+                    self.data[row_start..row_start + cols].iter().sum::<f64>() / cols as f64;
             }
             Self::new(result, vec![rows, 1])
         } else if ndim == 3 && axis == 2 {
@@ -747,8 +754,13 @@ impl DenseTensor {
     pub fn var_dim(&self, dim: isize) -> Self {
         let mean = self.mean_dim(dim);
         let ndim = self.ndim();
-        let axis = if dim < 0 { (ndim as isize + dim) as usize } else { dim as usize };
+        let axis = if dim < 0 {
+            (ndim as isize + dim) as usize
+        } else {
+            dim as usize
+        };
 
+        #[allow(clippy::needless_range_loop)]
         if ndim == 2 && axis == 0 {
             let cols = self.shape[1];
             let rows = self.shape[0];
@@ -771,7 +783,8 @@ impl DenseTensor {
                 let var: f64 = self.data[row_start..row_start + cols]
                     .iter()
                     .map(|&x| (x - m) * (x - m))
-                    .sum::<f64>() / cols as f64;
+                    .sum::<f64>()
+                    / cols as f64;
                 result[row] = var;
             }
             Self::new(result, vec![rows, 1])
@@ -787,7 +800,8 @@ impl DenseTensor {
                     let var: f64 = self.data[start..start + dim]
                         .iter()
                         .map(|&x| (x - m) * (x - m))
-                        .sum::<f64>() / dim as f64;
+                        .sum::<f64>()
+                        / dim as f64;
                     result[b * seq + s] = var;
                 }
             }
@@ -795,7 +809,12 @@ impl DenseTensor {
         } else {
             // Fallback: return scalar variance
             let mean_val = self.data.iter().sum::<f64>() / self.numel() as f64;
-            let var: f64 = self.data.iter().map(|&x| (x - mean_val) * (x - mean_val)).sum::<f64>() / self.numel() as f64;
+            let var: f64 = self
+                .data
+                .iter()
+                .map(|&x| (x - mean_val) * (x - mean_val))
+                .sum::<f64>()
+                / self.numel() as f64;
             Self::scalar(var)
         }
     }
@@ -818,7 +837,9 @@ impl DenseTensor {
     /// Fill values with a given value where mask is 1.0
     pub fn mask_fill(&self, mask: &Self, value: f64) -> Self {
         assert_eq!(self.shape, mask.shape, "Shape mismatch for mask_fill");
-        let data: Vec<f64> = self.data.iter()
+        let data: Vec<f64> = self
+            .data
+            .iter()
             .zip(mask.data.iter())
             .map(|(&v, &m)| if m > 0.5 { value } else { v })
             .collect();
@@ -842,12 +863,12 @@ impl DenseTensor {
             let batch = self.shape[0];
             let dim = self.shape[2];
             let mut result_data = Vec::with_capacity(batch * dim);
-            
+
             for b in 0..batch {
                 let offset = (b * self.shape[1] + row) * dim;
                 result_data.extend_from_slice(&self.data[offset..offset + dim]);
             }
-            
+
             Self::new(result_data, vec![batch, dim])
         } else {
             // Fallback: return first element
@@ -910,8 +931,18 @@ impl DenseTensor {
     /// For 3D tensors: [batch, seq, hidden] @ [hidden, out] -> [batch, seq, out]
     /// Broadcasts 2D weight across batch dimension
     pub fn bmm_broadcast_weight(&self, weight: &DenseTensor) -> Self {
-        assert_eq!(self.ndim(), 3, "bmm_broadcast_weight requires 3D tensor, got {}D", self.ndim());
-        assert_eq!(weight.ndim(), 2, "weight must be 2D, got {}D", weight.ndim());
+        assert_eq!(
+            self.ndim(),
+            3,
+            "bmm_broadcast_weight requires 3D tensor, got {}D",
+            self.ndim()
+        );
+        assert_eq!(
+            weight.ndim(),
+            2,
+            "weight must be 2D, got {}D",
+            weight.ndim()
+        );
         assert_eq!(
             self.shape[2], weight.shape[0],
             "Shape mismatch for bmm: {:?} x {:?}",
@@ -930,7 +961,7 @@ impl DenseTensor {
             for s in 0..seq {
                 let input_start = (b * seq + s) * hidden;
                 let output_start = (b * seq + s) * out;
-                
+
                 for o in 0..out {
                     let mut sum = 0.0;
                     for h in 0..hidden {
@@ -955,7 +986,7 @@ impl DenseTensor {
         let mut new_shape = self.shape.to_vec();
         new_shape[self.ndim() - 1] = target_dim;
 
-        let mut data = Vec::with_capacity(self.numel() / 1 * target_dim);
+        let mut data = Vec::with_capacity(self.numel() * target_dim);
         for &val in self.data.iter() {
             for _ in 0..target_dim {
                 data.push(val);

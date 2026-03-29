@@ -34,8 +34,8 @@
 //! }
 //! ```
 
-use crate::tensor::DenseTensor;
 use crate::tensor::traits::TensorBase;
+use crate::tensor::DenseTensor;
 
 /// Type of graph edge
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -150,8 +150,18 @@ impl SelfAttentionEdge {
     }
 
     /// Get all QKV projections if available
-    pub fn get_qkv(&self) -> (Option<&DenseTensor>, Option<&DenseTensor>, Option<&DenseTensor>) {
-        (self.message.as_ref(), self.key_proj.as_ref(), self.value_proj.as_ref())
+    pub fn get_qkv(
+        &self,
+    ) -> (
+        Option<&DenseTensor>,
+        Option<&DenseTensor>,
+        Option<&DenseTensor>,
+    ) {
+        (
+            self.message.as_ref(),
+            self.key_proj.as_ref(),
+            self.value_proj.as_ref(),
+        )
     }
 
     /// Check if this edge has complete QKV projections
@@ -167,12 +177,13 @@ impl SelfAttentionEdge {
                 // Simple dot-product attention
                 let q_data = q.data();
                 let k_data = k.data();
-                
-                let dot_product: f64 = q_data.iter()
+
+                let dot_product: f64 = q_data
+                    .iter()
                     .zip(k_data.iter())
                     .map(|(&q_val, &k_val)| q_val * k_val)
                     .sum();
-                
+
                 Some(dot_product / d_k.sqrt())
             } else {
                 None
@@ -299,7 +310,13 @@ pub struct GraphEdge {
 
 impl GraphEdge {
     /// Create a self-attention edge
-    pub fn self_attention(source: usize, target: usize, weight: f64, head: usize, layer: usize) -> Self {
+    pub fn self_attention(
+        source: usize,
+        target: usize,
+        weight: f64,
+        head: usize,
+        layer: usize,
+    ) -> Self {
         Self {
             edge_type: GraphEdgeType::SelfAttention,
             source,
@@ -375,7 +392,9 @@ impl GraphEdge {
             edge_type: GraphEdgeType::SelfAttention,
             source,
             target,
-            self_attention: Some(SelfAttentionEdge::with_message(weight, head, layer, message)),
+            self_attention: Some(SelfAttentionEdge::with_message(
+                weight, head, layer, message,
+            )),
             data_flow: None,
             residual: None,
         }
@@ -420,15 +439,12 @@ impl GraphEdge {
     /// Get the message tensor from this edge (if any)
     pub fn message(&self) -> Option<&DenseTensor> {
         match self.edge_type {
-            GraphEdgeType::SelfAttention => {
-                self.self_attention.as_ref().and_then(|sa| sa.message.as_ref())
-            }
-            GraphEdgeType::DataFlow => {
-                self.data_flow.as_ref().and_then(|df| df.message.as_ref())
-            }
-            GraphEdgeType::Residual => {
-                self.residual.as_ref().and_then(|r| r.residual.as_ref())
-            }
+            GraphEdgeType::SelfAttention => self
+                .self_attention
+                .as_ref()
+                .and_then(|sa| sa.message.as_ref()),
+            GraphEdgeType::DataFlow => self.data_flow.as_ref().and_then(|df| df.message.as_ref()),
+            GraphEdgeType::Residual => self.residual.as_ref().and_then(|r| r.residual.as_ref()),
         }
     }
 
@@ -486,7 +502,13 @@ impl GraphEdge {
     }
 
     /// Get Q/K/V projections if available (SelfAttention edges only)
-    pub fn get_qkv(&self) -> (Option<&DenseTensor>, Option<&DenseTensor>, Option<&DenseTensor>) {
+    pub fn get_qkv(
+        &self,
+    ) -> (
+        Option<&DenseTensor>,
+        Option<&DenseTensor>,
+        Option<&DenseTensor>,
+    ) {
         if let Some(sa) = &self.self_attention {
             sa.get_qkv()
         } else {
@@ -496,7 +518,9 @@ impl GraphEdge {
 
     /// Check if this edge has complete QKV projections
     pub fn has_qkv(&self) -> bool {
-        self.self_attention.as_ref().map_or(false, |sa| sa.has_qkv())
+        self.self_attention
+            .as_ref()
+            .is_some_and(|sa| sa.has_qkv())
     }
 
     /// Get the key projection (SelfAttention edges only)
@@ -511,7 +535,9 @@ impl GraphEdge {
 
     /// Compute attention score using Q and K projections (SelfAttention edges only)
     pub fn compute_attention_score(&self, d_k: f64) -> Option<f64> {
-        self.self_attention.as_ref().and_then(|sa| sa.compute_attention_score(d_k))
+        self.self_attention
+            .as_ref()
+            .and_then(|sa| sa.compute_attention_score(d_k))
     }
 }
 
@@ -573,31 +599,32 @@ mod tests {
 
     #[test]
     fn test_tensor_message_passing() {
-        use crate::tensor::DenseTensor;
         use crate::tensor::traits::TensorBase;
-        
+        use crate::tensor::DenseTensor;
+
         // Create a message tensor
         let message = DenseTensor::from_vec(vec![1.0, 2.0, 3.0, 4.0], vec![2, 2]);
-        
+
         // Test self-attention edge with message
-        let mut sa_edge = GraphEdge::self_attention_with_message(
-            0, 1, 0.8, 2, 5, message.clone()
-        );
+        let mut sa_edge = GraphEdge::self_attention_with_message(0, 1, 0.8, 2, 5, message.clone());
         assert!(sa_edge.message().is_some());
         assert_eq!(sa_edge.message().unwrap().shape(), &[2, 2]);
-        
+
         // Test data flow edge with message
         let df_edge = GraphEdge::data_flow_with_message(
-            10, 20, DataFlowOp::InputToAttention, 3, message.clone()
+            10,
+            20,
+            DataFlowOp::InputToAttention,
+            3,
+            message.clone(),
         );
         assert!(df_edge.message().is_some());
-        
+
         // Test residual edge with tensor
-        let res_edge = GraphEdge::residual_with_tensor(
-            5, 15, 7, SkipType::PreNorm, message.clone()
-        );
+        let res_edge =
+            GraphEdge::residual_with_tensor(5, 15, 7, SkipType::PreNorm, message.clone());
         assert!(res_edge.message().is_some());
-        
+
         // Test set_message on existing edge
         let new_message = DenseTensor::from_vec(vec![5.0, 6.0], vec![2]);
         sa_edge.set_message(new_message.clone());

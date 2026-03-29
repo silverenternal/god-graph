@@ -157,7 +157,10 @@ impl TensorRingCompressor {
     /// # Returns
     ///
     /// TensorRing decomposition of the input tensor
-    pub fn decompose(&self, tensor: &DenseTensor) -> Result<TensorRing, crate::tensor::TensorError> {
+    pub fn decompose(
+        &self,
+        tensor: &DenseTensor,
+    ) -> Result<TensorRing, crate::tensor::TensorError> {
         use crate::tensor::decomposition::tensor_ring::compress_tensor_ring;
 
         let shape = tensor.shape();
@@ -177,7 +180,10 @@ impl TensorRingCompressor {
     /// # Returns
     ///
     /// Reconstructed dense tensor
-    pub fn reconstruct(&self, ring: &TensorRing) -> Result<DenseTensor, crate::tensor::TensorError> {
+    pub fn reconstruct(
+        &self,
+        ring: &TensorRing,
+    ) -> Result<DenseTensor, crate::tensor::TensorError> {
         ring.reconstruct()
     }
 
@@ -207,10 +213,7 @@ impl TensorRingCompressor {
             let weight = edge_ref.data();
 
             // Decompose into Tensor Ring format
-            let weight_tensor = DenseTensor::new(
-                weight.data.to_vec(),
-                weight.shape.to_vec(),
-            );
+            let weight_tensor = DenseTensor::new(weight.data.to_vec(), weight.shape.to_vec());
 
             // Select rank based on config
             let rank = self.select_rank(weight_tensor.shape());
@@ -220,7 +223,9 @@ impl TensorRingCompressor {
 
             // Count parameters
             let original_params = weight_tensor.shape().iter().product::<usize>();
-            let compressed_params = ring.cores.iter()
+            let compressed_params = ring
+                .cores
+                .iter()
                 .map(|c| c.shape().iter().product::<usize>())
                 .sum::<usize>();
 
@@ -287,9 +292,9 @@ impl TensorRingCompressor {
     fn select_rank(&self, shape: &[usize]) -> usize {
         // Simple heuristic: use config rank or adapt based on dimensions
         let min_dim = shape.iter().min().copied().unwrap_or(1024);
-        
+
         let base_rank = self.config.target_ranks.first().copied().unwrap_or(64);
-        
+
         // Clamp to min/max bounds
         base_rank
             .max(self.config.min_rank)
@@ -321,7 +326,9 @@ impl TensorRingCompressor {
         *self.compressed_params.borrow_mut() += compressed;
 
         // Store compressed tensor
-        self.compressed_tensors.borrow_mut().insert(name.to_string(), ring.clone());
+        self.compressed_tensors
+            .borrow_mut()
+            .insert(name.to_string(), ring.clone());
 
         Ok(ring)
     }
@@ -351,15 +358,15 @@ pub fn adaptive_rank_selection(
 
     let shape = tensor.shape();
     let min_dim = shape.iter().min().copied().unwrap_or(1);
-    
+
     // Compute SVD
     let (_, s, _) = svd_decompose(tensor, Some(min_dim))?;
-    
+
     // Calculate cumulative energy
     let s_data = s.data();
     let total_energy: f64 = s_data.iter().map(|x| x * x).sum();
     let threshold = total_energy * energy_threshold;
-    
+
     let mut cumulative_energy = 0.0;
     for (i, &sigma) in s_data.iter().enumerate() {
         cumulative_energy += sigma * sigma;
@@ -367,7 +374,7 @@ pub fn adaptive_rank_selection(
             return Ok(i + 1);
         }
     }
-    
+
     Ok(min_dim)
 }
 
@@ -392,21 +399,21 @@ pub fn mixed_precision_compress(
     use crate::tensor::decomposition::tensor_ring::compress_tensor_ring;
 
     let mut results = HashMap::new();
-    
+
     for (name, tensor) in tensors {
         // Adjust rank based on importance
         let importance = importance_map
             .and_then(|m| m.get(name))
             .copied()
             .unwrap_or(1.0);
-        
+
         // Higher importance → higher rank
         let rank = (base_rank as f64 * importance).ceil() as usize;
-        
+
         let ring = compress_tensor_ring(tensor, rank)?;
         results.insert(name.clone(), ring);
     }
-    
+
     Ok(results)
 }
 
@@ -469,19 +476,23 @@ mod tests {
             .with_max_rank(8);
         let compressor = TensorRingCompressor::new(config);
 
-        let tensor = DenseTensor::from_vec(
-            vec![1.0; 64 * 64],
-            vec![64, 64],
-        );
+        let tensor = DenseTensor::from_vec(vec![1.0; 64 * 64], vec![64, 64]);
 
         let ring = compressor.decompose(&tensor).unwrap();
-        
+
         eprintln!("Original shape: {:?}", ring.original_shape);
         eprintln!("Ranks: {:?}", ring.ranks);
-        eprintln!("Core shapes: {:?}", ring.cores.iter().map(|c| c.shape()).collect::<Vec<_>>());
+        eprintln!(
+            "Core shapes: {:?}",
+            ring.cores.iter().map(|c| c.shape()).collect::<Vec<_>>()
+        );
         eprintln!("Compression ratio: {}", ring.compression_ratio());
-        
-        assert!(ring.compression_ratio() > 1.0, "Compression ratio should be > 1.0, got {}", ring.compression_ratio());
+
+        assert!(
+            ring.compression_ratio() > 1.0,
+            "Compression ratio should be > 1.0, got {}",
+            ring.compression_ratio()
+        );
     }
 
     #[test]

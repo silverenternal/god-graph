@@ -5,14 +5,14 @@
 
 #[cfg(all(test, feature = "tensor"))]
 mod tests {
-    use god_gragh::graph::Graph;
     use god_gragh::graph::traits::{GraphOps, GraphQuery};
+    use god_gragh::graph::Graph;
+    use god_gragh::tensor::decomposition::qr::{is_orthogonal, orthogonalize_in_place};
     use god_gragh::tensor::DenseTensor;
     use god_gragh::tensor::TensorBase;
-    use god_gragh::tensor::decomposition::qr::{orthogonalize_in_place, is_orthogonal};
-    use god_gragh::transformer::optimization::{LieGroupConfig};
     use god_gragh::transformer::optimization::lie_group::orthogonalize_weights_in_place;
     use god_gragh::transformer::optimization::switch::{OperatorType, WeightTensor};
+    use god_gragh::transformer::optimization::LieGroupConfig;
 
     /// Build a mini Transformer graph with random weights for testing
     fn build_mini_transformer_graph_with_weights() -> Graph<OperatorType, WeightTensor> {
@@ -159,8 +159,7 @@ mod tests {
 
         for edge_ref in graph.edges() {
             let weight = edge_ref.data();
-            let tensor =
-                DenseTensor::from_vec(weight.data.to_vec(), weight.shape.to_vec());
+            let tensor = DenseTensor::from_vec(weight.data.to_vec(), weight.shape.to_vec());
 
             // Check orthogonality (for square or tall matrices)
             if weight.shape[0] >= weight.shape[1] {
@@ -197,7 +196,10 @@ mod tests {
         );
 
         eprintln!("✓ Graph-level orthogonalization test passed");
-        eprintln!("  - Max orthogonality error: {:.2e}", max_orthogonality_error);
+        eprintln!(
+            "  - Max orthogonality error: {:.2e}",
+            max_orthogonality_error
+        );
         eprintln!("  - Output error: {:.2e}", output_error);
         eprintln!(
             "  - Average edge error: {:.2e}",
@@ -245,14 +247,18 @@ mod tests {
 
         // Test 2: Graph-level (same size matrix)
         let mut graph = Graph::<OperatorType, WeightTensor>::directed();
-        let a = graph.add_node(OperatorType::Linear {
-            in_features: 64,
-            out_features: 64,
-        }).unwrap();
-        let b = graph.add_node(OperatorType::Linear {
-            in_features: 64,
-            out_features: 64,
-        }).unwrap();
+        let a = graph
+            .add_node(OperatorType::Linear {
+                in_features: 64,
+                out_features: 64,
+            })
+            .unwrap();
+        let b = graph
+            .add_node(OperatorType::Linear {
+                in_features: 64,
+                out_features: 64,
+            })
+            .unwrap();
         let graph_data: Vec<f64> = (0..64 * 64).map(|_| rng.gen::<f64>() * 0.1).collect();
         let weight = WeightTensor::new("test".to_string(), graph_data, vec![64, 64]);
         let _edge = graph.add_edge(a, b, weight).unwrap();

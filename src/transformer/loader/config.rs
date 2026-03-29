@@ -6,28 +6,28 @@ use serde::{Deserialize, Serialize};
 pub trait ModelConfigTrait {
     /// Get vocabulary size
     fn vocab_size(&self) -> usize;
-    
+
     /// Get hidden dimension
     fn hidden_size(&self) -> usize;
-    
+
     /// Get intermediate dimension (FFN)
     fn intermediate_size(&self) -> usize;
-    
+
     /// Get number of hidden layers
     fn num_hidden_layers(&self) -> usize;
-    
+
     /// Get number of attention heads
     fn num_attention_heads(&self) -> usize;
-    
+
     /// Get number of KV heads (for GQA)
     fn num_key_value_heads(&self) -> Option<usize>;
-    
+
     /// Get maximum position embeddings
     fn max_position_embeddings(&self) -> usize;
-    
+
     /// Get RMS norm epsilon
     fn rms_norm_eps(&self) -> f64;
-    
+
     /// Get RoPE theta base
     fn rope_theta(&self) -> f64;
 }
@@ -264,11 +264,13 @@ pub enum ModelConfig {
 
 impl ModelConfig {
     /// Load config from a JSON file
-    pub fn from_file<P: AsRef<std::path::Path>>(path: P) -> Result<Self, Box<dyn std::error::Error>> {
+    pub fn from_file<P: AsRef<std::path::Path>>(
+        path: P,
+    ) -> Result<Self, Box<dyn std::error::Error>> {
         let file = std::fs::File::open(path)?;
         let reader = std::io::BufReader::new(file);
         let value: serde_json::Value = serde_json::from_reader(reader)?;
-        
+
         // Try to detect model type from config
         if value.get("sliding_window").is_some() {
             // Mistral has sliding_window
@@ -370,7 +372,7 @@ mod tests {
     #[test]
     fn test_llama_7b_config() {
         let config = LlamaConfig::llama_7b();
-        
+
         assert_eq!(config.vocab_size, 32000);
         assert_eq!(config.hidden_size, 4096);
         assert_eq!(config.intermediate_size, 11008);
@@ -382,7 +384,7 @@ mod tests {
     #[test]
     fn test_llama_2_7b_config() {
         let config = LlamaConfig::llama_2_7b();
-        
+
         assert_eq!(config.num_key_value_heads, Some(32));
         assert_eq!(config.max_position_embeddings, 4096);
     }
@@ -390,7 +392,7 @@ mod tests {
     #[test]
     fn test_llama_3_8b_config() {
         let config = LlamaConfig::llama_3_8b();
-        
+
         assert_eq!(config.vocab_size, 128256);
         assert_eq!(config.hidden_size, 4096);
         assert_eq!(config.intermediate_size, 14336);
@@ -403,7 +405,7 @@ mod tests {
     #[test]
     fn test_mistral_7b_config() {
         let config = MistralConfig::mistral_7b();
-        
+
         assert_eq!(config.vocab_size, 32000);
         assert_eq!(config.hidden_size, 4096);
         assert_eq!(config.num_key_value_heads, 8);

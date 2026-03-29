@@ -95,10 +95,12 @@ pub mod error_analysis;
 pub use switch::ModelSwitch;
 
 #[cfg(feature = "tensor")]
-pub use lie_group::{LieGroupConfig, LieGroupOptimizer, SOkBlock, decompose_into_so_blocks};
+pub use lie_group::{decompose_into_so_blocks, LieGroupConfig, LieGroupOptimizer, SOkBlock};
 
 #[cfg(feature = "tensor")]
-pub use tensor_ring::{CompressionConfig, TensorRingCompressor, mixed_precision_compress, adaptive_rank_selection};
+pub use tensor_ring::{
+    adaptive_rank_selection, mixed_precision_compress, CompressionConfig, TensorRingCompressor,
+};
 
 #[cfg(feature = "tensor")]
 pub use cad_editor::CadStyleEditor;

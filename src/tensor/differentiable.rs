@@ -227,11 +227,11 @@ impl DifferentiableEdge {
     }
 
     /// 基于梯度更新 logits（梯度下降）
-    /// 
+    ///
     /// # Gradient Descent
-    /// 
+    ///
     /// logits -= learning_rate * gradient
-    /// 
+    ///
     /// 其中 gradient = ∂L/∂logits（增加损失的方向）
     pub fn update_logits(&mut self, gradient: f64, learning_rate: f64) {
         self.logits -= learning_rate * gradient;
@@ -677,9 +677,18 @@ impl<T: Clone + Default> DifferentiableGraph<T> {
     #[cfg(feature = "transformer")]
     pub fn to_graph_with_types(
         &self,
-        node_types: &std::collections::HashMap<usize, crate::transformer::optimization::switch::OperatorType>,
-        edge_weights: &std::collections::HashMap<(usize, usize), crate::transformer::optimization::switch::WeightTensor>,
-    ) -> crate::graph::Graph<crate::transformer::optimization::switch::OperatorType, crate::transformer::optimization::switch::WeightTensor> {
+        node_types: &std::collections::HashMap<
+            usize,
+            crate::transformer::optimization::switch::OperatorType,
+        >,
+        edge_weights: &std::collections::HashMap<
+            (usize, usize),
+            crate::transformer::optimization::switch::WeightTensor,
+        >,
+    ) -> crate::graph::Graph<
+        crate::transformer::optimization::switch::OperatorType,
+        crate::transformer::optimization::switch::WeightTensor,
+    > {
         use crate::graph::traits::GraphOps;
         use crate::graph::Graph;
         use crate::node::NodeIndex;
@@ -691,10 +700,13 @@ impl<T: Clone + Default> DifferentiableGraph<T> {
         // 添加节点，使用提供的类型信息
         let mut node_indices: Vec<NodeIndex> = Vec::with_capacity(self.num_nodes);
         for i in 0..self.num_nodes {
-            let node_type = node_types.get(&i)
+            let node_type = node_types
+                .get(&i)
                 .cloned()
-                .unwrap_or_else(|| OperatorType::Custom { name: format!("node_{}", i) });
-            
+                .unwrap_or_else(|| OperatorType::Custom {
+                    name: format!("node_{}", i),
+                });
+
             let result = graph.add_node(node_type);
             match result {
                 Ok(idx) => node_indices.push(idx),
@@ -708,13 +720,9 @@ impl<T: Clone + Default> DifferentiableGraph<T> {
         // 添加存在的边，使用提供的权重信息
         for (&(src, dst), edge) in &self.edges {
             if edge.exists && src < node_indices.len() && dst < node_indices.len() {
-                let weight = edge_weights.get(&(src, dst))
-                    .cloned()
-                    .unwrap_or_else(|| WeightTensor::new(
-                        format!("edge_{}_to_{}", src, dst),
-                        vec![1.0],
-                        vec![1],
-                    ));
+                let weight = edge_weights.get(&(src, dst)).cloned().unwrap_or_else(|| {
+                    WeightTensor::new(format!("edge_{}_to_{}", src, dst), vec![1.0], vec![1])
+                });
                 let _ = graph.add_edge(node_indices[src], node_indices[dst], weight);
             }
         }

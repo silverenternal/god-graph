@@ -6,10 +6,15 @@
 //! - Visualization of computation flow
 //! - Dynamic graph modification (experimental)
 
-pub mod nodes;
 pub mod edges;
 pub mod execution;
+pub mod nodes;
 
-pub use nodes::{GraphNode, GraphNodeType, TokenEmbeddingNode, HiddenStateNode, AttentionOutputNode, FFNOutputNode};
-pub use edges::{GraphEdge, GraphEdgeType, SelfAttentionEdge, DataFlowEdge, ResidualEdge, SkipType};
+pub use edges::{
+    DataFlowEdge, GraphEdge, GraphEdgeType, ResidualEdge, SelfAttentionEdge, SkipType,
+};
 pub use execution::{GraphExecutor, GraphTransformer};
+pub use nodes::{
+    AttentionOutputNode, FFNOutputNode, GraphNode, GraphNodeType, HiddenStateNode,
+    TokenEmbeddingNode,
+};

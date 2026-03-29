@@ -19,10 +19,12 @@
 //! cargo run --features "tensor,safetensors,tensor-pool,transformer" --example llama_forward -- --export-dot graph.dot
 //! ```
 
-use god_gragh::transformer::model::{LlamaModel, LlamaConfig, LlamaModelGraphBuilder, LlamaDecoderLayer};
-use god_gragh::transformer::layers::{RMSNorm, MultiHeadAttention, FeedForward};
-use god_gragh::tensor::DenseTensor;
 use god_gragh::tensor::traits::TensorBase;
+use god_gragh::tensor::DenseTensor;
+use god_gragh::transformer::layers::{FeedForward, MultiHeadAttention, RMSNorm};
+use god_gragh::transformer::model::{
+    LlamaConfig, LlamaDecoderLayer, LlamaModel, LlamaModelGraphBuilder,
+};
 use std::path::Path;
 
 /// Model size presets
@@ -78,7 +80,7 @@ impl ModelSize {
 /// Create a test LlamaModel with random weights
 fn create_test_model(config: &LlamaConfig) -> LlamaModel {
     println!("  Creating model...");
-    
+
     // Create embedding layer
     let embed_tokens = DenseTensor::ones(vec![config.vocab_size, config.hidden_size]);
 
@@ -132,7 +134,7 @@ struct Args {
 
 fn parse_args() -> Args {
     let args: Vec<String> = std::env::args().collect();
-    
+
     let mut model_size = ModelSize::Tiny;
     let mut export_dot = None;
     let mut input_ids = vec![1, 2, 3, 4, 5]; // Default input
@@ -216,11 +218,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("║ Model: {}", args.model_size.name());
     println!("║ Input: {:?}", args.input_ids);
-    
+
     if let Some(ref dot_file) = args.export_dot {
         println!("║ Export DOT: {}", dot_file);
     }
-    
+
     println!("╠══════════════════════════════════════════════════════════╣");
 
     // Get configuration
@@ -235,8 +237,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("║ Building computation graph...");
     let builder = LlamaModelGraphBuilder::new(&model);
     let mut transformer = builder.build_graph_for_input(&args.input_ids);
-    println!("║ ✓ Graph built with {} nodes, {} edges", 
-             transformer.num_nodes(), transformer.num_edges());
+    println!(
+        "║ ✓ Graph built with {} nodes, {} edges",
+        transformer.num_nodes(),
+        transformer.num_edges()
+    );
 
     // Export to DOT if requested
     if let Some(dot_file) = &args.export_dot {
@@ -253,9 +258,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("╠══════════════════════════════════════════════════════════╣");
     println!("║ Output shape: {:?}", output.shape());
     println!("║ Output stats:");
-    println!("║   - Min: {:.6}", output.data().iter().cloned().fold(f64::INFINITY, f64::min));
-    println!("║   - Max: {:.6}", output.data().iter().cloned().fold(f64::NEG_INFINITY, f64::max));
-    println!("║   - Mean: {:.6}", output.data().iter().sum::<f64>() / output.data().len() as f64);
+    println!(
+        "║   - Min: {:.6}",
+        output.data().iter().cloned().fold(f64::INFINITY, f64::min)
+    );
+    println!(
+        "║   - Max: {:.6}",
+        output
+            .data()
+            .iter()
+            .cloned()
+            .fold(f64::NEG_INFINITY, f64::max)
+    );
+    println!(
+        "║   - Mean: {:.6}",
+        output.data().iter().sum::<f64>() / output.data().len() as f64
+    );
     println!("╚══════════════════════════════════════════════════════════╝");
 
     Ok(())

@@ -8,8 +8,8 @@
 #[cfg(feature = "simd")]
 use wide::f64x4;
 
-use crate::tensor::DenseTensor;
 use crate::tensor::traits::TensorBase;
+use crate::tensor::DenseTensor;
 
 /// Memory pool for Transformer inference
 ///
@@ -484,7 +484,10 @@ mod tests {
         });
         let actual_elapsed = elapsed.elapsed().as_secs_f64() * 1000.0;
 
-        assert!(actual_elapsed >= 10.0, "Should have slept for at least 10ms");
+        assert!(
+            actual_elapsed >= 10.0,
+            "Should have slept for at least 10ms"
+        );
 
         // Test tokens_per_second
         let tps = benchmark::tokens_per_second(100, 1000.0); // 100 tokens in 1000ms

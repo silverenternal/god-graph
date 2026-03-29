@@ -116,7 +116,10 @@ mod topology_defect_detection {
         println!("Input loss gradients:");
         for ((src, dst), &grad) in &loss_gradients {
             let classification = classify_gradient(grad);
-            println!("  {}→{}: ∂L/∂A = {:.3} [{}]", src, dst, grad, classification);
+            println!(
+                "  {}→{}: ∂L/∂A = {:.3} [{}]",
+                src, dst, grad, classification
+            );
         }
 
         // Compute structure gradients
@@ -570,7 +573,14 @@ mod topology_defect_detection {
 
         for node in 0..num_nodes {
             if !visited[node] {
-                dfs_cycle(node, &prob_matrix, &mut visited, &mut rec_stack, &mut path, &mut cycles);
+                dfs_cycle(
+                    node,
+                    &prob_matrix,
+                    &mut visited,
+                    &mut rec_stack,
+                    &mut path,
+                    &mut cycles,
+                );
             }
         }
 

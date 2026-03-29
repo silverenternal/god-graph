@@ -377,7 +377,7 @@ mod differentiable_graph_example {
     }
 
     /// 构建一个迷你 Transformer 图结构用于示例
-    /// 
+    ///
     /// 这是一个简化版的 Transformer，包含：
     /// - 4 个节点（输入、Attention、FFN、输出）
     /// - 边表示数据流和残差连接

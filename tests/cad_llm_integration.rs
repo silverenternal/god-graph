@@ -14,8 +14,8 @@ mod tests {
     use god_gragh::tensor::{DenseTensor, TensorBase, TensorOps};
     use god_gragh::transformer::optimization::switch::{ModelSwitch, OperatorType, WeightTensor};
     use god_gragh::transformer::optimization::{
-        CadStyleEditor, CompressionConfig, LieGroupConfig, LieGroupOptimizer,
-        TensorRingCompressor, TopologyConstraint,
+        CadStyleEditor, CompressionConfig, LieGroupConfig, LieGroupOptimizer, TensorRingCompressor,
+        TopologyConstraint,
     };
 
     /// Test complete CAD-LLM workflow
@@ -40,16 +40,13 @@ mod tests {
 
         // 4. Apply tensor ring compression with lower rank for actual compression
         let config = CompressionConfig::new()
-            .with_target_ranks(vec![8])  // Lower rank for compression
+            .with_target_ranks(vec![8]) // Lower rank for compression
             .with_min_rank(4)
             .with_max_rank(16);
         let compressor = TensorRingCompressor::new(config);
 
         // Test compression on a sample tensor
-        let weight = DenseTensor::from_vec(
-            vec![1.0; 64 * 64],
-            vec![64, 64],
-        );
+        let weight = DenseTensor::from_vec(vec![1.0; 64 * 64], vec![64, 64]);
         let ring = compressor.decompose(&weight).unwrap();
         // Just verify decomposition works (compression ratio may vary)
         assert!(ring.compression_ratio() > 0.0);
@@ -60,15 +57,19 @@ mod tests {
         println!("Found {} defects", defects.len());
 
         // 6. Add and solve constraints
-        editor.add_constraint(TopologyConstraint::ResidualConnection {
-            from_layer: "attention".to_string(),
-            to_layer: "output".to_string(),
-        }).unwrap();
+        editor
+            .add_constraint(TopologyConstraint::ResidualConnection {
+                from_layer: "attention".to_string(),
+                to_layer: "output".to_string(),
+            })
+            .unwrap();
 
         let report = editor.solve_constraints().unwrap();
-        println!("Constraints satisfied: {}/{}",
-                 report.satisfied_count,
-                 report.satisfied_count + report.violated_count);
+        println!(
+            "Constraints satisfied: {}/{}",
+            report.satisfied_count,
+            report.satisfied_count + report.violated_count
+        );
     }
 
     /// Test Model Switch functionality
@@ -116,14 +117,11 @@ mod tests {
         let config = LieGroupConfig::new()
             .with_block_size(16)
             .with_target_layers(vec!["linear".to_string()]);
-        
+
         let optimizer = LieGroupOptimizer::new(config);
 
         // Test on a small matrix
-        let matrix = DenseTensor::from_vec(
-            vec![1.0, 2.0, 3.0, 4.0],
-            vec![2, 2],
-        );
+        let matrix = DenseTensor::from_vec(vec![1.0, 2.0, 3.0, 4.0], vec![2, 2]);
 
         let result = optimizer.cayley_transform(&matrix);
         assert!(result.is_ok());
@@ -139,16 +137,14 @@ mod tests {
         let config = CompressionConfig::new()
             .with_target_ranks(vec![8])
             .with_layers(vec!["test".to_string()]);
-        
+
         let compressor = TensorRingCompressor::new(config);
 
-        let weight = DenseTensor::from_vec(
-            (0..100).map(|i| i as f64 / 100.0).collect(),
-            vec![10, 10],
-        );
+        let weight =
+            DenseTensor::from_vec((0..100).map(|i| i as f64 / 100.0).collect(), vec![10, 10]);
 
         let ring = compressor.decompose(&weight).unwrap();
-        
+
         assert_eq!(ring.cores.len(), 2);
         assert!(ring.compression_ratio() > 0.0);
         println!("Compression ratio: {:.2}x", ring.compression_ratio());
@@ -164,10 +160,12 @@ mod tests {
         let mut graph = Graph::<OperatorType, WeightTensor>::directed();
 
         // Add isolated node with dummy weight
-        graph.add_node(OperatorType::Linear {
-            in_features: 512,
-            out_features: 512,
-        }).unwrap();
+        graph
+            .add_node(OperatorType::Linear {
+                in_features: 512,
+                out_features: 512,
+            })
+            .unwrap();
 
         let editor = CadStyleEditor::new(&mut graph);
         let defects = editor.detect_defects().unwrap();
@@ -183,20 +181,26 @@ mod tests {
         let mut editor = CadStyleEditor::new(&mut graph);
 
         // Add multiple constraints
-        editor.add_constraint(TopologyConstraint::ResidualConnection {
-            from_layer: "attn".to_string(),
-            to_layer: "output".to_string(),
-        }).unwrap();
+        editor
+            .add_constraint(TopologyConstraint::ResidualConnection {
+                from_layer: "attn".to_string(),
+                to_layer: "output".to_string(),
+            })
+            .unwrap();
 
-        editor.add_constraint(TopologyConstraint::GradientFlow {
-            from: "embed".to_string(),
-            to: "head".to_string(),
-        }).unwrap();
+        editor
+            .add_constraint(TopologyConstraint::GradientFlow {
+                from: "embed".to_string(),
+                to: "head".to_string(),
+            })
+            .unwrap();
 
         let report = editor.solve_constraints().unwrap();
-        println!("Constraint report: {}/{} satisfied", 
-                 report.satisfied_count,
-                 report.satisfied_count + report.violated_count);
+        println!(
+            "Constraint report: {}/{} satisfied",
+            report.satisfied_count,
+            report.satisfied_count + report.violated_count
+        );
     }
 
     /// Test module extraction and replacement
@@ -221,10 +225,12 @@ mod tests {
         editor.set_auto_save(true);
 
         // Perform operations that should be recorded
-        editor.add_constraint(TopologyConstraint::ResidualConnection {
-            from_layer: "test".to_string(),
-            to_layer: "output".to_string(),
-        }).unwrap();
+        editor
+            .add_constraint(TopologyConstraint::ResidualConnection {
+                from_layer: "test".to_string(),
+                to_layer: "output".to_string(),
+            })
+            .unwrap();
 
         let _ = editor.solve_constraints().unwrap();
 
@@ -237,9 +243,9 @@ mod tests {
     #[test]
     fn test_assembly_validation() {
         let graph = create_test_graph();
-        
-        let report = god_gragh::transformer::optimization::constraints::validate_assembly(&graph)
-            .unwrap();
+
+        let report =
+            god_gragh::transformer::optimization::constraints::validate_assembly(&graph).unwrap();
 
         println!("Assembly valid: {}", report.is_valid);
         println!("Modules: {}", report.module_count);
@@ -250,39 +256,51 @@ mod tests {
         let mut graph = Graph::<OperatorType, WeightTensor>::directed();
 
         // Add embedding
-        let _embed = graph.add_node(OperatorType::Embedding {
-            vocab_size: 1000,
-            embed_dim: 128,
-        }).unwrap();
+        let _embed = graph
+            .add_node(OperatorType::Embedding {
+                vocab_size: 1000,
+                embed_dim: 128,
+            })
+            .unwrap();
 
         // Add attention layer
-        let _attn = graph.add_node(OperatorType::Attention {
-            num_heads: 4,
-            hidden_dim: 128,
-        }).unwrap();
+        let _attn = graph
+            .add_node(OperatorType::Attention {
+                num_heads: 4,
+                hidden_dim: 128,
+            })
+            .unwrap();
 
         // Add MLP
-        let _mlp = graph.add_node(OperatorType::MLP {
-            hidden_dim: 512,
-            activation: "relu".to_string(),
-        }).unwrap();
+        let _mlp = graph
+            .add_node(OperatorType::MLP {
+                hidden_dim: 512,
+                activation: "relu".to_string(),
+            })
+            .unwrap();
 
         // Add normalization
-        let _norm = graph.add_node(OperatorType::Norm {
-            norm_type: "layernorm".to_string(),
-            eps: 1e-6,
-        }).unwrap();
+        let _norm = graph
+            .add_node(OperatorType::Norm {
+                norm_type: "layernorm".to_string(),
+                eps: 1e-6,
+            })
+            .unwrap();
 
         // Add residual (using Custom as placeholder)
-        let _residual = graph.add_node(OperatorType::Custom {
-            name: "residual".to_string(),
-        }).unwrap();
+        let _residual = graph
+            .add_node(OperatorType::Custom {
+                name: "residual".to_string(),
+            })
+            .unwrap();
 
         // Add LM head
-        let _head = graph.add_node(OperatorType::Linear {
-            in_features: 128,
-            out_features: 1000,
-        }).unwrap();
+        let _head = graph
+            .add_node(OperatorType::Linear {
+                in_features: 128,
+                out_features: 1000,
+            })
+            .unwrap();
 
         graph
     }
@@ -291,19 +309,19 @@ mod tests {
     #[test]
     #[cfg(feature = "tensor")]
     fn test_compression_rank_sweep() {
-        let weight = DenseTensor::from_vec(
-            vec![1.0; 256 * 256],
-            vec![256, 256],
-        );
+        let weight = DenseTensor::from_vec(vec![1.0; 256 * 256], vec![256, 256]);
 
         for rank in [8, 16, 32, 64] {
-            let config = CompressionConfig::new()
-                .with_target_ranks(vec![rank]);
+            let config = CompressionConfig::new().with_target_ranks(vec![rank]);
             let compressor = TensorRingCompressor::new(config);
 
             let ring = compressor.decompose(&weight).unwrap();
-            
-            println!("Rank {}: compression ratio = {:.2}x", rank, ring.compression_ratio());
+
+            println!(
+                "Rank {}: compression ratio = {:.2}x",
+                rank,
+                ring.compression_ratio()
+            );
         }
     }
 
@@ -314,7 +332,7 @@ mod tests {
     #[test]
     #[cfg(feature = "tensor")]
     fn test_orthogonalization_quality() {
-        use god_gragh::tensor::decomposition::qr::{orthogonalize, debug_matrix, is_orthogonal};
+        use god_gragh::tensor::decomposition::qr::{debug_matrix, is_orthogonal, orthogonalize};
 
         // Create a well-conditioned matrix using sinusoidal patterns
         // This avoids linear dependence issues from repetitive values
@@ -371,14 +389,26 @@ mod tests {
             }
         }
 
-        println!("Diagonal values (should be ~1.0): min={:.6}, max={:.6}", 
-                 diagonal_errors.iter().cloned().fold(f64::INFINITY, f64::min),
-                 diagonal_errors.iter().cloned().fold(f64::NEG_INFINITY, f64::max));
+        println!(
+            "Diagonal values (should be ~1.0): min={:.6}, max={:.6}",
+            diagonal_errors
+                .iter()
+                .cloned()
+                .fold(f64::INFINITY, f64::min),
+            diagonal_errors
+                .iter()
+                .cloned()
+                .fold(f64::NEG_INFINITY, f64::max)
+        );
         println!("Max off-diagonal error: {:.2e}", max_error);
         println!("Off-diagonal errors > 1e-6: {}", off_diagonal_errors.len());
 
         // Verify orthogonality with tight tolerance (should achieve machine precision for well-conditioned matrices)
-        assert!(max_error < 1e-10, "Orthogonalization failed with error {}", max_error);
+        assert!(
+            max_error < 1e-10,
+            "Orthogonalization failed with error {}",
+            max_error
+        );
     }
 
     /// Test Phase 0 graph-level integration for Lie group orthogonalization
@@ -391,23 +421,23 @@ mod tests {
         let mut graph: Graph<OperatorType, WeightTensor> = Graph::directed();
 
         // Add nodes
-        let node1 = graph.add_node(OperatorType::Linear {
-            in_features: 8,
-            out_features: 8,
-        }).unwrap();
+        let node1 = graph
+            .add_node(OperatorType::Linear {
+                in_features: 8,
+                out_features: 8,
+            })
+            .unwrap();
 
-        let node2 = graph.add_node(OperatorType::Norm {
-            norm_type: "rms".to_string(),
-            eps: 1e-6,
-        }).unwrap();
+        let node2 = graph
+            .add_node(OperatorType::Norm {
+                norm_type: "rms".to_string(),
+                eps: 1e-6,
+            })
+            .unwrap();
 
         // Add edge with weight
         let weight_data: Vec<f64> = (0..64).map(|i| (i as f64) / 64.0).collect();
-        let weight = WeightTensor::new(
-            "test_layer.weight".to_string(),
-            weight_data,
-            vec![8, 8],
-        );
+        let weight = WeightTensor::new("test_layer.weight".to_string(), weight_data, vec![8, 8]);
         graph.add_edge(node1, node2, weight).unwrap();
 
         // Apply Lie group orthogonalization
@@ -432,23 +462,23 @@ mod tests {
         let mut graph: Graph<OperatorType, WeightTensor> = Graph::directed();
 
         // Add nodes
-        let node1 = graph.add_node(OperatorType::Attention {
-            num_heads: 4,
-            hidden_dim: 16,
-        }).unwrap();
+        let node1 = graph
+            .add_node(OperatorType::Attention {
+                num_heads: 4,
+                hidden_dim: 16,
+            })
+            .unwrap();
 
-        let node2 = graph.add_node(OperatorType::Norm {
-            norm_type: "rms".to_string(),
-            eps: 1e-6,
-        }).unwrap();
+        let node2 = graph
+            .add_node(OperatorType::Norm {
+                norm_type: "rms".to_string(),
+                eps: 1e-6,
+            })
+            .unwrap();
 
         // Add edge with larger weight for better compression
         let weight_data: Vec<f64> = (0..256).map(|i| (i as f64) / 256.0).collect();
-        let weight = WeightTensor::new(
-            "attention.weight".to_string(),
-            weight_data,
-            vec![16, 16],
-        );
+        let weight = WeightTensor::new("attention.weight".to_string(), weight_data, vec![16, 16]);
         graph.add_edge(node1, node2, weight).unwrap();
 
         // Apply tensor ring compression analysis
@@ -463,14 +493,19 @@ mod tests {
 
         let report = report.unwrap();
         println!("Compression ratio: {:.2}x", report.compression_ratio);
-        println!("Original params: {}, Compressed params: {}", 
-                 report.original_params, report.compressed_params);
+        println!(
+            "Original params: {}, Compressed params: {}",
+            report.original_params, report.compressed_params
+        );
 
         // Note: For small tensors, compression ratio may be < 1 (expansion)
         // This is expected - TR compression is effective for larger tensors
         // Just verify the compression completed successfully
-        assert!(report.compression_ratio > 0.0, 
-                "Compression ratio should be > 0.0, got {}", report.compression_ratio);
+        assert!(
+            report.compression_ratio > 0.0,
+            "Compression ratio should be > 0.0, got {}",
+            report.compression_ratio
+        );
     }
 
     /// Test Phase 0 complete workflow: orthogonalize + compress
@@ -483,30 +518,26 @@ mod tests {
         let mut graph: Graph<OperatorType, WeightTensor> = Graph::directed();
 
         // Add attention layer node
-        let q_node = graph.add_node(OperatorType::Linear {
-            in_features: 8,
-            out_features: 8,
-        }).unwrap();
+        let q_node = graph
+            .add_node(OperatorType::Linear {
+                in_features: 8,
+                out_features: 8,
+            })
+            .unwrap();
 
         // Add FFN layer node
-        let ffn_node = graph.add_node(OperatorType::MLP {
-            hidden_dim: 16,
-            activation: "silu".to_string(),
-        }).unwrap();
+        let ffn_node = graph
+            .add_node(OperatorType::MLP {
+                hidden_dim: 16,
+                activation: "silu".to_string(),
+            })
+            .unwrap();
 
         // Add residual connection with weight
-        let q_weight = WeightTensor::new(
-            "q_proj.weight".to_string(),
-            vec![1.0; 64],
-            vec![8, 8],
-        );
+        let q_weight = WeightTensor::new("q_proj.weight".to_string(), vec![1.0; 64], vec![8, 8]);
         graph.add_edge(q_node, ffn_node, q_weight).unwrap();
 
-        let ffn_weight = WeightTensor::new(
-            "mlp.weight".to_string(),
-            vec![1.0; 256],
-            vec![16, 16],
-        );
+        let ffn_weight = WeightTensor::new("mlp.weight".to_string(), vec![1.0; 256], vec![16, 16]);
         graph.add_edge(ffn_node, q_node, ffn_weight).unwrap();
 
         // Step 1: Validate topology
@@ -530,7 +561,10 @@ mod tests {
 
         println!("Complete workflow:");
         println!("  - Topology: valid={}", topology_report.is_valid);
-        println!("  - Compression ratio: {:.2}x", compression_report.compression_ratio);
+        println!(
+            "  - Compression ratio: {:.2}x",
+            compression_report.compression_ratio
+        );
         println!("  - Layers compressed: {}", compression_report.layers.len());
 
         assert!(compression_report.layers.len() > 0);
@@ -542,20 +576,20 @@ mod tests {
     #[cfg(feature = "tensor")]
     fn test_lie_group_orthogonalization_quality() {
         use god_gragh::tensor::decomposition::qr::orthogonalize;
-        
+
         // Create a square matrix for orthogonalization
         let data: Vec<f64> = (0..256).map(|i| ((i % 50) as f64) / 50.0).collect();
         let tensor = DenseTensor::from_vec(data, vec![16, 16]);
-        
+
         // Apply QR orthogonalization - verify it completes successfully
         let ortho = orthogonalize(&tensor).unwrap();
-        
+
         // Verify output shape matches input
         assert_eq!(ortho.shape(), &[16, 16]);
-        
+
         // Verify values are finite (no NaN or inf)
         assert!(ortho.data().iter().all(|&x| x.is_finite()));
-        
+
         println!("Orthogonalization completed successfully");
     }
 
@@ -565,38 +599,42 @@ mod tests {
     #[cfg(feature = "tensor")]
     fn test_tensor_ring_compress_reconstruct() {
         use god_gragh::tensor::TensorBase;
-        
+
         // Create a low-rank test matrix (easier to compress)
         let u_data: Vec<f64> = (0..100 * 5).map(|i| (i % 10) as f64 / 10.0).collect();
         let v_data: Vec<f64> = (0..5 * 50).map(|i| (i % 7) as f64 / 10.0).collect();
-        
+
         let u = DenseTensor::from_vec(u_data, vec![100, 5]);
         let v = DenseTensor::from_vec(v_data, vec![5, 50]);
         let original = u.matmul(&v);
-        
+
         // Compress with appropriate rank
         let config = CompressionConfig::new()
             .with_target_ranks(vec![4])
             .with_min_rank(2)
             .with_max_rank(8);
         let compressor = TensorRingCompressor::new(config);
-        
+
         let ring = compressor.decompose(&original).unwrap();
         let reconstructed = compressor.reconstruct(&ring).unwrap();
-        
+
         // Verify reconstruction error
         assert_eq!(original.shape(), reconstructed.shape());
-        
+
         let mut max_error: f64 = 0.0;
         for (orig, recon) in original.data().iter().zip(reconstructed.data().iter()) {
             let error: f64 = (orig - recon).abs();
             max_error = max_error.max(error);
         }
-        
+
         println!("Reconstruction error: {:.6}", max_error);
         // Allow reasonable reconstruction error for low-rank approximation
         // Tensor ring reconstruction is approximate by nature
-        assert!(max_error < 10.0, "Reconstruction error should be < 10.0, got {:.6}", max_error);
+        assert!(
+            max_error < 10.0,
+            "Reconstruction error should be < 10.0, got {:.6}",
+            max_error
+        );
     }
 
     /// Test block decomposition quality
@@ -604,24 +642,23 @@ mod tests {
     #[test]
     fn test_block_decomposition_orthogonality() {
         use god_gragh::transformer::optimization::decompose_into_so_blocks;
-        
+
         // Create a test matrix
-        let tensor = DenseTensor::from_vec(
-            vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0],
-            vec![2, 4],
-        );
-        
+        let tensor =
+            DenseTensor::from_vec(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0], vec![2, 4]);
+
         // Decompose into SO(2) blocks
         let blocks = decompose_into_so_blocks(&tensor, 2).unwrap();
-        
+
         // Verify each block is orthogonal
         for (i, block) in blocks.iter().enumerate() {
             assert!(
                 block.is_orthogonal(1e-5),
-                "Block {} should be orthogonal", i
+                "Block {} should be orthogonal",
+                i
             );
         }
-        
+
         println!("Decomposed into {} orthogonal blocks", blocks.len());
     }
 
@@ -631,44 +668,55 @@ mod tests {
     fn test_cad_editor_realistic_defects() {
         // Create a graph with intentional defects
         let mut graph: Graph<OperatorType, WeightTensor> = Graph::directed();
-        
+
         // Add main computation path
-        let layer1 = graph.add_node(OperatorType::Attention {
-            num_heads: 8,
-            hidden_dim: 64,
-        }).unwrap();
-        
-        let layer2 = graph.add_node(OperatorType::MLP {
-            hidden_dim: 128,
-            activation: "silu".to_string(),
-        }).unwrap();
-        
-        let layer3 = graph.add_node(OperatorType::Norm {
-            norm_type: "rmsnorm".to_string(),
-            eps: 1e-6,
-        }).unwrap();
-        
+        let layer1 = graph
+            .add_node(OperatorType::Attention {
+                num_heads: 8,
+                hidden_dim: 64,
+            })
+            .unwrap();
+
+        let layer2 = graph
+            .add_node(OperatorType::MLP {
+                hidden_dim: 128,
+                activation: "silu".to_string(),
+            })
+            .unwrap();
+
+        let layer3 = graph
+            .add_node(OperatorType::Norm {
+                norm_type: "rmsnorm".to_string(),
+                eps: 1e-6,
+            })
+            .unwrap();
+
         // Add edges (data flow)
         let w1 = WeightTensor::new("layer1.weight".to_string(), vec![1.0; 64], vec![8, 8]);
         graph.add_edge(layer1, layer2, w1).unwrap();
-        
+
         let w2 = WeightTensor::new("layer2.weight".to_string(), vec![1.0; 64], vec![8, 8]);
         graph.add_edge(layer2, layer3, w2).unwrap();
-        
+
         // Add isolated node (defect)
-        let _isolated = graph.add_node(OperatorType::Custom {
-            name: "isolated_op".to_string(),
-        }).unwrap();
-        
+        let _isolated = graph
+            .add_node(OperatorType::Custom {
+                name: "isolated_op".to_string(),
+            })
+            .unwrap();
+
         // Use CAD editor to detect defects
         let editor = CadStyleEditor::new(&mut graph);
         let defects = editor.detect_defects().unwrap();
-        
+
         println!("Detected {} defects", defects.len());
         for defect in &defects {
-            println!("  - {:?}: location={:?}", defect.defect_type, defect.location);
+            println!(
+                "  - {:?}: location={:?}",
+                defect.defect_type, defect.location
+            );
         }
-        
+
         // Should detect at least the isolated node
         assert!(defects.len() > 0, "Should detect at least one defect");
     }

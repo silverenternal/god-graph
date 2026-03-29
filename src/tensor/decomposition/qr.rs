@@ -83,7 +83,11 @@ pub fn qr_decompose(tensor: &DenseTensor) -> Result<(DenseTensor, DenseTensor), 
         new_norm = new_norm.sqrt();
 
         // Use relative norm change to detect linear dependence
-        let rel_norm = if col_norm > 1e-14 { new_norm / col_norm } else { new_norm };
+        let rel_norm = if col_norm > 1e-14 {
+            new_norm / col_norm
+        } else {
+            new_norm
+        };
 
         if rel_norm > 1e-12 && new_norm > 1e-14 {
             r[j * n + j] = new_norm;
@@ -218,7 +222,11 @@ pub fn orthogonalize_in_place(data: &mut [f64], shape: &[usize]) -> Result<f64, 
         }
         new_norm = new_norm.sqrt();
 
-        let rel_norm = if col_norm > 1e-14 { new_norm / col_norm } else { new_norm };
+        let rel_norm = if col_norm > 1e-14 {
+            new_norm / col_norm
+        } else {
+            new_norm
+        };
 
         if rel_norm > 1e-12 && new_norm > 1e-14 {
             for k in 0..m {
@@ -289,8 +297,10 @@ pub fn debug_matrix(tensor: &DenseTensor, label: &str) {
     let min_val = data.iter().cloned().fold(f64::INFINITY, f64::min);
     let max_val = data.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
     let mean_val: f64 = data.iter().sum::<f64>() / data.len() as f64;
-    println!("{}: shape={:?}, min={:.6}, max={:.6}, mean={:.6}", 
-             label, shape, min_val, max_val, mean_val);
+    println!(
+        "{}: shape={:?}, min={:.6}, max={:.6}, mean={:.6}",
+        label, shape, min_val, max_val, mean_val
+    );
 }
 
 #[cfg(test)]
@@ -300,10 +310,8 @@ mod tests {
 
     #[test]
     fn test_qr_decomposition() {
-        let tensor = DenseTensor::from_vec(
-            vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0],
-            vec![4, 2],
-        );
+        let tensor =
+            DenseTensor::from_vec(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0], vec![4, 2]);
 
         let (q, r) = qr_decompose(&tensor).unwrap();
 
@@ -314,10 +322,7 @@ mod tests {
 
     #[test]
     fn test_orthogonalize() {
-        let tensor = DenseTensor::from_vec(
-            vec![1.0, 0.0, 0.0, 1.0],
-            vec![2, 2],
-        );
+        let tensor = DenseTensor::from_vec(vec![1.0, 0.0, 0.0, 1.0], vec![2, 2]);
 
         let ortho = orthogonalize(&tensor).unwrap();
         assert!(is_orthogonal(&ortho, 1e-5));
@@ -325,10 +330,7 @@ mod tests {
 
     #[test]
     fn test_qr_reconstruction() {
-        let original = DenseTensor::from_vec(
-            vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
-            vec![3, 2],
-        );
+        let original = DenseTensor::from_vec(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], vec![3, 2]);
 
         let (q, r) = qr_decompose(&original).unwrap();
         let reconstructed = q.matmul(&r);
@@ -336,23 +338,25 @@ mod tests {
         let orig_data: &[f64] = original.data();
         let recon_data: &[f64] = reconstructed.data();
         for (a, b) in orig_data.iter().zip(recon_data.iter()) {
-            assert!((a - b).abs() < 1e-5, "Reconstruction failed: {} vs {}", a, b);
+            assert!(
+                (a - b).abs() < 1e-5,
+                "Reconstruction failed: {} vs {}",
+                a,
+                b
+            );
         }
     }
-    
+
     #[test]
     fn test_qr_square() {
-        let tensor = DenseTensor::from_vec(
-            vec![4.0, 1.0, 2.0, 3.0],
-            vec![2, 2],
-        );
-        
+        let tensor = DenseTensor::from_vec(vec![4.0, 1.0, 2.0, 3.0], vec![2, 2]);
+
         let (q, r) = qr_decompose(&tensor).unwrap();
-        
+
         assert_eq!(q.shape(), &[2, 2]);
         assert_eq!(r.shape(), &[2, 2]);
         assert!(is_orthogonal(&q, 1e-5));
-        
+
         let reconstructed = q.matmul(&r);
         let orig_data: &[f64] = tensor.data();
         let recon_data: &[f64] = reconstructed.data();
@@ -360,35 +364,29 @@ mod tests {
             assert!((a - b).abs() < 1e-5);
         }
     }
-    
+
     #[test]
     fn test_qr_identity() {
-        let tensor = DenseTensor::from_vec(
-            vec![1.0, 0.0, 0.0, 1.0],
-            vec![2, 2],
-        );
-        
+        let tensor = DenseTensor::from_vec(vec![1.0, 0.0, 0.0, 1.0], vec![2, 2]);
+
         let (q, r) = qr_decompose(&tensor).unwrap();
-        
+
         assert!(is_orthogonal(&q, 1e-5));
-        
+
         let r_data: &[f64] = r.data();
         assert!((r_data[0] - 1.0).abs() < 1e-5);
         assert!(r_data[1].abs() < 1e-5);
         assert!(r_data[2].abs() < 1e-5);
         assert!((r_data[3] - 1.0).abs() < 1e-5);
     }
-    
+
     #[test]
     fn test_qr_positive_diagonal() {
-        let tensor = DenseTensor::from_vec(
-            vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
-            vec![3, 2],
-        );
-        
+        let tensor = DenseTensor::from_vec(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], vec![3, 2]);
+
         let (_, r) = qr_decompose(&tensor).unwrap();
         let r_data: &[f64] = r.data();
-        
+
         assert!(r_data[0] >= 0.0, "R[0,0] should be non-negative");
         assert!(r_data[3] >= 0.0, "R[1,1] should be non-negative");
     }
@@ -401,7 +399,11 @@ mod tests {
         let error = orthogonalize_in_place(&mut data, &shape).unwrap();
 
         // Check orthogonality error is small
-        assert!(error < 1e-10, "Orthogonalization error too large: {}", error);
+        assert!(
+            error < 1e-10,
+            "Orthogonalization error too large: {}",
+            error
+        );
 
         // Verify the result is orthogonal
         let tensor = DenseTensor::from_vec(data, shape);

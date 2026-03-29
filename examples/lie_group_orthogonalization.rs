@@ -46,14 +46,12 @@
 
 #[cfg(feature = "tensor")]
 mod lie_group_comparison {
+    use god_gragh::graph::traits::{GraphBase, GraphOps};
+    use god_gragh::graph::Graph;
     use god_gragh::tensor::DenseTensor;
     use god_gragh::tensor::TensorBase;
-    use god_gragh::transformer::optimization::lie_group::{
-        LieGroupConfig, LieGroupOptimizer,
-    };
+    use god_gragh::transformer::optimization::lie_group::{LieGroupConfig, LieGroupOptimizer};
     use god_gragh::transformer::optimization::switch::{OperatorType, WeightTensor};
-    use god_gragh::graph::Graph;
-    use god_gragh::graph::traits::{GraphBase, GraphOps};
 
     /// Example 1: Basic orthogonalization with QR
     pub fn basic_qr_orthogonalization() {
@@ -68,11 +66,17 @@ mod lie_group_comparison {
 
         println!("Original weight matrix:");
         println!("  Shape: {}×{}", rows, cols);
-        println!("  Frobenius norm: {:.4}", frobenius_norm(&weight_data, rows, cols));
+        println!(
+            "  Frobenius norm: {:.4}",
+            frobenius_norm(&weight_data, rows, cols)
+        );
 
         // Check initial orthogonality
         let orthogonality_error = check_orthogonality(&weight_data, rows, cols);
-        println!("  Orthogonality error ||W^T W - I||: {:.6}\n", orthogonality_error);
+        println!(
+            "  Orthogonality error ||W^T W - I||: {:.6}\n",
+            orthogonality_error
+        );
 
         // Perform QR orthogonalization
         println!("Applying QR orthogonalization...");
@@ -81,7 +85,10 @@ mod lie_group_comparison {
         // Check orthogonality after
         let new_error = check_orthogonality(&orthogonalized, rows, cols);
         println!("\nAfter QR orthogonalization:");
-        println!("  Frobenius norm: {:.4}", frobenius_norm(&orthogonalized, rows, cols));
+        println!(
+            "  Frobenius norm: {:.4}",
+            frobenius_norm(&orthogonalized, rows, cols)
+        );
         println!("  Orthogonality error ||W^T W - I||: {:.6}", new_error);
 
         let improvement = (orthogonality_error - new_error) / orthogonality_error * 100.0;
@@ -97,8 +104,8 @@ mod lie_group_comparison {
             .with_block_size(64)
             .with_orthogonalize(true)
             .with_target_layers(vec![
-                "q_proj".to_string(), 
-                "k_proj".to_string(), 
+                "q_proj".to_string(),
+                "k_proj".to_string(),
                 "v_proj".to_string(),
                 "o_proj".to_string(),
             ])
@@ -136,7 +143,10 @@ mod lie_group_comparison {
             .map(|_| (random_f64() - 0.5) * 2.0)
             .collect();
 
-        println!("Comparing orthogonalization methods ({}×{} matrix):\n", rows, cols);
+        println!(
+            "Comparing orthogonalization methods ({}×{} matrix):\n",
+            rows, cols
+        );
 
         // Method 1: No orthogonalization (baseline)
         let baseline_error = check_orthogonality(&base_weights, rows, cols);
@@ -183,12 +193,36 @@ mod lie_group_comparison {
 
         // Summary table
         println!("\n=== Summary ===");
-        println!("{:<25} {:<15} {:<15} {:<15}", "Method", "Error", "Speed", "Stability");
+        println!(
+            "{:<25} {:<15} {:<15} {:<15}",
+            "Method", "Error", "Speed", "Stability"
+        );
         println!("{:-<70}", "");
-        println!("{:<25} {:<15.6} {:<15} {:<15}", "Baseline", baseline_error, "N/A", "Poor");
-        println!("{:<25} {:<15.6} {:<15} {:<15}", "QR", qr_error, format!("{:.2?}", qr_time), "Good");
-        println!("{:<25} {:<15.6} {:<15} {:<15}", "Cayley", cayley_error, format!("{:.2?}", cayley_time), "Excellent");
-        println!("{:<25} {:<15.6} {:<15} {:<15}", "Block SO(k)", block_error, format!("{:.2?}", block_time), "Excellent");
+        println!(
+            "{:<25} {:<15.6} {:<15} {:<15}",
+            "Baseline", baseline_error, "N/A", "Poor"
+        );
+        println!(
+            "{:<25} {:<15.6} {:<15} {:<15}",
+            "QR",
+            qr_error,
+            format!("{:.2?}", qr_time),
+            "Good"
+        );
+        println!(
+            "{:<25} {:<15.6} {:<15} {:<15}",
+            "Cayley",
+            cayley_error,
+            format!("{:.2?}", cayley_time),
+            "Excellent"
+        );
+        println!(
+            "{:<25} {:<15.6} {:<15} {:<15}",
+            "Block SO(k)",
+            block_error,
+            format!("{:.2?}", block_time),
+            "Excellent"
+        );
     }
 
     /// Example 4: Orthogonalization impact on gradient flow
@@ -215,10 +249,16 @@ mod lie_group_comparison {
             gradient_norm_non_ortho *= layer_effect;
         }
         println!("  Final gradient norm: {:.6}", gradient_norm_non_ortho);
-        println!("  Gradient behavior: {}\n", 
-            if gradient_norm_non_ortho > 10.0 { "EXPLODING ⚠️" }
-            else if gradient_norm_non_ortho < 0.01 { "VANISHING ⚠️" }
-            else { "STABLE ✓" });
+        println!(
+            "  Gradient behavior: {}\n",
+            if gradient_norm_non_ortho > 10.0 {
+                "EXPLODING ⚠️"
+            } else if gradient_norm_non_ortho < 0.01 {
+                "VANISHING ⚠️"
+            } else {
+                "STABLE ✓"
+            }
+        );
 
         // Scenario 2: Orthogonal weights
         println!("Scenario 2: Orthogonal weights");
@@ -261,12 +301,18 @@ mod lie_group_comparison {
 
         println!("Random matrix:");
         println!("  Estimated condition number κ: {:.4}", random_cond);
-        println!("  Interpretation: {}", interpret_condition_number(random_cond));
+        println!(
+            "  Interpretation: {}",
+            interpret_condition_number(random_cond)
+        );
         println!();
 
         println!("Orthogonal matrix (after QR):");
         println!("  Estimated condition number κ: {:.4}", ortho_cond);
-        println!("  Interpretation: {}", interpret_condition_number(ortho_cond));
+        println!(
+            "  Interpretation: {}",
+            interpret_condition_number(ortho_cond)
+        );
         println!();
 
         println!("Note: κ = 1 is optimal (perfect conditioning)");
@@ -385,7 +431,12 @@ mod lie_group_comparison {
         orthogonalize_qr(data, rows, cols)
     }
 
-    fn orthogonalize_block(data: &mut [f64], rows: usize, cols: usize, block_size: usize) -> Vec<f64> {
+    fn orthogonalize_block(
+        data: &mut [f64],
+        rows: usize,
+        cols: usize,
+        block_size: usize,
+    ) -> Vec<f64> {
         // Block-wise orthogonalization
         let mut result = data.to_vec();
 
@@ -399,8 +450,7 @@ mod lie_group_comparison {
                     let mut block = vec![0.0; block_rows * block_cols];
                     for bi in 0..block_rows {
                         for bj in 0..block_cols {
-                            block[bi * block_cols + bj] = 
-                                result[(i + bi) * cols + (j + bj)];
+                            block[bi * block_cols + bj] = result[(i + bi) * cols + (j + bj)];
                         }
                     }
 
@@ -410,8 +460,7 @@ mod lie_group_comparison {
                     // Put back
                     for bi in 0..block_rows {
                         for bj in 0..block_cols {
-                            result[(i + bi) * cols + (j + bj)] = 
-                                ortho_block[bi * block_cols + bj];
+                            result[(i + bi) * cols + (j + bj)] = ortho_block[bi * block_cols + bj];
                         }
                     }
                 }

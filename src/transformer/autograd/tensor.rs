@@ -1,9 +1,9 @@
 //! Differentiable tensor wrapper with gradient support
 
-use std::sync::Arc;
+use super::compute_graph::{ComputeGraph, OpId, OpType, TensorId};
+use crate::tensor::traits::{TensorBase, TensorOps};
 use crate::tensor::DenseTensor;
-use crate::tensor::traits::{TensorOps, TensorBase};
-use super::compute_graph::{ComputeGraph, OpId, TensorId, OpType};
+use std::sync::Arc;
 
 /// A differentiable tensor that tracks gradients and compute graph information
 #[derive(Debug, Clone)]
@@ -40,7 +40,7 @@ impl DifferentiableTensor {
     pub fn with_graph(data: DenseTensor, requires_grad: bool, graph: &mut ComputeGraph) -> Self {
         let tensor_id = graph.next_tensor_id();
         graph.store_value(tensor_id, data.clone());
-        
+
         Self {
             data,
             grad: None,
@@ -108,13 +108,21 @@ impl DifferentiableTensor {
     }
 
     /// Matrix multiplication
-    pub fn matmul(&self, other: &DifferentiableTensor, graph: &mut ComputeGraph) -> DifferentiableTensor {
+    pub fn matmul(
+        &self,
+        other: &DifferentiableTensor,
+        graph: &mut ComputeGraph,
+    ) -> DifferentiableTensor {
         let output_id = graph.next_tensor_id();
         let result_data = self.data.matmul(&other.data);
-        
-        graph.record_op(OpType::MatMul, &[self.tensor_id, other.tensor_id], output_id);
+
+        graph.record_op(
+            OpType::MatMul,
+            &[self.tensor_id, other.tensor_id],
+            output_id,
+        );
         graph.store_value(output_id, result_data.clone());
-        
+
         DifferentiableTensor {
             data: result_data,
             grad: None,
@@ -126,13 +134,17 @@ impl DifferentiableTensor {
     }
 
     /// Element-wise addition
-    pub fn add(&self, other: &DifferentiableTensor, graph: &mut ComputeGraph) -> DifferentiableTensor {
+    pub fn add(
+        &self,
+        other: &DifferentiableTensor,
+        graph: &mut ComputeGraph,
+    ) -> DifferentiableTensor {
         let output_id = graph.next_tensor_id();
         let result_data = self.data.add(&other.data);
-        
+
         graph.record_op(OpType::Add, &[self.tensor_id, other.tensor_id], output_id);
         graph.store_value(output_id, result_data.clone());
-        
+
         DifferentiableTensor {
             data: result_data,
             grad: None,
@@ -144,13 +156,17 @@ impl DifferentiableTensor {
     }
 
     /// Element-wise subtraction
-    pub fn sub(&self, other: &DifferentiableTensor, graph: &mut ComputeGraph) -> DifferentiableTensor {
+    pub fn sub(
+        &self,
+        other: &DifferentiableTensor,
+        graph: &mut ComputeGraph,
+    ) -> DifferentiableTensor {
         let output_id = graph.next_tensor_id();
         let result_data = self.data.sub(&other.data);
-        
+
         graph.record_op(OpType::Sub, &[self.tensor_id, other.tensor_id], output_id);
         graph.store_value(output_id, result_data.clone());
-        
+
         DifferentiableTensor {
             data: result_data,
             grad: None,
@@ -162,13 +178,17 @@ impl DifferentiableTensor {
     }
 
     /// Element-wise multiplication
-    pub fn mul(&self, other: &DifferentiableTensor, graph: &mut ComputeGraph) -> DifferentiableTensor {
+    pub fn mul(
+        &self,
+        other: &DifferentiableTensor,
+        graph: &mut ComputeGraph,
+    ) -> DifferentiableTensor {
         let output_id = graph.next_tensor_id();
         let result_data = self.data.mul(&other.data);
-        
+
         graph.record_op(OpType::Mul, &[self.tensor_id, other.tensor_id], output_id);
         graph.store_value(output_id, result_data.clone());
-        
+
         DifferentiableTensor {
             data: result_data,
             grad: None,
@@ -183,10 +203,10 @@ impl DifferentiableTensor {
     pub fn relu(&self, graph: &mut ComputeGraph) -> DifferentiableTensor {
         let output_id = graph.next_tensor_id();
         let result_data = self.data.relu();
-        
+
         graph.record_op(OpType::ReLU, &[self.tensor_id], output_id);
         graph.store_value(output_id, result_data.clone());
-        
+
         DifferentiableTensor {
             data: result_data,
             grad: None,
@@ -201,10 +221,10 @@ impl DifferentiableTensor {
     pub fn gelu(&self, graph: &mut ComputeGraph) -> DifferentiableTensor {
         let output_id = graph.next_tensor_id();
         let result_data = self.data.gelu();
-        
+
         graph.record_op(OpType::GELU, &[self.tensor_id], output_id);
         graph.store_value(output_id, result_data.clone());
-        
+
         DifferentiableTensor {
             data: result_data,
             grad: None,
@@ -219,10 +239,10 @@ impl DifferentiableTensor {
     pub fn softmax(&self, dim: isize, graph: &mut ComputeGraph) -> DifferentiableTensor {
         let output_id = graph.next_tensor_id();
         let result_data = self.data.softmax(dim);
-        
+
         graph.record_op(OpType::Softmax, &[self.tensor_id], output_id);
         graph.store_value(output_id, result_data.clone());
-        
+
         DifferentiableTensor {
             data: result_data,
             grad: None,
@@ -240,7 +260,7 @@ impl DifferentiableTensor {
 
         graph.record_op(OpType::Transpose, &[self.tensor_id], output_id);
         graph.store_value(output_id, result_data.clone());
-        
+
         DifferentiableTensor {
             data: result_data,
             grad: None,
@@ -292,7 +312,7 @@ mod tests {
     fn test_differentiable_tensor_creation() {
         let data = DenseTensor::new(vec![1.0, 2.0, 3.0], vec![1, 3]);
         let tensor = DifferentiableTensor::new(data.clone(), true);
-        
+
         assert!(tensor.requires_grad());
         assert_eq!(tensor.data(), &data);
         assert!(tensor.grad().is_none());
@@ -301,15 +321,15 @@ mod tests {
     #[test]
     fn test_differentiable_matmul() {
         let mut graph = ComputeGraph::new();
-        
+
         let x = DenseTensor::new(vec![1.0, 2.0], vec![1, 2]);
         let w = DenseTensor::new(vec![0.1, 0.2, 0.3, 0.4], vec![2, 2]);
-        
+
         let x_diff = DifferentiableTensor::with_graph(x, true, &mut graph);
         let w_diff = DifferentiableTensor::with_graph(w, true, &mut graph);
-        
+
         let out = x_diff.matmul(&w_diff, &mut graph);
-        
+
         assert!(out.requires_grad());
         assert_eq!(out.shape(), &[1, 2]);
     }
@@ -317,12 +337,12 @@ mod tests {
     #[test]
     fn test_differentiable_relu() {
         let mut graph = ComputeGraph::new();
-        
+
         let data = DenseTensor::new(vec![-1.0, 2.0, -3.0, 4.0], vec![1, 4]);
         let tensor = DifferentiableTensor::with_graph(data, true, &mut graph);
-        
+
         let out = tensor.relu(&mut graph);
-        
+
         // ReLU should zero out negative values
         assert_eq!(out.shape(), &[1, 4]);
     }

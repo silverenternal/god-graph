@@ -52,25 +52,33 @@ pub fn lie_exponential(algebra: &DenseTensor) -> Result<DenseTensor, TensorError
 
     // Padé [1/1] approximant: exp(A) ≈ (I - A/2)^(-1) (I + A/2)
     // Let M = I - A/2, N = I + A/2, then exp(A) ≈ M^(-1) N
-    
+
     // Build M = I - A/2
     let mut m_mat = vec![0.0; n * n];
     for i in 0..n {
         for j in 0..n {
             let idx = i * n + j;
-            m_mat[idx] = if i == j { 1.0 - scaled[idx] / 2.0 } else { -scaled[idx] / 2.0 };
+            m_mat[idx] = if i == j {
+                1.0 - scaled[idx] / 2.0
+            } else {
+                -scaled[idx] / 2.0
+            };
         }
     }
-    
+
     // Build N = I + A/2
     let mut n_mat = vec![0.0; n * n];
     for i in 0..n {
         for j in 0..n {
             let idx = i * n + j;
-            n_mat[idx] = if i == j { 1.0 + scaled[idx] / 2.0 } else { scaled[idx] / 2.0 };
+            n_mat[idx] = if i == j {
+                1.0 + scaled[idx] / 2.0
+            } else {
+                scaled[idx] / 2.0
+            };
         }
     }
-    
+
     // Solve M * X = N for X using Gaussian elimination
     // This gives X = M^(-1) * N
     let result = solve_matrix_equation(&m_mat, &n_mat, n)?;
@@ -110,17 +118,13 @@ pub fn lie_logarithm(group: &DenseTensor) -> Result<DenseTensor, TensorError> {
     // For matrices close to identity: log(A) ≈ A - I
     // More accurate: use the inverse of exp, i.e., solve for X in exp(X) = A
     // For now, use the series expansion: log(A) ≈ (A - I) - (A - I)^2 / 2 + ...
-    
+
     // First order: A - I
     let mut algebra = vec![0.0; n * n];
     for i in 0..n {
         for j in 0..n {
             let idx = i * n + j;
-            algebra[idx] = if i == j {
-                data[idx] - 1.0
-            } else {
-                data[idx]
-            };
+            algebra[idx] = if i == j { data[idx] - 1.0 } else { data[idx] };
         }
     }
 
@@ -154,7 +158,7 @@ pub fn skew_symmetric_projection(matrix: &DenseTensor) -> Result<DenseTensor, Te
     let data = matrix.data();
     let mut result = vec![0.0; n * n];
 
-    skew_symmetric_projection_with(&data, &mut result, n);
+    skew_symmetric_projection_with(data, &mut result, n);
 
     Ok(DenseTensor::from_vec(result, vec![n, n]))
 }
@@ -209,14 +213,14 @@ fn solve_matrix_equation(a: &[f64], b: &[f64], n: usize) -> Result<Vec<f64>, Ten
     // Create augmented matrix [A | B] where B has n columns
     // We solve for each column of X separately
     let mut x = vec![0.0; n * n];
-    
+
     for col in 0..n {
         // Extract the col-th column of B
         let mut rhs = vec![0.0; n];
         for i in 0..n {
             rhs[i] = b[i * n + col];
         }
-        
+
         // Create augmented matrix [A | rhs]
         let mut aug = vec![0.0; n * (n + 1)];
         for i in 0..n {
@@ -225,7 +229,7 @@ fn solve_matrix_equation(a: &[f64], b: &[f64], n: usize) -> Result<Vec<f64>, Ten
             }
             aug[i * (n + 1) + n] = rhs[i];
         }
-        
+
         // Forward elimination with partial pivoting
         for k in 0..n {
             // Find pivot
@@ -238,21 +242,21 @@ fn solve_matrix_equation(a: &[f64], b: &[f64], n: usize) -> Result<Vec<f64>, Ten
                     max_row = row;
                 }
             }
-            
+
             if max_val < 1e-12 {
                 return Err(TensorError::BlasError {
                     code: 0,
                     description: "Singular or near-singular matrix".to_string(),
                 });
             }
-            
+
             // Swap rows
             if max_row != k {
                 for j in 0..(n + 1) {
                     aug.swap(k * (n + 1) + j, max_row * (n + 1) + j);
                 }
             }
-            
+
             // Eliminate column
             let pivot = aug[k * (n + 1) + k];
             for row in (k + 1)..n {
@@ -262,7 +266,7 @@ fn solve_matrix_equation(a: &[f64], b: &[f64], n: usize) -> Result<Vec<f64>, Ten
                 }
             }
         }
-        
+
         // Back substitution
         for i in (0..n).rev() {
             let mut sum = aug[i * (n + 1) + n];
@@ -272,7 +276,7 @@ fn solve_matrix_equation(a: &[f64], b: &[f64], n: usize) -> Result<Vec<f64>, Ten
             x[i * n + col] = sum / aug[i * (n + 1) + i];
         }
     }
-    
+
     Ok(x)
 }
 
@@ -378,10 +382,7 @@ mod tests {
 
     #[test]
     fn test_skew_symmetric_projection() {
-        let matrix = DenseTensor::from_vec(
-            vec![1.0, 2.0, 3.0, 4.0],
-            vec![2, 2],
-        );
+        let matrix = DenseTensor::from_vec(vec![1.0, 2.0, 3.0, 4.0], vec![2, 2]);
 
         let skew = skew_symmetric_projection(&matrix).unwrap();
         assert!(is_skew_symmetric(&skew, 1e-6));
@@ -396,10 +397,7 @@ mod tests {
     #[test]
     fn test_lie_exponential_logarithm() {
         // Create a skew-symmetric matrix
-        let algebra = DenseTensor::from_vec(
-            vec![0.0, -0.1, 0.1, 0.0],
-            vec![2, 2],
-        );
+        let algebra = DenseTensor::from_vec(vec![0.0, -0.1, 0.1, 0.0], vec![2, 2]);
 
         // exp: so(n) -> SO(n)
         let group = lie_exponential(&algebra).unwrap();
@@ -409,37 +407,54 @@ mod tests {
         let algebra_back = lie_logarithm(&group).unwrap();
         assert!(is_skew_symmetric(&algebra_back, 1e-5));
     }
-    
+
     #[test]
     fn test_lie_exponential_rotation() {
         // Test with a known rotation generator
         // For SO(2), exp([0, -theta; theta, 0]) = [cos(theta), -sin(theta); sin(theta), cos(theta)]
         // Use small theta for better Padé approximation accuracy
         let theta = 0.1;
-        let algebra = DenseTensor::from_vec(
-            vec![0.0, -theta, theta, 0.0],
-            vec![2, 2],
-        );
+        let algebra = DenseTensor::from_vec(vec![0.0, -theta, theta, 0.0], vec![2, 2]);
 
         let group = lie_exponential(&algebra).unwrap();
         let data = group.data();
 
         // Check against known result (with relaxed tolerance for Padé approximation)
-        assert!((data[0] - theta.cos()).abs() < 1e-3, "Expected {}, got {}", theta.cos(), data[0]);
-        assert!((data[1] + theta.sin()).abs() < 1e-3, "Expected {}, got {}", -theta.sin(), data[1]);
-        assert!((data[2] - theta.sin()).abs() < 1e-3, "Expected {}, got {}", theta.sin(), data[2]);
-        assert!((data[3] - theta.cos()).abs() < 1e-3, "Expected {}, got {}", theta.cos(), data[3]);
+        assert!(
+            (data[0] - theta.cos()).abs() < 1e-3,
+            "Expected {}, got {}",
+            theta.cos(),
+            data[0]
+        );
+        assert!(
+            (data[1] + theta.sin()).abs() < 1e-3,
+            "Expected {}, got {}",
+            -theta.sin(),
+            data[1]
+        );
+        assert!(
+            (data[2] - theta.sin()).abs() < 1e-3,
+            "Expected {}, got {}",
+            theta.sin(),
+            data[2]
+        );
+        assert!(
+            (data[3] - theta.cos()).abs() < 1e-3,
+            "Expected {}, got {}",
+            theta.cos(),
+            data[3]
+        );
 
         assert!(is_orthogonal(&group, 1e-5));
     }
-    
+
     #[test]
     fn test_so3_generator() {
         // Test SO(3) generators
         let gen_xy = so_n_generator(3, 0, 1).unwrap();
         let gen_yz = so_n_generator(3, 1, 2).unwrap();
         let gen_xz = so_n_generator(3, 0, 2).unwrap();
-        
+
         assert!(is_skew_symmetric(&gen_xy, 1e-6));
         assert!(is_skew_symmetric(&gen_yz, 1e-6));
         assert!(is_skew_symmetric(&gen_xz, 1e-6));

@@ -7,11 +7,11 @@
 //! - Positional encodings (RoPE)
 
 pub mod attention;
+pub mod embedding;
 pub mod ffn;
 pub mod norm;
-pub mod embedding;
 
 pub use attention::MultiHeadAttention;
+pub use embedding::RoPE;
 pub use ffn::FeedForward;
 pub use norm::{LayerNorm, RMSNorm};
-pub use embedding::RoPE;

@@ -1,7 +1,7 @@
 //! Node types for graph-structured Transformer
 
-use crate::tensor::DenseTensor;
 use crate::tensor::traits::TensorBase;
+use crate::tensor::DenseTensor;
 
 /// Type of graph node
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -168,7 +168,12 @@ pub struct GraphNode {
 
 impl GraphNode {
     /// Create a token embedding node
-    pub fn token_embedding(id: usize, token_id: usize, position: usize, embedding: DenseTensor) -> Self {
+    pub fn token_embedding(
+        id: usize,
+        token_id: usize,
+        position: usize,
+        embedding: DenseTensor,
+    ) -> Self {
         Self {
             node_type: GraphNodeType::TokenEmbedding,
             id,
@@ -297,15 +302,8 @@ mod tests {
     #[test]
     fn test_attention_output_node() {
         let output = DenseTensor::new(vec![0.1, 0.2], vec![1, 2]);
-        let node = GraphNode::attention_output(
-            10,
-            3,
-            2,
-            5,
-            vec![3, 4, 5],
-            vec![0.3, 0.5, 0.2],
-            output,
-        );
+        let node =
+            GraphNode::attention_output(10, 3, 2, 5, vec![3, 4, 5], vec![0.3, 0.5, 0.2], output);
 
         assert_eq!(node.node_type, GraphNodeType::AttentionOutput);
         assert_eq!(node.layer, 3);

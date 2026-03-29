@@ -1,9 +1,9 @@
 //! LLaMA model implementation
 
-use crate::tensor::DenseTensor;
-use crate::tensor::traits::{TensorBase, TensorOps};
-use super::layers::{MultiHeadAttention, FeedForward, RMSNorm, RoPE};
+use super::layers::{FeedForward, MultiHeadAttention, RMSNorm, RoPE};
 pub use super::loader::LlamaConfig;
+use crate::tensor::traits::{TensorBase, TensorOps};
+use crate::tensor::DenseTensor;
 
 /// LLaMA decoder layer
 #[derive(Debug, Clone)]
@@ -44,22 +44,22 @@ impl LlamaDecoderLayer {
     /// Output tensor [batch_size, seq_len, hidden_dim]
     pub fn forward(&self, x: &DenseTensor, mask: Option<&DenseTensor>) -> DenseTensor {
         // Pre-norm residual architecture (LLaMA uses pre-LN)
-        
+
         // 1. Input normalization
         let normed = self.input_layernorm.forward(x);
-        
+
         // 2. Self-attention with residual
         let attn_output = self.self_attn.forward_with_mask(&normed, mask);
         let hidden = x.add(&attn_output);
-        
+
         // 3. Post-attention normalization
         let normed = self.post_attention_layernorm.forward(&hidden);
-        
+
         // 4. FFN with residual
         let mlp_output = self.mlp.forward(&normed);
-        let output = hidden.add(&mlp_output);
         
-        output
+
+        hidden.add(&mlp_output)
     }
 
     /// Forward pass with KV cache
@@ -94,8 +94,18 @@ impl LlamaDecoderLayer {
         total += self.mlp.num_parameters();
 
         // Layer norm parameters (2 * hidden_dim)
-        total += self.input_layernorm.weight.shape().iter().product::<usize>();
-        total += self.post_attention_layernorm.weight.shape().iter().product::<usize>();
+        total += self
+            .input_layernorm
+            .weight
+            .shape()
+            .iter()
+            .product::<usize>();
+        total += self
+            .post_attention_layernorm
+            .weight
+            .shape()
+            .iter()
+            .product::<usize>();
 
         total
     }
@@ -132,7 +142,7 @@ impl LlamaModel {
             config.max_position_embeddings,
             config.rope_theta,
         );
-        
+
         Self {
             config,
             embed_tokens,
@@ -174,19 +184,19 @@ impl LlamaModel {
         // Need to compute: hidden @ lm_head.T for each (batch, seq) position
         let lm_head = self.lm_head.as_ref().unwrap_or(&self.embed_tokens);
         let lm_head_t = lm_head.transpose(None); // [hidden_dim, vocab_size]
-        
+
         // Reshape hidden to [batch*seq_len, hidden_dim] for matmul
         let hidden_data = hidden.data().to_vec();
         let hidden_dim = self.config.hidden_size;
         let flat_hidden = DenseTensor::new(hidden_data, vec![batch_size * seq_len, hidden_dim]);
-        
+
         // Matmul: [batch*seq, hidden] @ [hidden, vocab] = [batch*seq, vocab]
         let logits_flat = flat_hidden.matmul(&lm_head_t);
-        
+
         // Reshape back to [batch, seq_len, vocab_size]
         let vocab_size = self.config.vocab_size;
         let logits_data = logits_flat.data().to_vec();
-        
+
         DenseTensor::new(logits_data, vec![batch_size, seq_len, vocab_size])
     }
 
@@ -200,9 +210,9 @@ impl LlamaModel {
         let batch_size = input_ids.len();
         let seq_len = input_ids[0].len();
         let hidden_dim = self.config.hidden_size;
-        
+
         let mut data = Vec::with_capacity(batch_size * seq_len * hidden_dim);
-        
+
         for batch in input_ids {
             for &token_id in batch {
                 let start = token_id * hidden_dim;
@@ -210,7 +220,7 @@ impl LlamaModel {
                 data.extend_from_slice(&self.embed_tokens.data()[start..end]);
             }
         }
-        
+
         DenseTensor::new(data, vec![batch_size, seq_len, hidden_dim])
     }
 
@@ -261,8 +271,8 @@ impl LlamaModel {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tensor::DenseTensor;
     use crate::tensor::traits::TensorBase;
+    use crate::tensor::DenseTensor;
 
     fn create_test_layer(config: &LlamaConfig) -> LlamaDecoderLayer {
         let hidden_dim = config.hidden_size;
@@ -404,7 +414,7 @@ impl<'a> LlamaModelGraphBuilder<'a> {
 #[cfg(test)]
 mod graph_builder_tests {
     use super::*;
-    use crate::transformer::layers::{MultiHeadAttention, FeedForward, RMSNorm};
+    use crate::transformer::layers::{FeedForward, MultiHeadAttention, RMSNorm};
 
     fn create_test_layer(config: &LlamaConfig) -> LlamaDecoderLayer {
         let hidden_dim = config.hidden_size;

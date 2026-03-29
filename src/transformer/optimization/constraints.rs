@@ -72,15 +72,9 @@ pub enum TopologyConstraint {
         to_layer: String,
     },
     /// Attention heads must have balanced weight norms
-    AttentionHeadBalance {
-        layer: String,
-        tolerance: f64,
-    },
+    AttentionHeadBalance { layer: String, tolerance: f64 },
     /// Gradient flow path must exist
-    GradientFlow {
-        from: String,
-        to: String,
-    },
+    GradientFlow { from: String, to: String },
     /// Custom constraint function
     Custom(Box<dyn Fn(&Graph<OperatorType, WeightTensor>) -> GraphResult<bool> + Send + Sync>),
 }
@@ -88,18 +82,17 @@ pub enum TopologyConstraint {
 impl Clone for TopologyConstraint {
     fn clone(&self) -> Self {
         match self {
-            Self::ResidualConnection { from_layer, to_layer } => {
-                Self::ResidualConnection {
-                    from_layer: from_layer.clone(),
-                    to_layer: to_layer.clone(),
-                }
-            }
-            Self::AttentionHeadBalance { layer, tolerance } => {
-                Self::AttentionHeadBalance {
-                    layer: layer.clone(),
-                    tolerance: *tolerance,
-                }
-            }
+            Self::ResidualConnection {
+                from_layer,
+                to_layer,
+            } => Self::ResidualConnection {
+                from_layer: from_layer.clone(),
+                to_layer: to_layer.clone(),
+            },
+            Self::AttentionHeadBalance { layer, tolerance } => Self::AttentionHeadBalance {
+                layer: layer.clone(),
+                tolerance: *tolerance,
+            },
             Self::GradientFlow { from, to } => Self::GradientFlow {
                 from: from.clone(),
                 to: to.clone(),
@@ -116,7 +109,10 @@ impl Clone for TopologyConstraint {
 impl std::fmt::Debug for TopologyConstraint {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::ResidualConnection { from_layer, to_layer } => f
+            Self::ResidualConnection {
+                from_layer,
+                to_layer,
+            } => f
                 .debug_struct("ResidualConnection")
                 .field("from_layer", from_layer)
                 .field("to_layer", to_layer)
@@ -178,13 +174,13 @@ impl TopologyValidator {
     /// Create validator with predefined constraints for common architectures
     pub fn with_default_constraints() -> Self {
         let mut validator = Self::new();
-        
+
         // Add common constraints for transformer architectures
         validator.add_constraint(TopologyConstraint::ResidualConnection {
             from_layer: "attention".to_string(),
             to_layer: "attention_output".to_string(),
         });
-        
+
         validator.add_constraint(TopologyConstraint::ResidualConnection {
             from_layer: "mlp".to_string(),
             to_layer: "mlp_output".to_string(),
@@ -219,15 +215,19 @@ impl TopologyValidator {
     /// # Returns
     ///
     /// Constraint validation report
-    pub fn validate(&mut self, graph: &Graph<OperatorType, WeightTensor>) -> GraphResult<ConstraintReport> {
+    pub fn validate(
+        &mut self,
+        graph: &Graph<OperatorType, WeightTensor>,
+    ) -> GraphResult<ConstraintReport> {
         let mut details = Vec::new();
         let mut satisfied_count = 0;
 
         for constraint in &self.constraints {
             let (satisfied, description, violation) = match constraint {
-                TopologyConstraint::ResidualConnection { from_layer, to_layer } => {
-                    self.validate_residual_connection(graph, from_layer, to_layer)?
-                }
+                TopologyConstraint::ResidualConnection {
+                    from_layer,
+                    to_layer,
+                } => self.validate_residual_connection(graph, from_layer, to_layer)?,
                 TopologyConstraint::AttentionHeadBalance { layer, tolerance } => {
                     self.validate_attention_balance(graph, layer, *tolerance)?
                 }
@@ -287,7 +287,9 @@ impl TopologyValidator {
                     location: node_id.index(),
                     severity: Severity::Warning,
                     description: format!("Node {} has no outgoing edges", node_id.index()),
-                    suggested_fix: Some("Connect the node to the computation graph or remove it".to_string()),
+                    suggested_fix: Some(
+                        "Connect the node to the computation graph or remove it".to_string(),
+                    ),
                 });
             }
         }
@@ -300,8 +302,14 @@ impl TopologyValidator {
                     defect_type: DefectType::DisconnectedComponent,
                     location: component.first().map(|idx| idx.index()).unwrap_or(0),
                     severity: Severity::Error,
-                    description: format!("Found disconnected component {} with {} nodes", i, component.len()),
-                    suggested_fix: Some("Add edges to connect this component to the main graph".to_string()),
+                    description: format!(
+                        "Found disconnected component {} with {} nodes",
+                        i,
+                        component.len()
+                    ),
+                    suggested_fix: Some(
+                        "Add edges to connect this component to the main graph".to_string(),
+                    ),
                 });
             }
         }
@@ -318,20 +326,23 @@ impl TopologyValidator {
     ) -> GraphResult<(bool, String, Option<String>)> {
         // Simplified implementation
         // In a full implementation, we would search for actual residual connections
-        
-        let found = graph.nodes().any(|n| {
-            matches!(n.data(), OperatorType::Residual)
-        });
+
+        let found = graph
+            .nodes()
+            .any(|n| matches!(n.data(), OperatorType::Residual));
 
         let description = format!("ResidualConnection: {} -> {}", from_layer, to_layer);
-        
+
         if found {
             Ok((true, description, None))
         } else {
             Ok((
                 false,
                 description,
-                Some(format!("No residual connection found between {} and {}", from_layer, to_layer)),
+                Some(format!(
+                    "No residual connection found between {} and {}",
+                    from_layer, to_layer
+                )),
             ))
         }
     }
@@ -367,7 +378,7 @@ impl TopologyValidator {
 
         for start_node in graph.nodes() {
             let mut visited: std::collections::HashSet<usize> = std::collections::HashSet::new();
-            
+
             bfs(graph, start_node.index(), |n: NodeIndex, _depth: usize| {
                 visited.insert(n.index());
                 true
@@ -443,26 +454,21 @@ pub struct ModuleDetail {
 /// # Returns
 ///
 /// Assembly validation report
-pub fn validate_assembly(
-    graph: &Graph<OperatorType, WeightTensor>,
-) -> GraphResult<AssemblyReport> {
+pub fn validate_assembly(graph: &Graph<OperatorType, WeightTensor>) -> GraphResult<AssemblyReport> {
     let mut module_details = Vec::new();
     let interface_mismatches = 0;
 
     for node_ref in graph.nodes() {
         let node_data = node_ref.data();
-        
+
         // Extract input/output dimensions based on operator type
         let (input_dim, output_dim) = match node_data {
-            OperatorType::Linear { in_features, out_features } => {
-                (Some(*in_features), Some(*out_features))
-            }
-            OperatorType::Attention { hidden_dim, .. } => {
-                (Some(*hidden_dim), Some(*hidden_dim))
-            }
-            OperatorType::MLP { hidden_dim, .. } => {
-                (Some(*hidden_dim), Some(*hidden_dim))
-            }
+            OperatorType::Linear {
+                in_features,
+                out_features,
+            } => (Some(*in_features), Some(*out_features)),
+            OperatorType::Attention { hidden_dim, .. } => (Some(*hidden_dim), Some(*hidden_dim)),
+            OperatorType::MLP { hidden_dim, .. } => (Some(*hidden_dim), Some(*hidden_dim)),
             _ => (None, None),
         };
 
@@ -490,7 +496,7 @@ mod tests {
     #[test]
     fn test_topology_validator() {
         let mut validator = TopologyValidator::new();
-        
+
         validator.add_constraint(TopologyConstraint::ResidualConnection {
             from_layer: "attn".to_string(),
             to_layer: "output".to_string(),
@@ -503,31 +509,38 @@ mod tests {
     fn test_defect_detection() {
         // Create a graph with an isolated node
         let mut graph = Graph::<OperatorType, WeightTensor>::directed();
-        
+
         // Add an isolated node
-        graph.add_node(OperatorType::Linear {
-            in_features: 512,
-            out_features: 1024,
-        }).unwrap();
+        graph
+            .add_node(OperatorType::Linear {
+                in_features: 512,
+                out_features: 1024,
+            })
+            .unwrap();
 
         let validator = TopologyValidator::new();
         let defects = validator.detect_defects(&graph).unwrap();
 
         // Graph with isolated node should have defects
-        assert!(!defects.is_empty(), "Should detect isolated node as a defect");
+        assert!(
+            !defects.is_empty(),
+            "Should detect isolated node as a defect"
+        );
     }
 
     #[test]
     fn test_assembly_validation() {
         let mut graph = Graph::<OperatorType, WeightTensor>::directed();
-        
-        let _node = graph.add_node(OperatorType::Linear {
-            in_features: 512,
-            out_features: 1024,
-        }).unwrap();
-        
+
+        let _node = graph
+            .add_node(OperatorType::Linear {
+                in_features: 512,
+                out_features: 1024,
+            })
+            .unwrap();
+
         let report = validate_assembly(&graph).unwrap();
-        
+
         assert_eq!(report.module_count, 1);
         assert!(report.is_valid);
     }
