@@ -3,14 +3,14 @@
 //! This module tests the numerical stability of graph-level tensor operations,
 //! including orthogonalization error accumulation and forward pass stability.
 
-#[cfg(test)]
+#[cfg(all(test, feature = "tensor"))]
 mod tests {
     use god_gragh::graph::Graph;
     use god_gragh::graph::traits::{GraphOps, GraphQuery};
     use god_gragh::tensor::DenseTensor;
     use god_gragh::tensor::TensorBase;
     use god_gragh::tensor::decomposition::qr::{orthogonalize_in_place, is_orthogonal};
-    use god_gragh::transformer::optimization::{LieGroupConfig, LieGroupOptimizer};
+    use god_gragh::transformer::optimization::{LieGroupConfig};
     use god_gragh::transformer::optimization::lie_group::orthogonalize_weights_in_place;
     use god_gragh::transformer::optimization::switch::{OperatorType, WeightTensor};
 
@@ -150,7 +150,7 @@ mod tests {
             .with_orthogonalize(true);
 
         // Use in-place version (zero-copy)
-        let errors = orthogonalize_weights_in_place(&config, &mut graph).unwrap();
+        let _errors = orthogonalize_weights_in_place(&config, &mut graph).unwrap();
 
         // 4. Verify orthogonality of each weight
         let mut max_orthogonality_error: f64 = 0.0;

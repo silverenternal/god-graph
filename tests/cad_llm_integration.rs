@@ -7,7 +7,7 @@
 //! - Lie Group Optimization (M2)
 //! - CAD-Style Editor (M4)
 
-#[cfg(test)]
+#[cfg(all(test, feature = "tensor"))]
 mod tests {
     use god_gragh::graph::traits::GraphOps;
     use god_gragh::graph::Graph;

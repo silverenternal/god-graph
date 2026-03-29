@@ -290,7 +290,11 @@ mod tests {
 
     #[test]
     fn test_decoder_layer() {
-        let config = LlamaConfig::llama_7b();
+        // Use small dimensions to avoid excessive memory allocation
+        let mut config = LlamaConfig::llama_7b();
+        config.hidden_size = 64;
+        config.intermediate_size = 128;
+        config.num_attention_heads = 2;
         let layer = create_test_layer(&config);
 
         let batch_size = 2;
@@ -304,7 +308,13 @@ mod tests {
 
     #[test]
     fn test_llama_model_creation() {
-        let config = LlamaConfig::llama_7b();
+        // Use small dimensions to avoid excessive memory allocation
+        let mut config = LlamaConfig::llama_7b();
+        config.vocab_size = 100;
+        config.hidden_size = 64;
+        config.intermediate_size = 128;
+        config.num_hidden_layers = 2;
+        config.num_attention_heads = 2;
 
         let embed_tokens = DenseTensor::ones(vec![config.vocab_size, config.hidden_size]);
         let layers = vec![create_test_layer(&config); config.num_hidden_layers];
@@ -313,9 +323,9 @@ mod tests {
 
         let model = LlamaModel::new(config, embed_tokens, layers, norm, lm_head);
 
-        assert_eq!(model.num_layers(), 32);
-        assert_eq!(model.vocab_size(), 32000);
-        assert_eq!(model.hidden_dim(), 4096);
+        assert_eq!(model.num_layers(), 2);
+        assert_eq!(model.vocab_size(), 100);
+        assert_eq!(model.hidden_dim(), 64);
     }
 }
 
@@ -419,7 +429,12 @@ mod graph_builder_tests {
 
     #[test]
     fn test_llama_model_graph_builder() {
-        let config = LlamaConfig::llama_7b();
+        // Use small dimensions to avoid excessive memory allocation
+        let mut config = LlamaConfig::llama_7b();
+        config.vocab_size = 100;
+        config.hidden_size = 64;
+        config.intermediate_size = 128;
+        config.num_attention_heads = 2;
         let embed_tokens = DenseTensor::ones(vec![config.vocab_size, config.hidden_size]);
         let layers = vec![create_test_layer(&config); 2]; // Use 2 layers for test
         let norm = RMSNorm::default(config.hidden_size);
@@ -437,7 +452,12 @@ mod graph_builder_tests {
 
     #[test]
     fn test_llama_model_graph_builder_with_input() {
-        let config = LlamaConfig::llama_7b();
+        // Use small dimensions to avoid excessive memory allocation
+        let mut config = LlamaConfig::llama_7b();
+        config.vocab_size = 100;
+        config.hidden_size = 64;
+        config.intermediate_size = 128;
+        config.num_attention_heads = 2;
         let embed_tokens = DenseTensor::ones(vec![config.vocab_size, config.hidden_size]);
         let layers = vec![create_test_layer(&config); 1];
         let norm = RMSNorm::default(config.hidden_size);
@@ -460,7 +480,12 @@ mod graph_builder_tests {
 
     #[test]
     fn test_graph_export_to_dot() {
-        let config = LlamaConfig::llama_7b();
+        // Use small dimensions to avoid excessive memory allocation
+        let mut config = LlamaConfig::llama_7b();
+        config.vocab_size = 100;
+        config.hidden_size = 64;
+        config.intermediate_size = 128;
+        config.num_attention_heads = 2;
         let embed_tokens = DenseTensor::ones(vec![config.vocab_size, config.hidden_size]);
         let layers = vec![create_test_layer(&config); 1];
         let norm = RMSNorm::default(config.hidden_size);

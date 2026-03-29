@@ -279,7 +279,7 @@ impl TensorRingCompressor {
     }
 
     /// Get compressed tensors
-    pub fn compressed_tensors(&self) -> std::cell::Ref<HashMap<String, TensorRing>> {
+    pub fn compressed_tensors(&self) -> std::cell::Ref<'_, HashMap<String, TensorRing>> {
         self.compressed_tensors.borrow()
     }
 
@@ -298,6 +298,7 @@ impl TensorRingCompressor {
     }
 
     /// Compress a weight tensor and store the result
+    #[allow(dead_code)]
     fn compress_weight(
         &self,
         name: &str,

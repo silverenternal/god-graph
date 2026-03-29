@@ -37,14 +37,18 @@
 //! # fn main() {}
 //! ```
 
-use crate::errors::{GraphError, GraphResult};
-use crate::graph::traits::{GraphBase, GraphOps, GraphQuery};
+use crate::errors::GraphResult;
+use crate::graph::traits::{GraphBase, GraphQuery};
 use crate::graph::Graph;
 use smallvec::SmallVec;
 use std::collections::HashMap;
+#[cfg(feature = "safetensors")]
+use crate::errors::GraphError;
+#[cfg(feature = "safetensors")]
 use std::path::Path;
 
 /// Operator types for LLM computation graph nodes
+#[allow(missing_docs)]
 #[derive(Debug, Clone, PartialEq)]
 pub enum OperatorType {
     /// Multi-head attention operator
@@ -684,6 +688,7 @@ impl ModelSwitch {
     }
 
     /// Infer operator type from tensor name
+    #[cfg(any(feature = "safetensors", test))]
     fn infer_operator_from_name(name: &str) -> OperatorType {
         let name_lower = name.to_lowercase();
         

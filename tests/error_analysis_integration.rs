@@ -3,7 +3,7 @@
 //! This test suite validates the error accumulation analysis tool
 //! by testing it with real graph-level tensor operations.
 
-#[cfg(test)]
+#[cfg(all(test, feature = "tensor"))]
 mod tests {
     use god_gragh::graph::Graph;
     use god_gragh::graph::traits::{GraphOps, GraphQuery};

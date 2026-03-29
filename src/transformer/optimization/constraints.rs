@@ -64,6 +64,7 @@ pub struct TopologyDefect {
 }
 
 /// Topology constraint definition
+#[allow(missing_docs)]
 pub enum TopologyConstraint {
     /// Residual connection must exist between specific nodes
     ResidualConnection {
@@ -520,7 +521,7 @@ mod tests {
     fn test_assembly_validation() {
         let mut graph = Graph::<OperatorType, WeightTensor>::directed();
         
-        let node = graph.add_node(OperatorType::Linear {
+        let _node = graph.add_node(OperatorType::Linear {
             in_features: 512,
             out_features: 1024,
         }).unwrap();

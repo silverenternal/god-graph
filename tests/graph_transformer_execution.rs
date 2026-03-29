@@ -3,13 +3,13 @@
 //! This module provides comprehensive tests for GraphTransformer execution
 //! including tensor passing, forward pass validation, and edge semantics.
 
-#[cfg(test)]
+#[cfg(all(test, feature = "tensor"))]
 mod tests {
     use god_gragh::tensor::DenseTensor;
     use god_gragh::tensor::traits::TensorBase;
     use god_gragh::transformer::graph_transformer::GraphTransformer;
     use god_gragh::transformer::graph_transformer::edges::{
-        GraphEdge, GraphEdgeType, SelfAttentionEdge, DataFlowEdge, DataFlowOp, SkipType, ResidualEdge,
+        GraphEdge, GraphEdgeType, DataFlowOp, SkipType,
     };
 
     // ==================== GraphTransformer Basic Tests ====================
@@ -98,7 +98,7 @@ mod tests {
         // Prune with high threshold to ensure some edges are pruned
         let pruned_count = transformer.prune_weak_edges(0.5);
         
-        assert!(pruned_count >= 0);
+        assert!(pruned_count <= initial_edges);
         assert_eq!(transformer.num_edges(), initial_edges - pruned_count);
         
         // Re-execute after pruning

@@ -470,6 +470,7 @@ struct ArenaSlice {
     /// Start pointer (raw pointer into arena)
     ptr: *mut f64,
     /// Number of elements
+    #[allow(dead_code)]
     len: usize,
     /// Shape
     shape: SmallVec<[usize; 4]>,
@@ -821,7 +822,7 @@ mod arena_tests {
         
         // Allocate
         let tensor1 = arena.allocate(&shape).unwrap();
-        let stats_after_alloc = arena.stats().allocation_count;
+        let _stats_after_alloc = arena.stats().allocation_count;
         
         // Explicitly deallocate to return to free list
         arena.deallocate(tensor1);

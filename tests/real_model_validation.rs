@@ -14,7 +14,7 @@
 //!
 //! The model will be stored in the `models/` directory.
 
-#[cfg(test)]
+#[cfg(all(test, feature = "safetensors"))]
 mod tests {
     use god_gragh::graph::traits::{GraphBase, GraphOps, GraphQuery};
     use god_gragh::tensor::TensorBase;

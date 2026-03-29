@@ -160,17 +160,17 @@ impl LieGroupOptimizer {
     }
 
     /// Get optimization statistics
-    pub fn statistics(&self) -> std::cell::Ref<HashMap<String, f64>> {
+    pub fn statistics(&self) -> std::cell::Ref<'_, HashMap<String, f64>> {
         self.statistics.borrow()
     }
 
     /// Get the error accumulator for detailed error analysis
-    pub fn error_accumulator(&self) -> std::cell::Ref<ErrorAccumulator> {
+    pub fn error_accumulator(&self) -> std::cell::Ref<'_, ErrorAccumulator> {
         self.error_accumulator.borrow()
     }
 
     /// Get a mutable reference to the error accumulator
-    pub fn error_accumulator_mut(&self) -> std::cell::RefMut<ErrorAccumulator> {
+    pub fn error_accumulator_mut(&self) -> std::cell::RefMut<'_, ErrorAccumulator> {
         self.error_accumulator.borrow_mut()
     }
 
@@ -263,6 +263,7 @@ impl LieGroupOptimizer {
     }
 
     /// Check orthogonality of a tensor (W^T W ≈ I)
+    #[allow(dead_code)]
     fn check_orthogonality(tensor: &DenseTensor) -> f64 {
         let shape = tensor.shape();
         if shape.len() != 2 {

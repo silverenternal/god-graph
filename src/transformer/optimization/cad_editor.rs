@@ -70,6 +70,7 @@ use crate::transformer::optimization::switch::{OperatorType, WeightTensor};
 use std::collections::HashMap;
 
 /// Edit operation types
+#[allow(missing_docs)]
 #[derive(Debug, Clone)]
 pub enum EditOperation {
     /// Add a node
@@ -277,24 +278,24 @@ impl<'a> CadStyleEditor<'a> {
                         let _ = self.graph.add_edge(from_idx, to_idx, weight);
                     }
                 }
-                EditOperation::RemoveEdge { from, to } => {
+                EditOperation::RemoveEdge { .. } => {
                     // Find and remove edge
                     // Note: This requires implementing edge removal in the graph
                     // For now, we just record the operation
                 }
-                EditOperation::AddNode { node_id, operator_type } => {
+                EditOperation::AddNode { .. } => {
                     // Node already added during fix_isolated_node/fix_disconnected_component
                     // Just record the operation
                 }
-                EditOperation::RemoveNode { node_id, operator_type } => {
+                EditOperation::RemoveNode { .. } => {
                     // Note: Graph doesn't have a remove_node method yet
                     // Just record the operation for now
                 }
-                EditOperation::ModifyNode { node_id, old_type, new_type } => {
+                EditOperation::ModifyNode { .. } => {
                     // Note: This requires implementing node modification
                     // Just record the operation for now
                 }
-                EditOperation::ReplaceModule { path, old_module, new_module } => {
+                EditOperation::ReplaceModule { .. } => {
                     // Module replacement is handled in replace_module
                     // Just record the operation
                 }
@@ -415,7 +416,7 @@ impl<'a> CadStyleEditor<'a> {
                 new_node_mapping.get(to),
             ) {
                 // Create a default weight tensor
-                let weight = WeightTensor::new(
+                let _weight = WeightTensor::new(
                     weight_name.clone(),
                     vec![1.0],
                     vec![1],
@@ -553,7 +554,7 @@ impl<'a> CadStyleEditor<'a> {
             diff_graph.add_learnable_edge(src, dst, 0.9);
         }
 
-        let mut initial_loss = loss_fn(&diff_graph);
+        let initial_loss = loss_fn(&diff_graph);
         let mut final_loss = initial_loss;
         let mut losses = vec![initial_loss];
         let initial_edge_count = diff_graph.num_edges();
@@ -579,7 +580,7 @@ impl<'a> CadStyleEditor<'a> {
                 let eps = 1e-5;
                 
                 // Get current probability
-                let current_prob = diff_graph.get_edge_probability(src, dst)
+                let _current_prob = diff_graph.get_edge_probability(src, dst)
                     .unwrap_or(0.5);
                 
                 // Compute gradient numerically
@@ -712,7 +713,7 @@ impl<'a> CadStyleEditor<'a> {
         
         // Find which component contains the component_start node
         let start_node_idx = NodeIndex::new(component_start, 0);
-        let component_containing_start = components.iter()
+        let _component_containing_start = components.iter()
             .position(|comp| comp.contains(&start_node_idx))
             .unwrap_or(0);
         
@@ -884,7 +885,8 @@ mod tests {
         let mut editor = CadStyleEditor::new(&mut graph);
         let subgraph = editor.extract_module("attention").unwrap();
 
-        assert!(subgraph.node_count() >= 0);
+        // Verify extract_module succeeded and cache was populated
+        let _node_count = subgraph.node_count();
         assert!(editor.module_cache().contains_key("attention"));
     }
 

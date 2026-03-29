@@ -3,7 +3,7 @@
 //! This module tests the Edge IndexMut implementation,
 //! including basic modification, generation checking, and concurrent modification.
 
-#[cfg(test)]
+#[cfg(all(test, feature = "tensor"))]
 mod tests {
     use god_gragh::graph::Graph;
     use god_gragh::graph::traits::{GraphOps, GraphQuery};
