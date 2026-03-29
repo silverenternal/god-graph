@@ -124,7 +124,7 @@ impl QuantizedTensor {
         let data = tensor.data();
 
         // Find max absolute value for symmetric quantization
-        let max_abs = data.iter().fold(0.0_f64, |max, &x| max.max(x.abs()));
+        let max_abs = data.iter().fold(0.0_f64, |max, &x: &f64| max.max(x.abs()));
 
         // Compute scale for symmetric quantization [-127, 127]
         let scale = max_abs / 127.0;
