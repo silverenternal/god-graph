@@ -10,6 +10,8 @@
 //! - Quantization support
 //! - Performance optimizations (SIMD, memory pool, optimized kernels)
 
+#![cfg(feature = "tensor")]
+
 pub mod autograd;
 pub mod layers;
 pub mod loader;

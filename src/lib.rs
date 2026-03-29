@@ -64,6 +64,7 @@ pub mod graph;
 pub mod node;
 pub mod prelude;
 pub mod tensor;
+#[cfg(feature = "tensor")]
 pub mod transformer;
 pub mod utils;
 
