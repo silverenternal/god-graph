@@ -5,14 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
-
-### Planned
-- par_dijkstra refactoring (fix bucket index calculation errors and deadlock risks)
-- GitHub Pages documentation site
-- crates.io release
-
-## [0.5.0-alpha] - 2026-03-29
+## [0.5.0] - 2026-03-29
 
 ### Added
 - **ModelSwitch Export Function** (`src/transformer/optimization/switch.rs`)
@@ -48,6 +41,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Test Count**
   - Total tests: 344 → 346 (added 2 ModelSwitch export tests)
   - All tests passing (100% pass rate)
+
+### Removed
+- Beta status - First stable release with LLM optimization features
 
 ### Fixed
 - **cad_editor.rs Warnings**
