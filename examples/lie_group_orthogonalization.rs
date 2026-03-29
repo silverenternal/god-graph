@@ -46,11 +46,15 @@
 
 #[cfg(feature = "tensor")]
 mod lie_group_comparison {
+    #[allow(unused_imports)]
     use god_gragh::graph::traits::{GraphBase, GraphOps};
+    #[allow(unused_imports)]
     use god_gragh::graph::Graph;
     use god_gragh::tensor::DenseTensor;
+    #[allow(unused_imports)]
     use god_gragh::tensor::TensorBase;
     use god_gragh::transformer::optimization::lie_group::{LieGroupConfig, LieGroupOptimizer};
+    #[allow(unused_imports)]
     use god_gragh::transformer::optimization::switch::{OperatorType, WeightTensor};
 
     /// Example 1: Basic orthogonalization with QR
@@ -501,6 +505,7 @@ mod lie_group_comparison {
         0.5
     }
 
+    #[allow(unused_imports)]
     use std::collections::HashMap;
 
     pub fn run_all_examples() {

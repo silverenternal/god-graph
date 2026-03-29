@@ -130,14 +130,14 @@ mod tests {
 
         // Modify the weight data using IndexMut
         let weight_mut = &mut graph[edge];
-        for i in 0..weight_mut.data.len() {
-            weight_mut.data[i] *= 2.0;
+        for val in weight_mut.data.iter_mut() {
+            *val *= 2.0;
         }
 
         // Verify the modification
         let modified_weight = &graph[edge];
-        for i in 0..original_data.len() {
-            assert!((modified_weight.data[i] - original_data[i] * 2.0).abs() < 1e-10);
+        for (i, &orig) in original_data.iter().enumerate() {
+            assert!((modified_weight.data[i] - orig * 2.0).abs() < 1e-10);
         }
     }
 

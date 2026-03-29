@@ -45,23 +45,23 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         export_transformer_to_dot(&graph, "model.dot")?;
         println!("✓ Exported demo transformer to model.dot");
     } else {
-        let input_path = &args[1];
-        let output_path = if args.len() > 2 {
-            &args[2]
-        } else {
-            "model.dot"
-        };
-
-        println!("Loading model from: {}", input_path);
-        let graph = ModelSwitch::load_from_safetensors(input_path)?;
-        println!(
-            "✓ Loaded model with {} nodes, {} edges",
-            graph.node_count(),
-            graph.edge_count()
-        );
-
-        export_transformer_to_dot(&graph, output_path)?;
-        println!("✓ Exported to {}", output_path);
+        #[cfg(feature = "safetensors")]
+        {
+            let input_path = &args[1];
+            let output_path = if args.len() > 2 { &args[2] } else { "model.dot" };
+            println!("Loading model from: {}", input_path);
+            let graph = ModelSwitch::load_from_safetensors(input_path)?;
+            println!("✓ Loaded model with {} nodes, {} edges", graph.node_count(), graph.edge_count());
+            export_transformer_to_dot(&graph, output_path)?;
+            println!("✓ Exported to {}", output_path);
+        }
+        #[cfg(not(feature = "safetensors"))]
+        {
+            println!("safetensors feature not enabled; running demo instead.");
+            let graph = create_demo_transformer();
+            export_transformer_to_dot(&graph, "model.dot")?;
+            println!("✓ Exported demo transformer to model.dot");
+        }
     }
 
     Ok(())
@@ -179,7 +179,7 @@ fn export_transformer_to_dot(
     output_path: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
     // Create custom options for transformer visualization
-    let options = DotOptions::new()
+    let _options = DotOptions::new()
         .with_name("Transformer")
         .hide_edge_labels() // Hide edge labels for cleaner look
         .undirected(); // Remove arrowheads for cleaner look

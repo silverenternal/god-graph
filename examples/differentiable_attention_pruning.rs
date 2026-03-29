@@ -200,6 +200,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 /// 获取 TinyLlama 模型路径
+#[allow(dead_code)]
 fn get_tinyllama_model_path() -> Option<String> {
     let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap_or_else(|_| ".".to_string());
 
@@ -218,8 +219,9 @@ fn get_tinyllama_model_path() -> Option<String> {
 }
 
 /// 使用合成数据的简化演示（当真实模型不可用时）
+#[allow(dead_code)]
 fn run_synthetic_demo() {
-    use god_gragh::graph::traits::{GraphBase, GraphOps, GraphQuery};
+    use god_gragh::graph::traits::{GraphBase, GraphOps};
     use god_gragh::graph::Graph;
     use god_gragh::tensor::differentiable::{DifferentiableGraph, GradientConfig};
 
@@ -233,7 +235,7 @@ fn run_synthetic_demo() {
     let mut token_nodes = Vec::new();
 
     // 创建 token 节点
-    for i in 0..n_tokens {
+    for _ in 0..n_tokens {
         let feature = vec![1.0; hidden_dim];
         let node_idx = graph.add_node(feature).unwrap();
         token_nodes.push(node_idx);
