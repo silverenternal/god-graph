@@ -1066,6 +1066,59 @@ impl<T, E> core::ops::IndexMut<NodeIndex> for Graph<T, E> {
     }
 }
 
+impl<T, E> core::ops::Index<EdgeIndex> for Graph<T, E> {
+    type Output = E;
+
+    #[inline]
+    fn index(&self, index: EdgeIndex) -> &Self::Output {
+        self.get_edge(index).expect("边索引无效")
+    }
+}
+
+/// # Safety
+///
+/// 此实现使用 `panic!` 而非 `Result`，因为 `IndexMut` trait 不允许返回 `Result`。
+/// 对于需要安全访问的场景，请使用边数据可变访问方法。
+///
+/// # Panics
+///
+/// Panics if:
+/// - 边索引超出范围 (`index.index() >= self.edges.len()`)
+/// - 边已被删除 (`edge.is_occupied() == false`)
+/// - Generation 不匹配，索引已失效
+///
+/// # 示例
+///
+/// ```
+/// use god_gragh::graph::Graph;
+/// use god_gragh::graph::traits::GraphOps;
+///
+/// let mut graph = Graph::directed();
+/// let a = graph.add_node(1).unwrap();
+/// let b = graph.add_node(2).unwrap();
+/// let edge = graph.add_edge(a, b, 42.0).unwrap();
+///
+/// // 使用 IndexMut 修改边数据
+/// graph[edge] = 100.0;
+/// assert_eq!(graph[edge], 100.0);
+/// ```
+impl<T, E> core::ops::IndexMut<EdgeIndex> for Graph<T, E> {
+    #[inline]
+    fn index_mut(&mut self, index: EdgeIndex) -> &mut Self::Output {
+        if index.index() >= self.edges.len() {
+            panic!("边索引无效：index={}", index.index());
+        }
+        let edge = &mut self.edges[index.index()];
+        if !edge.is_occupied() {
+            panic!("边索引无效：边不存在");
+        }
+        if edge.generation != index.generation() {
+            panic!("边索引已失效：generation 不匹配");
+        }
+        edge.data.as_mut().expect("边数据为空")
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

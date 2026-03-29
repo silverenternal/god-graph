@@ -24,7 +24,11 @@
       "Bash(git commit *)",
       "Bash(git push *)",
       "Bash(cargo clean)",
-      "Bash(curl *)"
+      "Bash(curl *)",
+      "Bash(git clone *)",
+      "Bash(cargo run *)",
+      "Bash(bash *)",
+      "Bash(mv *)"
     ]
   },
   "$version": 3

@@ -1,0 +1,70 @@
+digraph Transformer {
+    rankdir=TB;
+    splines=ortho;
+    node [shape=box, style="rounded,filled"];
+    edge [color=gray, arrowsize=0.5];
+
+    subgraph cluster_embedding {
+        label="Embedding";
+        style=filled;
+        fillcolor=lightyellow;
+        n0 [label="Embedding\n32000x512" fillcolor="#FFC107"];
+    }
+
+    subgraph cluster_attention {
+        label="Attention Layers";
+        style=filled;
+        fillcolor=lightgreen;
+        n1 [label="Attention\n8 heads\n512 dim" fillcolor="#4CAF50"];
+        n5 [label="Attention\n8 heads\n512 dim" fillcolor="#4CAF50"];
+        n9 [label="Attention\n8 heads\n512 dim" fillcolor="#4CAF50"];
+    }
+
+    subgraph cluster_mlp {
+        label="MLP Layers";
+        style=filled;
+        fillcolor=lightcoral;
+        n3 [label="MLP\n512\nSiLU" fillcolor="#f44336"];
+        n7 [label="MLP\n512\nSiLU" fillcolor="#f44336"];
+        n11 [label="MLP\n512\nSiLU" fillcolor="#f44336"];
+    }
+
+    subgraph cluster_norm {
+        label="Normalization Layers";
+        style=filled;
+        fillcolor=lightblue;
+        n2 [label="RMSNorm\neps=1e-6" fillcolor="#2196F3"];
+        n4 [label="RMSNorm\neps=1e-6" fillcolor="#2196F3"];
+        n6 [label="RMSNorm\neps=1e-6" fillcolor="#2196F3"];
+        n8 [label="RMSNorm\neps=1e-6" fillcolor="#2196F3"];
+        n10 [label="RMSNorm\neps=1e-6" fillcolor="#2196F3"];
+        n12 [label="RMSNorm\neps=1e-6" fillcolor="#2196F3"];
+    }
+
+    subgraph cluster_linear {
+        label="Linear Layers";
+        style=filled;
+        fillcolor=lightgray;
+        n13 [label="Linear\n512→32000" fillcolor="#9E9E9E"];
+    }
+
+    n0 -> n1;
+    n1 -> n2;
+    n0 -> n2;
+    n2 -> n3;
+    n3 -> n4;
+    n2 -> n4;
+    n4 -> n5;
+    n5 -> n6;
+    n4 -> n6;
+    n6 -> n7;
+    n7 -> n8;
+    n6 -> n8;
+    n8 -> n9;
+    n9 -> n10;
+    n8 -> n10;
+    n10 -> n11;
+    n11 -> n12;
+    n10 -> n12;
+    n12 -> n13;
+}

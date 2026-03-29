@@ -4,27 +4,27 @@ version = "0.4.3-beta"
 edition = "2021"
 rust-version = "1.85"
 authors = ["silverenternal <3147264070@qq.com>"]
-description = "A high-performance, feature-rich Rust graph operations library with comprehensive algorithm support and parallel processing capabilities"
+description = "A graph-based LLM white-box optimization toolbox: topology validation, Lie group orthogonalization, tensor ring compression"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/silverenternal/god-graph"
 homepage = "https://github.com/silverenternal/god-graph"
 documentation = "https://docs.rs/god-gragh"
 readme = "README.md"
-keywords = ["graph", "algorithms", "data-structures", "parallel", "performance"]
-categories = ["data-structures", "algorithms", "science"]
+keywords = ["graph", "llm", "optimization", "tensor", "topology"]
+categories = ["data-structures", "algorithms", "science", "compilers"]
 exclude = [".github/", "benches/", "tests/", "examples/", "ROADMAP.json", ".qwen/"]
 
 [features]
-default = ["std"]
+default = ["std", "parallel"]
 
 # 标准库支持（始终启用）
 std = []
 
-# 并行算法支持
+# 并行算法支持（默认启用）
 parallel = ["dep:rayon", "dep:crossbeam-queue"]
 
-# 序列化支持
-serde = ["dep:serde"]
+# 序列化支持 (serde is now always enabled, this feature is for backward compatibility)
+serde = []
 
 # Rayon 集成（并行迭代器）
 rayon-support = ["dep:rayon"]
@@ -36,7 +36,8 @@ dot = []
 matrix = ["dep:nalgebra"]
 
 # 随机图生成
-rand = ["dep:rand", "dep:rand_chacha"]
+rand = []
+rand_chacha = ["dep:rand_chacha"]
 
 # 夜间 Rust 特性（实验性）
 unstable = []
@@ -61,16 +62,31 @@ tensor-candle = ["tensor", "dep:candle-core"]
 tensor-autograd = ["tensor", "dep:dfdx"]
 
 # Tensor 序列化
-tensor-serde = ["tensor", "dep:serde"]
+tensor-serde = ["tensor"]
 
 # GNN 层（GCN, GAT, GraphSAGE 等）
-tensor-gnn = ["tensor", "tensor-sparse", "dep:rand_distr", "rand"]
+tensor-gnn = ["tensor", "tensor-sparse", "dep:rand_distr"]
 
 # 内存池优化
-tensor-pool = ["tensor", "dep:bitvec"]
+tensor-pool = ["tensor", "dep:bitvec", "dep:bumpalo"]
 
 # 批量图处理
 tensor-batch = ["tensor", "tensor-sparse"]
+
+# Transformer/LLM support
+transformer = ["tensor", "tensor-sparse"]
+
+# Safetensors model loading
+safetensors = ["dep:safetensors", "transformer"]
+
+# CAD-LLM Topology Optimization (experimental)
+cad-llm = ["tensor", "safetensors"]
+
+# Tokenizer support
+tokenizer = ["dep:tokenizers"]
+
+# Full LLM inference support
+llm = ["transformer", "safetensors", "tokenizer", "tensor-pool"]
 
 # ============================================
 # 元特性（Meta-Features）- 简化用户配置
@@ -105,9 +121,7 @@ tensor-ml = [
 [dependencies]
 # 可选依赖
 rayon = { version = "1.10", optional = true }
-serde = { version = "1.0", features = ["derive"], optional = true }
 nalgebra = { version = "0.33", optional = true }
-rand = { version = "0.8", optional = true }
 rand_chacha = { version = "0.3", optional = true }
 crossbeam-queue = { version = "0.3", optional = true }
 
@@ -126,8 +140,23 @@ candle-core = { version = "0.8", optional = true }
 # 内存池支持
 bitvec = { version = "1.0", optional = true, default-features = false, features = ["alloc"] }
 
+# Arena 分配器（真正的内存池）
+bumpalo = { version = "3.16", optional = true }
+
 # GNN 支持
 rand_distr = { version = "0.4", optional = true }
+
+# Transformer/LLM 支持
+safetensors = { version = "0.4", optional = true }
+tokenizers = { version = "0.19", optional = true }
+
+# Required for transformer module (non-optional)
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+bytemuck = "1.14"
+half = { version = "2.3", features = ["num-traits"] }
+rand = "0.8"
+smallvec = "1.11"
 
 [dev-dependencies]
 # 基准测试
@@ -182,6 +211,21 @@ name = "tensor_ops"
 harness = false
 required-features = ["tensor", "tensor-sparse", "tensor-gnn", "tensor-pool"]
 
+[[bench]]
+name = "tensor_pool"
+harness = false
+required-features = ["tensor", "tensor-pool"]
+
+[[bench]]
+name = "memory_pool_reduction"
+harness = false
+required-features = ["tensor", "tensor-pool"]
+
+[[bench]]
+name = "transformer"
+harness = false
+required-features = ["transformer", "simd"]
+
 [profile.release]
 opt-level = 3
 lto = "thin"
@@ -194,5 +238,5 @@ codegen-units = 1
 
 [package.metadata.docs.rs]
 # 启用除 GPU 外的所有特性（GPU 需要 CUDA，docs.rs 不支持）
-features = ["std", "parallel", "serde", "dot", "matrix", "rand", "simd", "tensor", "tensor-sparse", "tensor-gnn", "tensor-pool", "tensor-batch"]
+features = ["std", "parallel", "dot", "matrix", "simd", "tensor", "tensor-sparse", "tensor-gnn", "tensor-pool", "tensor-batch"]
 rustdoc-args = ["--cfg", "docsrs"]

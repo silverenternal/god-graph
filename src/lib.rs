@@ -64,6 +64,7 @@ pub mod graph;
 pub mod node;
 pub mod prelude;
 pub mod tensor;
+pub mod transformer;
 pub mod utils;
 
 // 重新导出核心类型

@@ -674,6 +674,343 @@ impl TensorOps for DenseTensor {
     }
 }
 
+// Additional DenseTensor methods for transformer support
+#[cfg(feature = "tensor")]
+impl DenseTensor {
+    /// SiLU activation: f(x) = x * sigmoid(x)
+    pub fn silu(&self) -> Self {
+        self.map(|x| x / (1.0 + (-x).exp()))
+    }
+
+    /// GELU derivative (for backpropagation)
+    pub fn gelu_derivative(&self) -> Self {
+        const SQRT_2_OVER_PI: f64 = 0.7978845608028654;
+        const COEF: f64 = 0.044715;
+        self.map(|x| {
+            let x2 = x * x;
+            let x3 = x * x2;
+            let tanh_arg = SQRT_2_OVER_PI * (x + COEF * x3);
+            let tanh_val = tanh_arg.tanh();
+            0.5 * (1.0 + tanh_val) + x * 0.5 * (1.0 - tanh_val * tanh_val) * SQRT_2_OVER_PI * (1.0 + 3.0 * COEF * x2)
+        })
+    }
+
+    /// Mean along a specific dimension
+    pub fn mean_dim(&self, dim: isize) -> Self {
+        let ndim = self.ndim();
+        let axis = if dim < 0 { (ndim as isize + dim) as usize } else { dim as usize };
+
+        if ndim == 2 && axis == 0 {
+            // Mean along rows (result: [cols])
+            let cols = self.shape[1];
+            let rows = self.shape[0];
+            let mut result = vec![0.0; cols];
+            for col in 0..cols {
+                for row in 0..rows {
+                    result[col] += self.data[row * cols + col];
+                }
+                result[col] /= rows as f64;
+            }
+            Self::new(result, vec![1, cols])
+        } else if ndim == 2 && axis == 1 {
+            // Mean along columns (result: [rows, 1])
+            let rows = self.shape[0];
+            let cols = self.shape[1];
+            let mut result = vec![0.0; rows];
+            for row in 0..rows {
+                let row_start = row * cols;
+                result[row] = self.data[row_start..row_start + cols].iter().sum::<f64>() / cols as f64;
+            }
+            Self::new(result, vec![rows, 1])
+        } else if ndim == 3 && axis == 2 {
+            // Mean along last dimension for 3D tensors
+            let batch = self.shape[0];
+            let seq = self.shape[1];
+            let dim = self.shape[2];
+            let mut result = vec![0.0; batch * seq];
+            for b in 0..batch {
+                for s in 0..seq {
+                    let start = (b * seq + s) * dim;
+                    let sum: f64 = self.data[start..start + dim].iter().sum();
+                    result[b * seq + s] = sum / dim as f64;
+                }
+            }
+            Self::new(result, vec![batch, seq, 1])
+        } else {
+            // Fallback: return scalar mean
+            let sum: f64 = self.data.iter().sum();
+            Self::scalar(sum / self.numel() as f64)
+        }
+    }
+
+    /// Variance along a specific dimension
+    pub fn var_dim(&self, dim: isize) -> Self {
+        let mean = self.mean_dim(dim);
+        let ndim = self.ndim();
+        let axis = if dim < 0 { (ndim as isize + dim) as usize } else { dim as usize };
+
+        if ndim == 2 && axis == 0 {
+            let cols = self.shape[1];
+            let rows = self.shape[0];
+            let mut result = vec![0.0; cols];
+            for col in 0..cols {
+                for row in 0..rows {
+                    let diff = self.data[row * cols + col] - mean.data()[col];
+                    result[col] += diff * diff;
+                }
+                result[col] /= rows as f64;
+            }
+            Self::new(result, vec![1, cols])
+        } else if ndim == 2 && axis == 1 {
+            let rows = self.shape[0];
+            let cols = self.shape[1];
+            let mut result = vec![0.0; rows];
+            for row in 0..rows {
+                let row_start = row * cols;
+                let m = mean.data()[row];
+                let var: f64 = self.data[row_start..row_start + cols]
+                    .iter()
+                    .map(|&x| (x - m) * (x - m))
+                    .sum::<f64>() / cols as f64;
+                result[row] = var;
+            }
+            Self::new(result, vec![rows, 1])
+        } else if ndim == 3 && axis == 2 {
+            let batch = self.shape[0];
+            let seq = self.shape[1];
+            let dim = self.shape[2];
+            let mut result = vec![0.0; batch * seq];
+            for b in 0..batch {
+                for s in 0..seq {
+                    let start = (b * seq + s) * dim;
+                    let m = mean.data()[b * seq + s];
+                    let var: f64 = self.data[start..start + dim]
+                        .iter()
+                        .map(|&x| (x - m) * (x - m))
+                        .sum::<f64>() / dim as f64;
+                    result[b * seq + s] = var;
+                }
+            }
+            Self::new(result, vec![batch, seq, 1])
+        } else {
+            // Fallback: return scalar variance
+            let mean_val = self.data.iter().sum::<f64>() / self.numel() as f64;
+            let var: f64 = self.data.iter().map(|&x| (x - mean_val) * (x - mean_val)).sum::<f64>() / self.numel() as f64;
+            Self::scalar(var)
+        }
+    }
+
+    /// Element-wise square root
+    pub fn sqrt(&self) -> Self {
+        self.map(|x| x.sqrt())
+    }
+
+    /// Negate the tensor
+    pub fn neg(&self) -> Self {
+        self.mul_scalar(-1.0)
+    }
+
+    /// Element-wise greater than comparison (returns 1.0 if true, 0.0 otherwise)
+    pub fn gt(&self, value: f64) -> Self {
+        self.map(|x| if x > value { 1.0 } else { 0.0 })
+    }
+
+    /// Fill values with a given value where mask is 1.0
+    pub fn mask_fill(&self, mask: &Self, value: f64) -> Self {
+        assert_eq!(self.shape, mask.shape, "Shape mismatch for mask_fill");
+        let data: Vec<f64> = self.data.iter()
+            .zip(mask.data.iter())
+            .map(|(&v, &m)| if m > 0.5 { value } else { v })
+            .collect();
+        Self::new(data, self.shape.clone())
+    }
+
+    /// Transpose for 2D tensors (convenience method)
+    pub fn transpose_2d(&self) -> Self {
+        self.transpose(None)
+    }
+
+    /// Get a row from a 2D or 3D tensor
+    pub fn get_row(&self, row: usize) -> Self {
+        if self.ndim() == 2 {
+            let cols = self.shape[1];
+            let start = row * cols;
+            Self::new(self.data[start..start + cols].to_vec(), vec![1, cols])
+        } else if self.ndim() == 3 {
+            // For 3D tensors [batch, seq, dim], get row at index row
+            // This returns a 2D slice [batch, dim] at position row along seq dimension
+            let batch = self.shape[0];
+            let dim = self.shape[2];
+            let mut result_data = Vec::with_capacity(batch * dim);
+            
+            for b in 0..batch {
+                let offset = (b * self.shape[1] + row) * dim;
+                result_data.extend_from_slice(&self.data[offset..offset + dim]);
+            }
+            
+            Self::new(result_data, vec![batch, dim])
+        } else {
+            // Fallback: return first element
+            Self::scalar(self.data[0])
+        }
+    }
+
+    /// Set a row in the tensor (mutable)
+    pub fn set_row(&mut self, row: usize, data: &Self) {
+        if self.ndim() == 2 && data.ndim() == 2 {
+            let cols = self.shape[1];
+            let start = row * cols;
+            self.data[start..start + cols].copy_from_slice(data.data());
+        }
+    }
+
+    /// Create a tensor filled with a value
+    pub fn full(shape: &[usize], value: f64) -> Self {
+        let size: usize = shape.iter().product();
+        let data = vec![value; size];
+        Self::new(data, shape.to_vec())
+    }
+
+    /// Scale the tensor by a scalar
+    pub fn scale(&self, scalar: f64) -> Self {
+        self.mul_scalar(scalar)
+    }
+
+    /// Softmax along the last dimension
+    pub fn softmax(&self, dim: isize) -> Self {
+        crate::tensor::ops::activations::softmax(self, dim)
+    }
+
+    /// ReLU activation
+    pub fn relu(&self) -> Self {
+        crate::tensor::ops::activations::relu(self)
+    }
+
+    /// GELU activation
+    pub fn gelu(&self) -> Self {
+        crate::tensor::ops::activations::gelu(self)
+    }
+
+    /// Element-wise cosine
+    pub fn cos(&self) -> Self {
+        self.map(|x| x.cos())
+    }
+
+    /// Element-wise sine
+    pub fn sin(&self) -> Self {
+        self.map(|x| x.sin())
+    }
+
+    /// Element-wise natural logarithm
+    pub fn ln(&self) -> Self {
+        self.map(|x| x.ln())
+    }
+
+    /// Batched matrix multiplication
+    /// For 3D tensors: [batch, seq, hidden] @ [hidden, out] -> [batch, seq, out]
+    /// Broadcasts 2D weight across batch dimension
+    pub fn bmm_broadcast_weight(&self, weight: &DenseTensor) -> Self {
+        assert_eq!(self.ndim(), 3, "bmm_broadcast_weight requires 3D tensor, got {}D", self.ndim());
+        assert_eq!(weight.ndim(), 2, "weight must be 2D, got {}D", weight.ndim());
+        assert_eq!(
+            self.shape[2], weight.shape[0],
+            "Shape mismatch for bmm: {:?} x {:?}",
+            self.shape, weight.shape
+        );
+
+        let batch = self.shape[0];
+        let seq = self.shape[1];
+        let hidden = self.shape[2];
+        let out = weight.shape[1];
+
+        let mut result = vec![0.0; batch * seq * out];
+
+        // Batched matmul: for each batch and seq, do matmul with weight
+        for b in 0..batch {
+            for s in 0..seq {
+                let input_start = (b * seq + s) * hidden;
+                let output_start = (b * seq + s) * out;
+                
+                for o in 0..out {
+                    let mut sum = 0.0;
+                    for h in 0..hidden {
+                        sum += self.data[input_start + h] * weight.data[h * out + o];
+                    }
+                    result[output_start + o] = sum;
+                }
+            }
+        }
+
+        Self::new(result, vec![batch, seq, out])
+    }
+
+    /// Expand the last dimension from 1 to target_dim (for broadcasting)
+    /// E.g., [batch, seq, 1] -> [batch, seq, target_dim]
+    pub fn expand_last_dim(&self, target_dim: usize) -> Self {
+        assert!(
+            self.ndim() >= 1 && self.shape()[self.ndim() - 1] == 1,
+            "Last dimension must be 1 for expansion"
+        );
+
+        let mut new_shape = self.shape.to_vec();
+        new_shape[self.ndim() - 1] = target_dim;
+
+        let mut data = Vec::with_capacity(self.numel() / 1 * target_dim);
+        for &val in self.data.iter() {
+            for _ in 0..target_dim {
+                data.push(val);
+            }
+        }
+
+        Self::new(data, new_shape)
+    }
+
+    /// Expand a 1D tensor [hidden] to 3D [batch, seq, hidden]
+    pub fn expand_to_3d(&self, batch: usize, seq: usize) -> Self {
+        assert_eq!(self.ndim(), 1, "Must be 1D tensor for 3D expansion");
+        let hidden = self.shape[0];
+
+        let mut data = Vec::with_capacity(batch * seq * hidden);
+        for _ in 0..batch * seq {
+            data.extend_from_slice(&self.data);
+        }
+
+        Self::new(data, vec![batch, seq, hidden])
+    }
+
+    /// Expand the last dimension from 1 to target_dim for 2D tensors
+    /// E.g., [seq, 1] -> [seq, target_dim]
+    pub fn expand_last_dim_2d(&self, target_dim: usize) -> Self {
+        assert!(
+            self.ndim() == 2 && self.shape()[1] == 1,
+            "Must be 2D tensor with last dim 1 for expansion"
+        );
+
+        let seq = self.shape[0];
+        let mut data = Vec::with_capacity(seq * target_dim);
+        for &val in self.data.iter() {
+            for _ in 0..target_dim {
+                data.push(val);
+            }
+        }
+
+        Self::new(data, vec![seq, target_dim])
+    }
+
+    /// Expand a 1D tensor [hidden] to 2D [seq, hidden]
+    pub fn expand_to_2d(&self, seq: usize) -> Self {
+        assert_eq!(self.ndim(), 1, "Must be 1D tensor for 2D expansion");
+        let hidden = self.shape[0];
+
+        let mut data = Vec::with_capacity(seq * hidden);
+        for _ in 0..seq {
+            data.extend_from_slice(&self.data);
+        }
+
+        Self::new(data, vec![seq, hidden])
+    }
+}
+
 #[cfg(feature = "tensor")]
 impl fmt::Debug for DenseTensor {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

@@ -111,6 +111,15 @@ pub enum GraphError {
         /// 边界
         bound: usize,
     },
+
+    /// 未找到资源
+    NotFound(String),
+
+    /// 无效格式
+    InvalidFormat(String),
+
+    /// IO 错误
+    IoError(String),
 }
 
 impl Display for GraphError {
@@ -187,6 +196,15 @@ impl Display for GraphError {
             }
             GraphError::IndexOutOfBounds { index, bound } => {
                 write!(f, "索引越界：索引 {} 超出边界 {}", index, bound)
+            }
+            GraphError::NotFound(resource) => {
+                write!(f, "未找到资源：{}", resource)
+            }
+            GraphError::InvalidFormat(msg) => {
+                write!(f, "无效格式：{}", msg)
+            }
+            GraphError::IoError(err) => {
+                write!(f, "IO 错误：{}", err)
             }
         }
     }

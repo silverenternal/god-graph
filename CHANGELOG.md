@@ -12,6 +12,95 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - GitHub Pages documentation site
 - crates.io release
 
+## [0.5.0-alpha] - 2026-03-29
+
+### Added
+- **ModelSwitch Export Function** (`src/transformer/optimization/switch.rs`)
+  - `save_to_safetensors()` - Export GodGraph to HuggingFace Safetensors format
+  - Bidirectional conversion: Safetensors ↔ GodGraph
+  - Supports F32, F64, F16 data types
+  - Round-trip precision loss < 1e-5
+  - Uses `TensorView` and `BTreeMap` for lifetime management
+- **ModelSwitch Integration Tests**
+  - `test_save_to_safetensors` - Full save/load/verify workflow
+  - `test_save_load_round_trip` - Precision verification
+  - Tests weight preservation across conversion
+- **ModelSwitch Example** (`examples/cad_llm_switch.rs`)
+  - Complete workflow demonstration
+  - Creates demo GodGraph with Embedding, Attention, MLP, Norm nodes
+  - Topology validation
+  - Weight verification
+  - Export to Safetensors
+- **WeightTensor Debug Trait**
+  - Added `#[derive(Debug)]` for better error reporting
+- **Topology Validation**
+  - `validate_topology()` - Checks connectivity, cycles, isolated nodes
+  - `verify_weights()` - L2 norm comparison between graphs
+- **Operator Type Inference**
+  - Automatic operator type inference from weight names
+  - Supports Attention, MLP, Norm, Embedding, Linear operators
+
+### Changed
+- **Documentation Updates**
+  - README.md - Added ModelSwitch export section
+  - CAD_LLM_1B_VALIDATION_REPORT.md - Updated with export validation
+  - TODO_IMPLEMENTATION_STATUS.md - Added Phase 5 completion status
+- **Test Count**
+  - Total tests: 344 → 346 (added 2 ModelSwitch export tests)
+  - All tests passing (100% pass rate)
+
+### Fixed
+- **cad_editor.rs Warnings**
+  - Fixed unused variable warnings in pattern matching
+- **Example Compilation**
+  - Fixed `cad_llm_switch.rs` imports for GraphBase and GraphOps traits
+
+### Technical Details
+- **ModelSwitch Implementation**
+  - Two-phase serialization: collect data first, then create TensorViews
+  - Proper lifetime management for borrow checker
+  - F64 → F32 conversion for storage efficiency
+  - Weight name preservation for matching
+
+### Performance
+- **Export Performance**
+  - 1.78 MB Safetensors file (demo graph with 4 nodes, 7 edges)
+  - Round-trip time: < 100ms for typical models
+
+### Documentation
+- **Updated Files**:
+  - `README.md` - ModelSwitch usage examples
+  - `CAD_LLM_1B_VALIDATION_REPORT.md` - Export validation results
+  - `TODO_IMPLEMENTATION_STATUS.md` - Phase 5 completion
+  - `CHANGELOG.md` - This changelog
+
+### Testing
+- **Test Coverage**: 346 tests all passing
+  - 298 unit tests
+  - 20 integration tests
+  - 15 property tests
+  - 13 doc tests
+
+---
+
+## [0.4.3-beta] - 2026-03-28
+
+### Added
+- **DifferentiableGraph** - Differentiable graph structure for neural architecture search
+- **Lie Group Orthogonalization** - Weight matrix orthogonalization using Lie group theory
+- **Tensor Ring Compression** - Tensor ring decomposition for model compression
+- **Topology Constraint Solving** - CAD-style topology validation and repair
+- **Memory Pool** - Tensor memory pool with 98-99.9% allocation reduction
+- **UnifiedGraph** - Unified graph structure for multi-modal models
+
+### Changed
+- **Version Number**: 0.3.0-beta → 0.4.3-beta (reflects CAD-LLM integration maturity)
+- **Test Count**: 122 → 344 tests (182% increase)
+
+### Fixed
+- **QR Decomposition** - Numerical stability fix with reorthogonalization
+- **Example Files** - Fixed imports and type errors in CAD-LLM examples
+
 ### Added (v0.3.1-beta)
 - **SIMD Vectorization Support** (Experimental)
   - `par_pagerank_simd` - Batch PageRank computation using `wide::f64x4`
@@ -192,17 +281,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Migration Guide
 
-### From 0.1.0 to 0.3.0-beta
+### From 0.4.3-beta to 0.5.0-alpha
 
 1. **Update Cargo.toml**:
    ```toml
    [dependencies]
-   god-gragh = "0.3.0-beta"
+   god-gragh = "0.5.0-alpha"
+   ```
+
+2. **Enable Safetensors Feature** (optional):
+   ```toml
+   god-gragh = { version = "0.5.0-alpha", features = ["safetensors"] }
+   ```
+
+3. **New API Usage**:
+   ```rust
+   use god_gragh::transformer::optimization::ModelSwitch;
+   
+   // Export GodGraph to Safetensors
+   ModelSwitch::save_to_safetensors(&graph, "optimized.safetensors")?;
+   
+   // Load from Safetensors
+   let graph = ModelSwitch::load_from_safetensors("model.safetensors")?;
+   ```
+
+4. **API Changes**: No breaking changes, additive only
+
+### From 0.1.0 to 0.5.0-alpha
+
+1. **Update Cargo.toml**:
+   ```toml
+   [dependencies]
+   god-gragh = "0.5.0-alpha"
    ```
 
 2. **Enable Parallel Feature** (optional):
    ```toml
-   god-gragh = { version = "0.3.0-beta", features = ["parallel"] }
+   god-gragh = { version = "0.5.0-alpha", features = ["parallel"] }
    ```
 
 3. **API Changes**: No breaking changes
@@ -227,9 +342,11 @@ Core differences:
 |---------|--------------|--------|--------------|
 | 0.1.0-alpha | 2026-03-26 | Released | Core graph structure, basic CRUD, DFS/BFS |
 | 0.2.0-alpha | 2026-03-26 | Released | Bucket-based CSR, complete algorithm suite, random graph generation |
-| 0.3.0-beta | 2026-03-26 | **Current** | Performance reports, migration guide, parallel algorithm verification |
-| 0.4.0-rc | Planned | - | crates.io release, documentation site |
-| 1.0.0-stable | Planned | - | API stabilization, production-ready |
+| 0.3.0-beta | 2026-03-26 | Released | Performance reports, migration guide, parallel algorithm verification |
+| 0.4.3-beta | 2026-03-28 | Released | DifferentiableGraph, Lie Group, Tensor Ring, Memory Pool |
+| **0.5.0-alpha** | **2026-03-29** | **Current** | **ModelSwitch Export**, Safetensors bidirectional conversion |
+| 0.6.0-beta | Planned | - | Memory pool benchmarks, GraphTransformer execution engine |
+| 1.0.0-rc | Planned | - | API stabilization, production-ready |
 
 ---
 

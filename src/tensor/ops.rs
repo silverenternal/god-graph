@@ -30,15 +30,19 @@ pub mod activations {
     }
 
     /// Softmax 函数（沿指定轴）
-    pub fn softmax(tensor: &DenseTensor, axis: usize) -> DenseTensor {
-        if tensor.ndim() == 1 {
+    pub fn softmax(tensor: &DenseTensor, axis: isize) -> DenseTensor {
+        let ndim = tensor.ndim();
+        // Handle negative axis
+        let axis = if axis < 0 { (ndim as isize + axis) as usize } else { axis as usize };
+        
+        if ndim == 1 {
             // 1D 情况：直接计算 softmax
             let max_val = tensor.max();
             let exp_data: Vec<f64> = tensor.data().iter().map(|&x| (x - max_val).exp()).collect();
             let sum: f64 = exp_data.iter().sum();
             let data: Vec<f64> = exp_data.iter().map(|&x| x / sum).collect();
             DenseTensor::new(data, tensor.shape().to_vec())
-        } else if tensor.ndim() == 2 {
+        } else if ndim == 2 {
             // 2D 情况：按行或按列计算 softmax
             let rows = tensor.shape()[0];
             let cols = tensor.shape()[1];
@@ -76,13 +80,52 @@ pub mod activations {
                 }
                 DenseTensor::new(result, vec![rows, cols])
             }
+        } else if ndim == 3 {
+            // 3D 情况：[batch, seq, dim]
+            let batch = tensor.shape()[0];
+            let seq = tensor.shape()[1];
+            let dim = tensor.shape()[2];
+            
+            if axis == 2 {
+                // Softmax along last dimension (most common for transformers)
+                let mut result = Vec::with_capacity(batch * seq * dim);
+                for b in 0..batch {
+                    for s in 0..seq {
+                        let start = (b * seq + s) * dim;
+                        let row_data = &tensor.data()[start..start + dim];
+                        let max_val = row_data.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
+                        let exp_data: Vec<f64> = row_data.iter().map(|&x| (x - max_val).exp()).collect();
+                        let sum: f64 = exp_data.iter().sum();
+                        for &e in &exp_data {
+                            result.push(e / sum);
+                        }
+                    }
+                }
+                DenseTensor::new(result, vec![batch, seq, dim])
+            } else {
+                panic!("Softmax for 3D tensors only supports axis=2 or axis=-1");
+            }
         } else {
-            // N 维情况：简化处理，展平后计算
-            // TODO: 实现完整的 N 维 softmax
-            panic!(
-                "Softmax for {}D tensors is not yet implemented",
-                tensor.ndim()
-            );
+            // N 维情况：简化处理，沿最后一个轴计算 softmax
+            if axis == ndim - 1 {
+                let outer_size: usize = tensor.shape()[..ndim-1].iter().product();
+                let inner_size = tensor.shape()[ndim-1];
+                let mut result = Vec::with_capacity(tensor.numel());
+                
+                for i in 0..outer_size {
+                    let start = i * inner_size;
+                    let row_data = &tensor.data()[start..start + inner_size];
+                    let max_val = row_data.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
+                    let exp_data: Vec<f64> = row_data.iter().map(|&x| (x - max_val).exp()).collect();
+                    let sum: f64 = exp_data.iter().sum();
+                    for &e in &exp_data {
+                        result.push(e / sum);
+                    }
+                }
+                DenseTensor::new(result, tensor.shape().to_vec())
+            } else {
+                panic!("Softmax for {}D tensors with axis={} is not yet implemented", ndim, axis);
+            }
         }
     }
 

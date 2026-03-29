@@ -65,6 +65,12 @@ pub mod graph_tensor;
 #[cfg(feature = "tensor")]
 pub mod differentiable;
 
+#[cfg(feature = "tensor")]
+pub mod decomposition;
+
+#[cfg(feature = "tensor")]
+pub mod unified_graph;
+
 // 重新导出核心类型
 #[cfg(feature = "tensor")]
 pub use traits::{COOView, DType, Device, SparseTensorOps, TensorBase, TensorOps};
@@ -91,7 +97,7 @@ pub use types::DegreeMatrix;
 pub use backend::{NdArrayStorage, TensorStorage, UnifiedStorage};
 
 #[cfg(feature = "tensor-pool")]
-pub use pool::{PoolConfig, PoolStats, PooledTensor, TensorPool};
+pub use pool::{ArenaStats, ArenaTensor, PoolConfig, PoolStats, PooledTensor, TensorArena, TensorPool};
 
 #[cfg(feature = "tensor-autograd")]
 pub use pool::GradientCheckpoint;
@@ -104,7 +110,12 @@ pub use gnn::{
 
 #[cfg(feature = "tensor")]
 pub use graph_tensor::{
-    GraphAdjacencyMatrix, GraphBatch, GraphFeatureExtractor, GraphReconstructor, GraphTensorExt,
+    GraphFeatureExtractor, GraphReconstructor,
+};
+
+#[cfg(feature = "tensor-sparse")]
+pub use graph_tensor::{
+    GraphAdjacencyMatrix, GraphBatch, GraphTensorExt,
 };
 
 #[cfg(feature = "tensor")]
@@ -112,4 +123,15 @@ pub use differentiable::{
     DifferentiableEdge, DifferentiableGraph, DifferentiableNode, EdgeEditOp, EdgeEditPolicy,
     EditOperation, GradientConfig, GradientRecorder, GraphTransformer, GumbelSoftmaxSampler,
     NodeEditOp, StructureEdit, ThresholdEditPolicy,
+};
+
+#[cfg(feature = "tensor")]
+pub use unified_graph::{EdgeData, NodeData, UnifiedConfig, UnifiedGraph};
+
+#[cfg(feature = "tensor")]
+pub use decomposition::{
+    lie_algebra::{lie_exponential, lie_logarithm, skew_symmetric_projection},
+    qr::{orthogonalize, qr_decompose},
+    svd::{low_rank_approx, svd_decompose},
+    tensor_ring::{compress_tensor_ring, tensor_ring_decompose, TensorRing},
 };

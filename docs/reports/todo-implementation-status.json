@@ -1,0 +1,627 @@
+{
+  "project": {
+    "name": "god-gragh",
+    "version": "0.5.0-alpha",
+    "vision": "下一代 LLM 基座：基于图结构的白盒化张量计算引擎",
+    "core_philosophy": "张量在图里，图即计算——图结构不是容器，是计算本身",
+    "last_updated": "2026-03-29",
+    "p11_review_depth": "深度利用图结构设计，发挥桶式邻接表 + Generation 索引 + 64 字节对齐的核心优势",
+    "p11_review_correction": "修正误判：Autograd 梯度计算已完整实现，Safetensors 加载器功能完整，GraphTransformer forward 已实现"
+  },
+
+  "executive_summary": {
+    "vision_statement": "将 god-gragh 从高效图结构数据处理库转型为下一代 LLM 基座，核心思路是把张量放到图节点/边里（已有泛型集成），利用图结构的可编辑性实现 LLM 白盒优化",
+    "p11_verdict": "核心功能完成度 75/100——Autograd、Safetensors、GraphTransformer forward 均已实现。真正的问题是：DifferentiableGraph 与 ComputeGraph 未集成、ndarray 后端无原生 GPU 支持、缺少真实模型端到端验证。必须深度利用桶式邻接表 + Generation 索引的图结构优势，而不是简单套 tensor 库",
+    "critical_gaps": [
+      "文档没有突出核心创新：DifferentiableGraph（可微图结构）是灵魂，但 README 只字未提",
+      "DifferentiableGraph 与 ComputeGraph 未集成：训练时需要手动协调两个图，增加使用复杂度",
+      "缺少端到端示例：DifferentiableGraph 有 1421 行代码，但没有一个完整使用示例",
+      "真实模型验证缺失：所有测试用合成数据，未加载 TinyLlama 等真实权重",
+      "ndarray 后端无 GPU 支持：需要切换到 candle-core 或 dfdx 才能获得 CUDA 加速",
+      "图结构核心优势未充分发挥：桶式邻接表的 O(1) 动态编辑能力未在 LLM 场景中充分利用"
+    ],
+    "unique_advantages": [
+      "桶式邻接表 + Generation 索引：O(1) 增量更新 + 防止 ABA 问题，这是 petgraph 没有的——适合动态注意力剪枝场景",
+      "64 字节对齐 WeightTensor：避免 false sharing，CPU 缓存友好——这是推理优化的基础",
+      "DifferentiableGraph：可微图结构是原创创新，支持梯度引导的架构搜索——这是核心差异化优势",
+      "GraphTransformer 显式表示注意力：每条边可单独访问/修改，这是黑盒推理引擎（llama.cpp）做不到的",
+      "李群正交化 + 张量环压缩：数学保证的数值稳定性和压缩比，这是经验性剪枝/量化比不了的"
+    ],
+    "recommended_positioning": "LLM 白盒分析工具 + 可微架构搜索平台，不是推理引擎（打不过 llama.cpp），不是训练框架（打不过 PyTorch）——而是'LLM 的 CAD 软件'"
+  },
+
+  "phase_0_documentation_refactor": {
+    "name": "Phase 0: 文档重构（突出核心创新）",
+    "duration_weeks": 1,
+    "priority": "P0-Critical",
+    "goal": "重写 README 和核心文档，突出 DifferentiableGraph 这个核心创新点",
+    "why_critical": "当前文档让读者误以为这是'普通图库蹭 LLM 热度'，实际是'可微图结构用于架构搜索'",
+    "tasks": [
+      {
+        "id": "P0-T1",
+        "name": "重写 README 核心定位章节",
+        "priority": "P0",
+        "estimated_hours": 4,
+        "status": "Pending",
+        "problem": "README 过多强调'不是推理引擎'，没有讲清楚'是什么'和'核心创新'",
+        "solution": {
+          "new_positioning": "God-Graph 是一个 LLM 白盒分析工具——把 LLM 从黑盒变成可编辑的白盒",
+          "key_sections": [
+            "核心创新：DifferentiableGraph（可微图结构）",
+            "使用场景 1：动态注意力剪枝（梯度引导）",
+            "使用场景 2：拓扑缺陷检测（孤立节点、梯度阻断）",
+            "使用场景 3：架构搜索（自动发现最优残差连接）",
+            "使用场景 4：权重编辑（李群正交化保证数值合法性）"
+          ],
+          "code_example": "use god_gragh::tensor::differentiable::DifferentiableGraph;\n\n// 1. 从标准 Transformer 构建可微图\nlet mut diff_graph = DifferentiableGraph::from_transformer(&model);\n\n// 2. 定义目标函数（注意力熵 + 稀疏性正则）\nlet loss_fn = |g: &DifferentiableGraph| {\n    g.entropy_loss() + 0.1 * g.sparsity_loss()\n};\n\n// 3. 梯度下降优化结构\nfor step in 0..100 {\n    let loss = loss_fn(&diff_graph);\n    let grads = diff_graph.compute_structure_gradients(loss);\n    diff_graph.update_structure(&grads, lr=0.01);\n}\n\n// 4. 导出剪枝后的图\nlet pruned_graph = diff_graph.discretize(threshold=0.5);\nprintln!(\"剪枝了 {} 条弱注意力边\", pruned_graph.num_pruned_edges());"
+        },
+        "file_path": "README.md"
+      },
+      {
+        "id": "P0-T2",
+        "name": "添加 DifferentiableGraph 完整教程",
+        "priority": "P0",
+        "estimated_hours": 6,
+        "status": "Pending",
+        "problem": "differentiable.rs 有 1421 行代码，但没有一个端到端示例",
+        "solution": {
+          "tutorial_structure": [
+            "1. 什么是可微图结构？（连续松弛 + STE + Gumbel-Softmax）",
+            "2. 快速开始：5 分钟上手示例",
+            "3. 进阶：自定义编辑策略",
+            "4. 实战：注意力剪枝",
+            "5. 实战：架构搜索"
+          ],
+          "file_path": "docs/differentiable_graph_tutorial.md"
+        }
+      },
+      {
+        "id": "P0-T3",
+        "name": "澄清 GraphTransformer 定位",
+        "priority": "P0",
+        "estimated_hours": 2,
+        "status": "Pending",
+        "problem": "GraphTransformer 是分析工具还是推理引擎？文档没说清楚",
+        "solution": {
+          "clarification": "GraphTransformer 主要用于：1) 可视化注意力拓扑 2) 动态剪枝弱边 3) 添加自定义连接。对于高性能推理，建议转换为标准 LlamaModel",
+          "add_to": "src/transformer/graph_transformer/execution.rs 的模块文档"
+        },
+        "file_path": "src/transformer/graph_transformer/execution.rs"
+      },
+      {
+        "id": "P0-T4",
+        "name": "更新 CAD-LLM 设计哲学文档",
+        "priority": "P1",
+        "estimated_hours": 3,
+        "status": "Pending",
+        "problem": "CAD 类比很酷，但没有和 DifferentiableGraph 关联起来",
+        "solution": {
+          "new_mapping": [
+            "CAD 参数化设计 → DifferentiableGraph 可微结构",
+            "CAD 约束求解 → 拓扑约束 + 梯度优化",
+            "CAD 公差分析 → 李群正交化数值稳定性",
+            "CAD 轻量化 → 张量环压缩"
+          ]
+        },
+        "file_path": "docs/CAD_LLM_DESIGN_PHILOSOPHY.md"
+      }
+    ]
+  },
+
+  "phase_1_differentiable_examples": {
+    "name": "Phase 1: DifferentiableGraph 示例完善",
+    "duration_weeks": 2,
+    "priority": "P0",
+    "goal": "添加 3-5 个完整的 DifferentiableGraph 端到端示例",
+    "why_critical": "没有示例的代码等于不存在——用户不知道怎么用",
+    "tasks": [
+      {
+        "id": "P1-T1",
+        "name": "示例 1：可微注意力剪枝",
+        "priority": "P0",
+        "estimated_hours": 8,
+        "status": "Pending",
+        "file_path": "examples/differentiable_attention_pruning.rs",
+        "code_template": "//! 示例：用梯度下降优化注意力结构\n//!\n//! 这个示例展示如何用 DifferentiableGraph 实现动态注意力剪枝：\n//! 1. 从标准 Transformer 构建可微图\n//! 2. 定义目标函数（注意力熵 + 稀疏性正则）\n//! 3. 梯度下降优化边结构\n//! 4. 离散化并导出剪枝后的图\n\nuse god_gragh::graph::Graph;\nuse god_gragh::tensor::differentiable::{DifferentiableGraph, GradientConfig, ThresholdEditPolicy};\nuse god_gragh::tensor::DenseTensor;\n\nfn main() {\n    // 1. 构建小型 Transformer 图\n    let mut graph = build_mini_transformer();\n    \n    // 2. 转换为可微图（边权重变为可学习参数）\n    let config = GradientConfig::default()\n        .with_sparsity(0.1); // L1 稀疏正则\n    let mut diff_graph = DifferentiableGraph::from_graph(graph, config);\n    \n    // 3. 梯度下降优化结构\n    println!(\"开始优化注意力结构...\");\n    for step in 0..100 {\n        // 计算目标函数：注意力熵（鼓励聚焦）+ 稀疏性（鼓励剪枝）\n        let entropy_loss = diff_graph.entropy_loss();\n        let sparsity_loss = diff_graph.sparsity_loss();\n        let total_loss = entropy_loss + sparsity_loss;\n        \n        // 计算梯度\n        let grads = diff_graph.compute_structure_gradients(total_loss);\n        \n        // 更新结构\n        diff_graph.update_structure(&grads, 0.01);\n        \n        if step % 10 == 0 {\n            println!(\"Step {}: loss={:.4}, entropy={:.4}, sparsity={:.4}\",\n                step, total_loss, entropy_loss, sparsity_loss);\n        }\n    }\n    \n    // 4. 离散化（阈值=0.5）\n    let policy = ThresholdEditPolicy::new(0.5);\n    let pruned_graph = diff_graph.discretize(&policy);\n    \n    println!(\"\\n优化完成!\");\n    println!(\"  原始边数：{}\", graph.edge_count());\n    println!(\"  剪枝后边数：{}\", pruned_graph.edge_count());\n    println!(\"  剪枝比例：{:.2}%\", \n        (1.0 - pruned_graph.edge_count() as f64 / graph.edge_count() as f64) * 100.0);\n}\n\nfn build_mini_transformer() -> Graph<Vec<f64>, f64> {\n    use god_gragh::graph::traits::GraphOps;\n    \n    let mut graph = Graph::directed();\n    \n    // 创建 token 节点\n    let n_tokens = 4;\n    let hidden_dim = 8;\n    let mut token_nodes = Vec::new();\n    \n    for i in 0..n_tokens {\n        let feature = vec![1.0; hidden_dim];\n        let node_idx = graph.add_node(feature).unwrap();\n        token_nodes.push(node_idx);\n    }\n    \n    // 创建全连接注意力边（后续可剪枝）\n    for &src in &token_nodes {\n        for &dst in &token_nodes {\n            if src != dst {\n                let weight = 1.0 / (n_tokens - 1) as f64;\n                let _ = graph.add_edge(src, dst, weight);\n            }\n        }\n    }\n    \n    graph\n}",
+        "acceptance_criteria": [
+          "代码可编译运行（cargo run --example differentiable_attention_pruning --features tensor）",
+          "输出剪枝前后的边数对比",
+          "添加注释解释每一步的数学原理"
+        ]
+      },
+      {
+        "id": "P1-T2",
+        "name": "示例 2：拓扑缺陷检测（真实模型）",
+        "priority": "P0",
+        "estimated_hours": 8,
+        "status": "Pending",
+        "file_path": "examples/topology_defect_detection.rs",
+        "problem": "当前测试用合成数据，需要展示真实模型（TinyLlama）的缺陷检测",
+        "solution": {
+          "workflow": [
+            "1. 从 HuggingFace 下载 TinyLlama-1.1B",
+            "2. 用 ModelSwitch 加载为 GodGraph",
+            "3. 用 CadStyleEditor 检测拓扑缺陷",
+            "4. 输出缺陷报告（孤立节点、梯度阻断等）"
+          ]
+        },
+        "acceptance_criteria": [
+          "能加载 TinyLlama 真实权重",
+          "检测到至少 1 类拓扑缺陷（或确认无缺陷）",
+          "生成可视化 DOT 文件"
+        ]
+      },
+      {
+        "id": "P1-T3",
+        "name": "示例 3：李群正交化效果对比",
+        "priority": "P1",
+        "estimated_hours": 6,
+        "status": "Pending",
+        "file_path": "examples/lie_group_orthogonalization.rs",
+        "solution": {
+          "comparison": [
+            "正交化前：计算权重矩阵的条件数",
+            "正交化后：重新计算条件数（应该接近 1）",
+            "数值稳定性：添加扰动后比较输出变化"
+          ]
+        }
+      },
+      {
+        "id": "P1-T4",
+        "name": "示例 4：架构搜索（自动发现残差连接）",
+        "priority": "P1",
+        "estimated_hours": 10,
+        "status": "Pending",
+        "file_path": "examples/neural_architecture_search.rs",
+        "problem": "DifferentiableGraph 的灵魂应用：让模型自己学习最优结构",
+        "solution": {
+          "design": [
+            "1. 初始化全连接候选结构（所有可能的残差连接）",
+            "2. 定义验证损失（如分类准确率）",
+            "3. 梯度下降优化边存在概率",
+            "4. 离散化得到最优结构"
+          ]
+        }
+      }
+    ]
+  },
+
+  "phase_2_graph_level_orthogonalization_fix": {
+    "name": "Phase 2: DifferentiableGraph + ComputeGraph 集成（核心）",
+    "duration_weeks": 3,
+    "priority": "P0-Critical",
+    "goal": "将 DifferentiableGraph（结构梯度）与 ComputeGraph（参数梯度）集成到统一框架",
+    "why_critical": "当前两个图独立运作，训练时需要手动协调——这是架构缺陷，不是功能缺失。必须利用桶式邻接表的 O(1) 动态编辑优势，实现结构 - 参数联合优化",
+    "tasks": [
+      {
+        "id": "P2-T1",
+        "name": "设计 UnifiedGraph 统一图结构",
+        "priority": "P0",
+        "estimated_hours": 12,
+        "status": "Pending",
+        "problem": "DifferentiableGraph 存储 structure_params，ComputeGraph 存储 weight_params，两者数据分离",
+        "solution": {
+          "design_philosophy": "利用 God-Graph 的桶式邻接表设计，将结构参数和权重参数统一存储在边数据中",
+          "structure": {
+            "UnifiedGraph": "struct UnifiedGraph { graph: Graph<NodeData, EdgeData>, compute_graph: ComputeGraph }",
+            "EdgeData": "struct EdgeData { weight: DenseTensor, structure_logits: f64, exists: bool }",
+            "NodeData": "struct NodeData { features: DenseTensor, bias: Option<DenseTensor> }"
+          },
+          "key_advantage": "桶式邻接表支持 O(1) 边编辑——DifferentiableGraph 的 discretize() 可以直接修改 graph 结构，无需重建"
+        },
+        "file_path": "src/tensor/unified_graph.rs",
+        "code_design": "/// 统一图结构：同时支持结构梯度和参数梯度\n///\n/// 核心设计：利用 God-Graph 的桶式邻接表 + Generation 索引\n/// - 结构参数（边存在性）存储在 EdgeData.logits\n/// - 权重参数（W 矩阵）存储在 EdgeData.weight\n/// - ComputeGraph 记录操作，支持自动微分\n///\n/// # 与 petgraph 的对比\n///\n/// petgraph 的边是静态的，删除边后索引失效。\n/// God-Graph 的桶式邻接表 + Generation 索引：\n/// - 删除边后，索引可安全重用（generation 检查）\n/// - O(1) 增量更新（优于 CSR 格式）\n/// - 支持动态结构优化（DifferentiableGraph 的核心需求）\npub struct UnifiedGraph {\n    /// 主图结构（桶式邻接表）\n    graph: Graph<NodeData, EdgeData>,\n    /// 计算图（记录操作，支持 autograd）\n    compute_graph: ComputeGraph,\n    /// 结构梯度配置\n    gradient_config: GradientConfig,\n}\n\nimpl UnifiedGraph {\n    /// 联合优化一步：同时更新结构和参数\n    pub fn joint_optimization_step(\n        &mut self,\n        loss: &DenseTensor,\n        structure_lr: f64,\n        param_lr: f64,\n    ) -> GraphResult<()> {\n        // 1. 反向传播计算参数梯度\n        let loss_id = self.compute_graph.get_loss_tensor_id(loss);\n        let param_grads = self.compute_graph.backward(loss_id);\n        \n        // 2. 计算结构梯度（STE）\n        let structure_grads = self.compute_structure_gradients(loss)?;\n        \n        // 3. 更新权重参数\n        self.update_weights(&param_grads, param_lr)?;\n        \n        // 4. 更新结构参数（logits）\n        self.update_structure(&structure_grads, structure_lr)?;\n        \n        // 5. 离散化弱边（利用桶式邻接表的 O(1) 删除）\n        self.prune_weak_edges()?;\n        \n        Ok(())\n    }\n}"
+      },
+      {
+        "id": "P2-T2",
+        "name": "实现结构 - 参数联合优化器",
+        "priority": "P0",
+        "estimated_hours": 16,
+        "status": "Pending",
+        "file_path": "src/tensor/optimizer.rs",
+        "design": {
+          "JointOptimizer": "struct JointOptimizer { structure_optimizer: Adam, param_optimizer: Adam }",
+          "optimization_loop": [
+            "1. forward: 通过图结构计算输出",
+            "2. backward: 计算 loss 对结构和参数的梯度",
+            "3. step: 同时更新 structure_logits 和 weight_params",
+            "4. discretize: 定期离散化，删除弱边"
+          ],
+          "graph_structure_advantage": "利用 Generation 索引，删除边后索引可安全重用——支持动态剪枝而不破坏计算图"
+        }
+      },
+      {
+        "id": "P2-T3",
+        "name": "添加联合优化测试",
+        "priority": "P0",
+        "estimated_hours": 8,
+        "status": "Pending",
+        "file_path": "tests/unified_graph_tests.rs",
+        "test_cases": [
+          "test_joint_optimization_basic: 基本联合优化流程",
+          "test_structure_gradient_flow: 验证结构梯度正确传播",
+          "test_dynamic_pruning: 验证动态剪枝后计算图一致性",
+          "test_generation_indexing_safety: 验证删除边后索引重用安全"
+        ]
+      }
+    ]
+  },
+
+  "phase_3_graph_level_orthogonalization_fix": {
+    "name": "Phase 3: 图级正交化数据流修复",
+    "duration_weeks": 1,
+    "priority": "P0",
+    "goal": "修复图级正交化数据流 bug，实现原地正交化接口",
+    "why_critical": "单张量 QR 测试 error<1e-10，但图级集成后 error=1.0——这是严重的数据流 bug",
+    "tasks": [
+      {
+        "id": "P3-T1",
+        "name": "实现原地正交化接口（零拷贝）",
+        "priority": "P0",
+        "estimated_hours": 4,
+        "status": "Pending",
+        "problem": "当前 orthogonalize_weights() 先克隆数据再写回，存在不必要的内存分配，且可能引入数据不一致",
+        "solution": {
+          "design": "原地 QR 正交化，直接操作 WeightTensor 的 data 字段",
+          "api": "pub fn orthogonalize_weights_in_place(config: &LieGroupConfig, graph: &mut Graph<OperatorType, WeightTensor>) -> GraphResult<Vec<f64>>",
+          "algorithm": [
+            "1. 收集边索引（避免借用冲突）",
+            "2. 通过 graph[edge_idx] 获取可变引用",
+            "3. 原地执行 Gram-Schmidt 正交化",
+            "4. 返回正交化误差列表"
+          ]
+        },
+        "file_path": "src/transformer/optimization/lie_group.rs",
+        "code_snippet": "/// 原地正交化单个权重\npub fn orthogonalize_single_weight(\n    graph: &mut Graph<OperatorType, WeightTensor>,\n    edge_idx: crate::edge::EdgeIndex,\n) -> GraphResult<f64> {\n    use crate::tensor::decomposition::qr::orthogonalize_in_place;\n    \n    // 通过 IndexMut 获取可变引用\n    let weight = &mut graph[edge_idx];\n    let shape = weight.shape.to_vec();\n    \n    // 原地正交化（不克隆数据）\n    let error = orthogonalize_in_place(&mut weight.data, &shape)\n        .map_err(|e| GraphError::InvalidFormat(e.to_string()))?;\n    \n    Ok(error)\n}\n\n/// 批量原地正交化（遍历图）\npub fn orthogonalize_weights_in_place(\n    config: &LieGroupConfig,\n    graph: &mut Graph<OperatorType, WeightTensor>,\n) -> GraphResult<Vec<f64>> {\n    use crate::graph::traits::GraphQuery;\n    \n    let mut errors = Vec::new();\n    \n    // 收集边索引（避免借用冲突）\n    let edge_indices: Vec<_> = graph.edges().map(|e| e.index()).collect();\n    \n    for edge_idx in edge_indices {\n        // 检查层名匹配\n        let weight = &graph[edge_idx];\n        if !config.matches_layer(&weight.name) {\n            continue;\n        }\n        \n        drop(weight); // 释放不可变借用\n        let error = orthogonalize_single_weight(graph, edge_idx)?;\n        errors.push(error);\n    }\n    \n    Ok(errors)\n}"
+      },
+      {
+        "id": "P3-T2",
+        "name": "添加图级正交化稳定性测试",
+        "priority": "P0",
+        "estimated_hours": 4,
+        "status": "Pending",
+        "file_path": "tests/graph_tensor_stability.rs",
+        "acceptance_criteria": [
+          "单张量正交化误差 < 1e-10",
+          "图级正交化平均误差 < 1e-8",
+          "无 NaN/Inf 产生"
+        ]
+      },
+      {
+        "id": "P3-T3",
+        "name": "添加 Edge IndexMut 测试覆盖",
+        "priority": "P0",
+        "estimated_hours": 2,
+        "status": "Pending",
+        "problem": "graph[edge_idx] 的 IndexMut 实现缺少充分测试，generation 检查可能失败",
+        "solution": {
+          "test_cases": [
+            "test_edge_index_mut_basic: 基本修改功能",
+            "test_edge_index_mut_generation_check: generation 不匹配应 panic",
+            "test_edge_index_mut_concurrent: 并发修改测试"
+          ]
+        },
+        "file_path": "tests/edge_index_mut_tests.rs"
+      }
+    ]
+  },
+
+  "phase_3_real_model_validation": {
+    "name": "Phase 3: 真实模型端到端验证",
+    "duration_weeks": 2,
+    "priority": "P1",
+    "goal": "加载 TinyLlama-1.1B 真实权重，运行完整优化流程",
+    "why_critical": "没有真实模型验证，所有声称都是空谈",
+    "tasks": [
+      {
+        "id": "P3-T1",
+        "name": "从 HuggingFace 下载 TinyLlama 模型",
+        "priority": "P1",
+        "estimated_hours": 2,
+        "status": "Pending",
+        "solution": {
+          "model": "TinyLlama/TinyLlama-1.1B-intermediate-step-1431k-5T",
+          "files": ["model.safetensors", "config.json"],
+          "command": "huggingface-cli download TinyLlama/TinyLlama-1.1B-intermediate-step-1431k-5T --include 'model.safetensors' --include 'config.json' --local-dir models/tinyllama"
+        }
+      },
+      {
+        "id": "P3-T2",
+        "name": "用 ModelSwitch 加载真实权重",
+        "priority": "P1",
+        "estimated_hours": 8,
+        "status": "Pending",
+        "problem": "当前测试用合成数据，真实模型有权重分布偏移和精度问题",
+        "solution": {
+          "api": "ModelSwitch::load_from_safetensors(\"models/tinyllama/model.safetensors\")",
+          "validation": [
+            "验证加载的权重数量",
+            "验证权重形状匹配 config",
+            "验证权重值范围（无 NaN/Inf）"
+          ]
+        },
+        "file_path": "tests/real_model_validation.rs"
+      },
+      {
+        "id": "P3-T3",
+        "name": "运行完整优化流程并导出",
+        "priority": "P1",
+        "estimated_hours": 8,
+        "status": "Pending",
+        "workflow": [
+          "1. 加载 TinyLlama 权重",
+          "2. 拓扑验证（ModelSwitch::validate_topology）",
+          "3. 李群正交化（LieGroupOptimizer）",
+          "4. 张量环压缩（TensorRingCompressor）",
+          "5. 导出优化后权重（ModelSwitch::save_to_safetensors）"
+        ],
+        "acceptance_criteria": [
+          "优化流程无 crash",
+          "导出文件可被 transformers 库加载",
+          "生成优化报告（压缩比、正交化误差等）"
+        ]
+      }
+    ]
+  },
+
+  "phase_4_memory_pool_benchmark": {
+    "name": "Phase 4: 内存池基准测试",
+    "duration_weeks": 1,
+    "priority": "P2",
+    "goal": "验证内存池减少 80-90% 分配开销的声称",
+    "why_critical": "没有基准测试的性能声称是营销，不是工程",
+    "tasks": [
+      {
+        "id": "P4-T1",
+        "name": "实现内存池基准测试",
+        "priority": "P2",
+        "estimated_hours": 8,
+        "status": "Pending",
+        "file_path": "benches/tensor_pool.rs",
+        "benchmarks": [
+          "bench_iterative_allocation_without_pool: 迭代分配（无内存池）",
+          "bench_iterative_allocation_with_pool: 迭代分配（有内存池）",
+          "bench_gnn_iteration_with_pool: GNN 迭代算法（典型场景）"
+        ]
+      },
+      {
+        "id": "P4-T2",
+        "name": "更新 README 性能数据",
+        "priority": "P2",
+        "estimated_hours": 2,
+        "status": "Pending",
+        "solution": {
+          "add_section": "### 内存池性能数据",
+          "metrics": [
+            "复用率（reuse_ratio）",
+            "新分配减少百分比",
+            "内存吞吐量"
+          ]
+        },
+        "file_path": "README.md"
+      }
+    ]
+  },
+
+  "phase_5_gpu_backend_and_sparse_attention": {
+    "name": "Phase 5: GPU 后端集成 + 动态稀疏注意力（深度利用图结构）",
+    "duration_weeks": 4,
+    "priority": "P1-High",
+    "goal": "切换到 candle-core 后端获得 GPU 支持，并实现动态稀疏注意力（利用桶式邻接表的 O(1) 编辑优势）",
+    "why_critical": "ndarray 无 GPU 支持是硬伤。但更重要的是：我们的桶式邻接表天生适合动态稀疏注意力——这是 CSR 格式做不到的",
+    "tasks": [
+      {
+        "id": "P5-T1",
+        "name": "实现 CandleBackend GPU 后端",
+        "priority": "P1",
+        "estimated_hours": 24,
+        "status": "Pending",
+        "problem": "当前 DenseTensor 基于 ndarray，无 GPU 支持",
+        "solution": {
+          "design": "实现 TensorBackend trait，支持 ndarray 和 candle 双后端",
+          "trait": "pub trait TensorBackend { fn matmul(&self, a: &Tensor, b: &Tensor) -> Tensor; fn add(&self, a: &Tensor, b: &Tensor) -> Tensor; ... }",
+          "backends": {
+            "NdArrayBackend": "CPU 后端，基于 ndarray",
+            "CandleBackend": "GPU 后端，基于 candle-core，支持 CUDA"
+          },
+          "migration_path": "用户可通过 feature 切换：cargo run --features candle-backend"
+        },
+        "file_path": "src/tensor/backend/candle.rs"
+      },
+      {
+        "id": "P5-T2",
+        "name": "实现动态稀疏注意力（核心差异化优势）",
+        "priority": "P0",
+        "estimated_hours": 32,
+        "status": "Pending",
+        "problem": "传统稀疏注意力（如 FlashAttention）是静态的，无法动态编辑",
+        "solution": {
+          "key_insight": "利用 God-Graph 的桶式邻接表 + Generation 索引，实现 O(1) 动态稀疏注意力编辑",
+          "design": {
+            "DynamicSparseAttention": "struct DynamicSparseAttention { graph: Graph<AttentionNode, AttentionEdge>, backend: Box<dyn TensorBackend> }",
+            "AttentionEdge": "struct AttentionEdge { q_proj: Tensor, k_proj: Tensor, v_proj: Tensor, attention_score: f64, exists: bool }",
+            "advantages": [
+              "O(1) 动态剪枝：删除弱注意力边（优于 CSR 的 O(n) 重建）",
+              "Generation 索引：删除边后索引安全重用",
+              "64 字节对齐：AttentionEdge 结构体对齐，避免 false sharing"
+            ]
+          },
+          "workflow": [
+            "1. 构建全连接注意力图",
+            "2. 计算注意力分数",
+            "3. 基于阈值/梯度动态剪枝弱边",
+            "4. 在剩余边上执行稀疏注意力计算",
+            "5. 支持运行时添加新边（如长程连接）"
+          ]
+        },
+        "file_path": "src/transformer/dynamic_sparse_attention.rs",
+        "code_design": "/// 动态稀疏注意力：利用 God-Graph 的桶式邻接表实现 O(1) 编辑\n///\n/// # 与 FlashAttention 的对比\n///\n/// | 特性 | FlashAttention | DynamicSparseAttention |\n/// |------|---------------|------------------------|\n/// | 稀疏模式 | 静态（编译时确定） | 动态（运行时编辑） |\n/// | 编辑开销 | O(n) 重建 CSR | O(1) 桶式邻接表 |\n/// | GPU 支持 | ✅ | ✅ (CandleBackend) |\n/// | 长程连接 | ❌ | ✅ (add_skip_connection) |\n///\n/// # 核心优势\n///\n/// 1. **动态剪枝**：基于注意力分数动态删除弱边\n/// 2. **架构搜索**：梯度下降学习最优稀疏模式\n/// 3. **长程连接**：运行时添加自定义连接\n/// 4. **可视化**：导出 DOT 格式，直观理解注意力模式\npub struct DynamicSparseAttention {\n    /// 注意力图（桶式邻接表）\n    graph: Graph<AttentionNode, AttentionEdge>,\n    /// 计算后端（CPU/GPU）\n    backend: Box<dyn TensorBackend>,\n    /// 稀疏性目标（用于梯度优化）\n    sparsity_target: f64,\n}\n\nimpl DynamicSparseAttention {\n    /// 动态剪枝弱注意力边\n    pub fn prune_weak_edges(&mut self, threshold: f64) -> usize {\n        use crate::graph::traits::GraphQuery;\n        \n        let mut pruned = 0;\n        let edge_indices: Vec<_> = self.graph.edges().map(|e| e.index()).collect();\n        \n        for edge_idx in edge_indices {\n            let edge = &self.graph[edge_idx];\n            if edge.attention_score < threshold {\n                // O(1) 删除：桶式邻接表的优势\n                let _ = self.graph.remove_edge(edge_idx);\n                pruned += 1;\n            }\n        }\n        \n        pruned\n    }\n    \n    /// 添加自定义长程连接\n    pub fn add_skip_connection(&mut self, src: usize, dst: usize) {\n        // O(1) 添加：桶式邻接表的优势\n        let _ = self.graph.add_edge(\n            NodeIndex::new(src, 0),\n            NodeIndex::new(dst, 0),\n            AttentionEdge::new_skip_connection(),\n        );\n    }\n}"
+      },
+      {
+        "id": "P5-T3",
+        "name": "实现滑动窗口注意力（Mistral 兼容）",
+        "priority": "P1",
+        "estimated_hours": 12,
+        "status": "Pending",
+        "file_path": "src/transformer/sparse_attention/sliding_window.rs",
+        "solution": {
+          "design": "利用桶式邻接表，只添加 window_size 内的边",
+          "complexity": "O(seq_len * window_size) 而非 O(seq_len²)"
+        }
+      },
+      {
+        "id": "P5-T4",
+        "name": "添加 GPU 性能基准测试",
+        "priority": "P1",
+        "estimated_hours": 8,
+        "status": "Pending",
+        "file_path": "benches/gpu_attention.rs",
+        "benchmarks": [
+          "bench_dense_attention_cpu: ndarray 后端",
+          "bench_dense_attention_gpu: candle GPU 后端",
+          "bench_sparse_attention_gpu: 动态稀疏注意力 GPU",
+          "bench_flash_attention: 作为对比基线"
+        ]
+      }
+    ]
+  },
+
+  "phase_6_graph_transformer_execution": {
+    "name": "Phase 6: GraphTransformer 执行引擎（可选）",
+    "duration_weeks": 3,
+    "priority": "P3",
+    "goal": "实现基于拓扑排序的执行引擎，支持消息传递",
+    "why_optional": "GraphTransformer 主要定位是分析工具，推理功能是锦上添花",
+    "tasks": [
+      {
+        "id": "P6-T1",
+        "name": "实现 GraphTransformer forward()",
+        "priority": "P3",
+        "estimated_hours": 16,
+        "status": "Pending",
+        "problem": "当前 GraphTransformer 只有节点/边定义，没有 forward() 实现",
+        "solution": {
+          "design": "基于拓扑排序的执行引擎，支持消息传递",
+          "components": {
+            "GraphTransformer": "struct GraphTransformer { graph: Graph<GraphNode, GraphEdge>, weights: HashMap<String, WeightTensor> }",
+            "ExecutionEngine": "struct ExecutionEngine { schedule: Vec<NodeIndex> }"
+          },
+          "forward_pass": [
+            "1. 拓扑排序确定计算顺序",
+            "2. 按序执行每个节点的操作",
+            "3. 边上传递张量（消息传递）",
+            "4. 缓存中间结果"
+          ]
+        },
+        "file_path": "src/transformer/graph_transformer/execution.rs"
+      },
+      {
+        "id": "P6-T2",
+        "name": "实现边上的张量传递语义",
+        "priority": "P3",
+        "estimated_hours": 8,
+        "status": "Pending",
+        "problem": "当前 GraphEdge 只有简单的 weight: f64，无法传递张量",
+        "solution": {
+          "design": "EdgeData 泛型支持张量传递",
+          "structure": "GraphEdge<TensorData> { data: TensorData, endpoints: (NodeIndex, NodeIndex) }"
+        },
+        "file_path": "src/transformer/graph_transformer/edges.rs"
+      }
+    ]
+  },
+
+  "deliverables": {
+    "v0.5.0-alpha": {
+      "target_date": "2026-04-15",
+      "must_have": [
+        "文档重构完成（P0-T1, P0-T2, P0-T3, P0-T4）",
+        "DifferentiableGraph 示例 1-2（P1-T1, P1-T2）",
+        "DifferentiableGraph + ComputeGraph 集成设计（P2-T1）",
+        "图级正交化修复（P3-T1, P3-T2, P3-T3）",
+        "真实模型验证（P4-T1, P4-T2, P4-T3）"
+      ],
+      "nice_to_have": [
+        "DifferentiableGraph 示例 3-4（P1-T3, P1-T4）",
+        "联合优化器实现（P2-T2, P2-T3）",
+        "内存池基准测试（P4-T1, P4-T2）"
+      ]
+    },
+    "v0.5.0-beta": {
+      "target_date": "2026-05-15",
+      "must_have": [
+        "crates.io 发布",
+        "所有 P0/P1 任务完成",
+        "GPU 后端集成（P5-T1）",
+        "动态稀疏注意力核心功能（P5-T2）"
+      ],
+      "nice_to_have": [
+        "滑动窗口注意力（P5-T3）",
+        "GPU 性能基准测试（P5-T4）",
+        "GraphTransformer forward()（P6-T1）",
+        "边张量传递语义（P6-T2）"
+      ]
+    },
+    "v0.6.0-rc": {
+      "target_date": "2026-06-30",
+      "must_have": [
+        "所有 P0/P1/P2 任务完成",
+        "生产环境案例验证",
+        "完整性能基准测试套件"
+      ],
+      "nice_to_have": [
+        "更多稀疏注意力模式",
+        "分布式训练支持"
+      ]
+    }
+  },
+
+  "success_metrics": {
+    "documentation": [
+      "README 突出 DifferentiableGraph 核心创新",
+      "添加 3-5 个完整示例",
+      "澄清 GraphTransformer 定位",
+      "添加 DynamicSparseAttention 设计文档"
+    ],
+    "numerical_stability": [
+      "单张量正交化误差 < 1e-10",
+      "图级正交化平均误差 < 1e-8",
+      "真实模型优化后无 NaN/Inf"
+    ],
+    "performance": [
+      "内存池复用率 > 80%",
+      "新分配减少 > 80%",
+      "GPU 加速比 > 10x（相比 CPU 后端）",
+      "动态稀疏注意力编辑开销 O(1)"
+    ],
+    "adoption": [
+      "crates.io 发布 v0.5.0-alpha",
+      "100+ 周下载量",
+      "3+ 生产环境案例",
+      "1+ 论文引用"
+    ]
+  },
+
+  "appendix": {
+    "files_to_delete": [
+      "Todo.json (旧版本，已迁移到 todo.json)"
+    ],
+    "key_design_advantages": {
+      "bucket_adjacency_list": "O(1) 增量更新，优于静态 CSR——适合动态图编辑场景",
+      "generation_indexing": "防止 ABA 问题，类型安全——删除节点后重用索引不会混淆",
+      "64_byte_alignment": "避免 false sharing，CPU 缓存友好——推理性能基础",
+      "differentiable_graph": "可微图结构是原创创新——支持梯度引导的架构搜索",
+      "graph_transformer": "显式表示注意力边——可单独访问/修改，黑盒推理引擎做不到",
+      "dynamic_sparse_attention": "利用桶式邻接表实现 O(1) 动态编辑——这是 FlashAttention 做不到的"
+    },
+    "p11_review_summary": {
+      "original_verdict": "75/100 - 核心功能完成，但集成度和真实模型验证缺失",
+      "critical_fixes": [
+        "DifferentiableGraph + ComputeGraph 集成（UnifiedGraph）",
+        "GPU 后端切换（CandleBackend）",
+        "动态稀疏注意力（核心差异化优势）"
+      ],
+      "unique_positioning": "LLM 的 CAD 软件——不是推理引擎，不是训练框架，而是白盒分析和架构搜索平台"
+    }
+  }
+}

@@ -94,6 +94,12 @@ pub enum TensorError {
         /// 错误描述
         description: String,
     },
+
+    /// 内存分配错误
+    AllocationError {
+        /// 错误描述
+        message: String,
+    },
 }
 
 impl fmt::Display for TensorError {
@@ -155,6 +161,9 @@ impl fmt::Display for TensorError {
                     "Device transfer error from {} to {}: {}",
                     from, to, description
                 )
+            }
+            TensorError::AllocationError { message } => {
+                write!(f, "Allocation error: {}", message)
             }
         }
     }

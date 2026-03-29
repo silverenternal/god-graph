@@ -18,6 +18,7 @@ use crate::tensor::{COOTensor, CSRTensor};
 
 /// Adjacency matrix representation for graph neural networks
 #[derive(Debug, Clone)]
+#[cfg(feature = "tensor-sparse")]
 pub struct GraphAdjacencyMatrix {
     /// Sparse adjacency matrix in CSR format
     csr: CSRTensor,
@@ -29,6 +30,7 @@ pub struct GraphAdjacencyMatrix {
     pub is_directed: bool,
 }
 
+#[cfg(feature = "tensor-sparse")]
 impl GraphAdjacencyMatrix {
     /// Create adjacency matrix from edge list
     pub fn from_edge_list(
@@ -98,6 +100,7 @@ impl GraphAdjacencyMatrix {
     }
 
     /// Get sparse tensor representation
+    #[cfg(feature = "tensor-sparse")]
     pub fn as_sparse_tensor(&self) -> &CSRTensor {
         &self.csr
     }
@@ -106,6 +109,7 @@ impl GraphAdjacencyMatrix {
     ///
     /// Returns: D^(-1/2) * (A + I) * D^(-1/2)
     /// where D is the degree matrix and I is the identity matrix
+    #[cfg(feature = "tensor-sparse")]
     pub fn normalized_with_self_loops(&self) -> Result<Self, TensorError> {
         let n = self.num_nodes;
 
@@ -128,6 +132,7 @@ impl GraphAdjacencyMatrix {
     }
 
     /// Compute degree matrix
+    #[cfg(feature = "tensor-sparse")]
     pub fn degree_matrix(&self) -> DenseTensor {
         let n = self.num_nodes;
         let mut degrees = vec![0.0; n];
@@ -142,6 +147,7 @@ impl GraphAdjacencyMatrix {
     }
 
     /// Compute inverse degree matrix (for normalization)
+    #[cfg(feature = "tensor-sparse")]
     pub fn inverse_degree_matrix(&self) -> DenseTensor {
         let n = self.num_nodes;
         let mut inv_degrees = vec![0.0; n];
@@ -230,6 +236,7 @@ where
     }
 
     /// Extract adjacency matrix as sparse tensor
+    #[cfg(feature = "tensor-sparse")]
     pub fn extract_adjacency(&self) -> Result<GraphAdjacencyMatrix, TensorError> {
         let mut edges: Vec<(usize, usize)> = Vec::new();
 
@@ -249,6 +256,7 @@ where
     }
 
     /// Extract complete graph as tensor representation
+    #[cfg(feature = "tensor-sparse")]
     pub fn extract_all(
         &self,
         num_node_features: usize,
@@ -277,6 +285,7 @@ impl GraphReconstructor {
     }
 
     /// Reconstruct graph from adjacency matrix
+    #[cfg(feature = "tensor-sparse")]
     pub fn from_adjacency<T, E>(
         &self,
         adjacency: &GraphAdjacencyMatrix,
@@ -330,6 +339,7 @@ impl GraphReconstructor {
     }
 
     /// Reconstruct graph from COO tensor
+    #[cfg(feature = "tensor-sparse")]
     pub fn from_coo<T, E>(
         &self,
         coo: &COOTensor,
@@ -357,6 +367,7 @@ impl GraphReconstructor {
 }
 
 /// Extension trait for Graph to add tensor conversion methods
+#[cfg(feature = "tensor-sparse")]
 pub trait GraphTensorExt<T, E> {
     /// Convert graph to tensor representation
     fn to_tensor_representation(&self) -> Result<(DenseTensor, GraphAdjacencyMatrix), TensorError>
@@ -376,6 +387,7 @@ pub trait GraphTensorExt<T, E> {
     fn feature_extractor(&self) -> GraphFeatureExtractor<'_, T, E>;
 }
 
+#[cfg(feature = "tensor-sparse")]
 impl<T, E> GraphTensorExt<T, E> for Graph<T, E>
 where
     T: Clone,
@@ -418,10 +430,12 @@ where
 ///
 /// Creates a batched tensor with shape [batch_size * max_nodes, num_features]
 /// and a batch adjacency matrix with appropriate offsets
+#[cfg(feature = "tensor-sparse")]
 pub struct GraphBatch {
     graphs: Vec<(DenseTensor, GraphAdjacencyMatrix)>,
 }
 
+#[cfg(feature = "tensor-sparse")]
 impl GraphBatch {
     /// Create new batch from graphs
     pub fn new<T, E>(graphs: &[Graph<T, E>]) -> Result<Self, TensorError>
@@ -483,6 +497,7 @@ impl GraphBatch {
     }
 
     /// Get batched adjacency matrix (block diagonal)
+    #[cfg(feature = "tensor-sparse")]
     pub fn batch_adjacency(&self) -> GraphAdjacencyMatrix {
         if self.graphs.is_empty() {
             return GraphAdjacencyMatrix::from_edge_list(&[], 0, false).unwrap();
@@ -532,12 +547,13 @@ impl GraphBatch {
     }
 
     /// Get individual graph by index
+    #[cfg(feature = "tensor-sparse")]
     pub fn get(&self, idx: usize) -> Option<&(DenseTensor, GraphAdjacencyMatrix)> {
         self.graphs.get(idx)
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "tensor-sparse"))]
 mod tests {
     use super::*;
     use crate::graph::Graph;

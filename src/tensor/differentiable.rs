@@ -119,6 +119,12 @@ impl GradientConfig {
         self.smoothness_weight = weight;
         self
     }
+
+    /// 设置边学习率
+    pub fn with_edge_learning_rate(mut self, lr: f64) -> Self {
+        self.edge_learning_rate = lr;
+        self
+    }
 }
 
 /// 边编辑操作类型
@@ -220,9 +226,15 @@ impl DifferentiableEdge {
         }
     }
 
-    /// 基于梯度更新 logits
+    /// 基于梯度更新 logits（梯度下降）
+    /// 
+    /// # Gradient Descent
+    /// 
+    /// logits -= learning_rate * gradient
+    /// 
+    /// 其中 gradient = ∂L/∂logits（增加损失的方向）
     pub fn update_logits(&mut self, gradient: f64, learning_rate: f64) {
-        self.logits += learning_rate * gradient;
+        self.logits -= learning_rate * gradient;
         self.gradient = Some(gradient);
     }
 }
@@ -589,9 +601,24 @@ impl<T: Clone + Default> DifferentiableGraph<T> {
         &self.config
     }
 
+    /// 设置配置
+    pub fn set_config(&mut self, config: GradientConfig) {
+        self.config = config;
+    }
+
     /// 获取当前温度
     pub fn temperature(&self) -> f64 {
         self.config.temperature
+    }
+
+    /// 设置温度
+    pub fn set_temperature(&mut self, temp: f64) {
+        self.config.temperature = temp;
+    }
+
+    /// 获取边迭代器
+    pub fn edges(&self) -> impl Iterator<Item = (&(usize, usize), &DifferentiableEdge)> {
+        self.edges.iter()
     }
 
     /// 转换为普通 Graph
@@ -636,6 +663,65 @@ impl<T: Clone + Default> DifferentiableGraph<T> {
         graph
     }
 
+    /// 转换为带类型信息的 Graph（保留 OperatorType 和 WeightTensor）
+    ///
+    /// 使用离散化的边存在性构建 Graph，保留原始的节点和边类型信息。
+    ///
+    /// # Arguments
+    /// * `node_types` - 节点类型映射 (node_index -> OperatorType)
+    /// * `edge_weights` - 边权重映射 ((src, dst) -> WeightTensor)
+    ///
+    /// # Returns
+    ///
+    /// 带类型信息的 Graph<OperatorType, WeightTensor>
+    #[cfg(feature = "transformer")]
+    pub fn to_graph_with_types(
+        &self,
+        node_types: &std::collections::HashMap<usize, crate::transformer::optimization::switch::OperatorType>,
+        edge_weights: &std::collections::HashMap<(usize, usize), crate::transformer::optimization::switch::WeightTensor>,
+    ) -> crate::graph::Graph<crate::transformer::optimization::switch::OperatorType, crate::transformer::optimization::switch::WeightTensor> {
+        use crate::graph::traits::GraphOps;
+        use crate::graph::Graph;
+        use crate::node::NodeIndex;
+        use crate::transformer::optimization::switch::{OperatorType, WeightTensor};
+
+        let mut graph: Graph<OperatorType, WeightTensor> =
+            Graph::with_capacity(self.num_nodes, self.edges.len());
+
+        // 添加节点，使用提供的类型信息
+        let mut node_indices: Vec<NodeIndex> = Vec::with_capacity(self.num_nodes);
+        for i in 0..self.num_nodes {
+            let node_type = node_types.get(&i)
+                .cloned()
+                .unwrap_or_else(|| OperatorType::Custom { name: format!("node_{}", i) });
+            
+            let result = graph.add_node(node_type);
+            match result {
+                Ok(idx) => node_indices.push(idx),
+                Err(_) => {
+                    // 如果失败，创建一个占位符
+                    node_indices.push(NodeIndex::new(i, 0));
+                }
+            }
+        }
+
+        // 添加存在的边，使用提供的权重信息
+        for (&(src, dst), edge) in &self.edges {
+            if edge.exists && src < node_indices.len() && dst < node_indices.len() {
+                let weight = edge_weights.get(&(src, dst))
+                    .cloned()
+                    .unwrap_or_else(|| WeightTensor::new(
+                        format!("edge_{}_to_{}", src, dst),
+                        vec![1.0],
+                        vec![1],
+                    ));
+                let _ = graph.add_edge(node_indices[src], node_indices[dst], weight);
+            }
+        }
+
+        graph
+    }
+
     /// 从普通 Graph 初始化可微图
     ///
     /// # Arguments
@@ -674,6 +760,45 @@ impl<T: Clone + Default> DifferentiableGraph<T> {
                     let dst_idx = neighbor.index();
                     diff_graph.add_learnable_edge(src_idx, dst_idx, 1.0);
                 }
+            }
+        }
+
+        diff_graph
+    }
+
+    /// 从普通图构建可微图（使用统一的初始概率）
+    ///
+    /// # Arguments
+    /// * `graph` - 原始图
+    /// * `init_prob` - 边的初始存在概率（0.0~1.0）
+    ///
+    /// # Returns
+    /// DifferentiableGraph<()> - 可微图
+    ///
+    /// # Note
+    ///
+    /// 此方法忽略原图的节点和边数据，只使用图结构。
+    pub fn from_graph_with_prob<U, V>(
+        graph: &crate::graph::Graph<U, V>,
+        init_prob: Option<f64>,
+    ) -> DifferentiableGraph<()>
+    where
+        U: Clone,
+        V: Clone,
+    {
+        use crate::graph::traits::{GraphBase, GraphQuery};
+
+        let num_nodes = graph.node_count();
+        let mut diff_graph = DifferentiableGraph::new(num_nodes);
+
+        let prob = init_prob.unwrap_or(1.0);
+
+        // 根据图中存在的边初始化
+        for node in graph.nodes() {
+            let src_idx = node.index().index();
+            for neighbor in graph.neighbors(node.index()) {
+                let dst_idx = neighbor.index();
+                diff_graph.add_learnable_edge(src_idx, dst_idx, prob);
             }
         }
 
@@ -759,14 +884,14 @@ impl GumbelSoftmaxSampler {
     fn gumbel_sample(&self) -> f64 {
         #[cfg(feature = "rand")]
         {
-            let u = random::<f64>();
+            let u: f64 = random::<f64>();
             -(-u.ln()).ln()
         }
         #[cfg(not(feature = "rand"))]
         {
             // 无 rand 特性时，使用简单确定性值
             // 注意：这会使 Gumbel-Softmax 变成确定性函数，仅用于测试
-            let u = 0.5;
+            let u: f64 = 0.5;
             -(-u.ln()).ln()
         }
     }
@@ -1064,8 +1189,8 @@ mod tests {
         assert!((edge.logits - 0.0).abs() < 1e-6); // log(0.5/0.5) = 0
         assert!((edge.probability - 0.5).abs() < 1e-6);
 
-        // 更新 logits
-        edge.update_logits(0.1, 0.01);
+        // 更新 logits（负梯度增加 logits，正梯度减小 logits）
+        edge.update_logits(-0.1, 0.01); // 负梯度：增加 logits
         assert!(edge.logits > 0.0);
     }
 

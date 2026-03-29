@@ -376,6 +376,92 @@ mod differentiable_graph_example {
         }
     }
 
+    /// 构建一个迷你 Transformer 图结构用于示例
+    /// 
+    /// 这是一个简化版的 Transformer，包含：
+    /// - 4 个节点（输入、Attention、FFN、输出）
+    /// - 边表示数据流和残差连接
+    #[cfg(feature = "transformer")]
+    pub fn build_mini_transformer() -> god_gragh::graph::Graph<
+        god_gragh::transformer::optimization::switch::OperatorType,
+        god_gragh::transformer::optimization::switch::WeightTensor,
+    > {
+        use god_gragh::graph::traits::GraphOps;
+        use god_gragh::graph::Graph;
+        use god_gragh::transformer::optimization::switch::{OperatorType, WeightTensor};
+
+        let mut graph: Graph<OperatorType, WeightTensor> = Graph::directed();
+
+        // 添加节点
+        let input_node = graph
+            .add_node(OperatorType::Embedding {
+                vocab_size: 1000,
+                embed_dim: 128,
+            })
+            .unwrap();
+
+        let attention_node = graph
+            .add_node(OperatorType::Attention {
+                num_heads: 4,
+                hidden_dim: 128,
+            })
+            .unwrap();
+
+        let ffn_node = graph
+            .add_node(OperatorType::MLP {
+                hidden_dim: 256,
+                activation: "gelu".to_string(),
+            })
+            .unwrap();
+
+        let output_node = graph
+            .add_node(OperatorType::Norm {
+                norm_type: "layernorm".to_string(),
+                eps: 1e-6,
+            })
+            .unwrap();
+
+        // 添加边（数据流）
+        let edge_data = vec![
+            (input_node, attention_node, "input_to_attention"),
+            (attention_node, ffn_node, "attention_to_ffn"),
+            (ffn_node, output_node, "ffn_to_output"),
+            // 残差连接
+            (input_node, ffn_node, "residual_input_to_ffn"),
+            (attention_node, output_node, "residual_attention_to_output"),
+        ];
+
+        for (src, dst, name) in edge_data {
+            let weight = WeightTensor::new(name.to_string(), vec![1.0; 16], vec![4, 4]);
+            let _ = graph.add_edge(src, dst, weight);
+        }
+
+        graph
+    }
+
+    #[cfg(not(feature = "transformer"))]
+    pub fn build_mini_transformer() -> god_gragh::graph::Graph<usize, f64> {
+        use god_gragh::graph::traits::GraphOps;
+        use god_gragh::graph::Graph;
+
+        let mut graph: Graph<usize, f64> = Graph::directed();
+
+        // 添加节点
+        let n0 = graph.add_node(0).unwrap();
+        let n1 = graph.add_node(1).unwrap();
+        let n2 = graph.add_node(2).unwrap();
+        let n3 = graph.add_node(3).unwrap();
+
+        // 添加边
+        let _ = graph.add_edge(n0, n1, 1.0);
+        let _ = graph.add_edge(n1, n2, 1.0);
+        let _ = graph.add_edge(n2, n3, 1.0);
+        let _ = graph.add_edge(n0, n2, 1.0); // 残差
+        let _ = graph.add_edge(n1, n3, 1.0); // 残差
+
+        graph
+    }
+
     pub fn run_all_examples() {
         basic_differentiable_graph();
         structure_gradient_computation();
