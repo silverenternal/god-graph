@@ -10,9 +10,9 @@
 use god_gragh::transformer::optimization::ModelSwitch;
 
 #[cfg(feature = "safetensors")]
-use god_gragh::graph::Graph;
-#[cfg(feature = "safetensors")]
 use god_gragh::graph::traits::{GraphBase, GraphOps};
+#[cfg(feature = "safetensors")]
+use god_gragh::graph::Graph;
 #[cfg(feature = "safetensors")]
 use god_gragh::transformer::optimization::switch::{OperatorType, WeightTensor};
 
@@ -93,15 +93,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .add_edge(
             norm_node,
             norm_node,
-            WeightTensor::new(
-                "model.norm.weight".to_string(),
-                vec![1.0; 256],
-                vec![256],
-            ),
+            WeightTensor::new("model.norm.weight".to_string(), vec![1.0; 256], vec![256]),
         )
         .unwrap();
 
-    println!("Created graph with {} nodes and {} edges\n", graph.node_count(), graph.edge_count());
+    println!(
+        "Created graph with {} nodes and {} edges\n",
+        graph.node_count(),
+        graph.edge_count()
+    );
 
     // 1. Validate topology
     println!("Step 1: Validating topology...");
@@ -117,7 +117,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let export_path = "demo_export.safetensors";
     ModelSwitch::save_to_safetensors(&graph, export_path)?;
     println!("  Exported to: {}", export_path);
-    
+
     // Check file size
     let metadata = std::fs::metadata(export_path)?;
     println!("  File size: {:.2} KB\n", metadata.len() as f64 / 1024.0);
@@ -125,7 +125,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 3. Load back from Safetensors
     println!("Step 3: Loading back from Safetensors...");
     let loaded_graph = ModelSwitch::load_from_safetensors(export_path)?;
-    println!("  Loaded graph with {} nodes and {} edges\n", loaded_graph.node_count(), loaded_graph.edge_count());
+    println!(
+        "  Loaded graph with {} nodes and {} edges\n",
+        loaded_graph.node_count(),
+        loaded_graph.edge_count()
+    );
 
     // 4. Verify weights
     println!("Step 4: Verifying weights...");

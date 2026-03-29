@@ -32,9 +32,8 @@ where
     #[cfg(feature = "rand")]
     {
         use rand::{Rng, SeedableRng};
-        use rand_chacha::ChaCha8Rng;
 
-        let mut rng = ChaCha8Rng::seed_from_u64(seed);
+        let mut rng = rand::rngs::StdRng::seed_from_u64(seed);
 
         for i in 0..n {
             for j in (if directed { 0 } else { i + 1 })..n {

@@ -87,14 +87,14 @@
 //! - **AttentionOutput**：加权求和注意力输出
 //! - **FFNOutput**：应用 FFN 变换
 
-use std::collections::{HashMap, HashSet};
-use crate::graph::Graph;
-use crate::graph::traits::{GraphBase, GraphOps, GraphQuery};
-use crate::node::NodeIndex;
-use crate::tensor::DenseTensor;
-use crate::tensor::traits::{TensorOps, TensorBase};
+use super::edges::{DataFlowOp, GraphEdge, GraphEdgeType, SkipType};
 use super::nodes::{GraphNode, GraphNodeType};
-use super::edges::{GraphEdge, GraphEdgeType, DataFlowOp, SkipType};
+use crate::graph::traits::{GraphBase, GraphOps, GraphQuery};
+use crate::graph::Graph;
+use crate::node::NodeIndex;
+use crate::tensor::traits::{TensorBase, TensorOps};
+use crate::tensor::DenseTensor;
+use std::collections::{HashMap, HashSet};
 
 /// Graph executor for executing Transformer computation graphs
 #[derive(Debug)]
@@ -215,12 +215,12 @@ impl GraphExecutor {
                 // Get cached tensor from source node
                 if let Some(source_tensor) = self.cache.get(&edge_ref.source()) {
                     inputs.push(source_tensor.clone());
-                    
+
                     // Get message tensor from edge (Q/K/V projections)
                     if let Some(msg) = edge_ref.data().message() {
                         edge_messages.push(msg.clone());
                     }
-                    
+
                     // Get attention weight if available
                     if let Some(sa) = edge_ref.data().get_self_attention() {
                         edge_weights.push(sa.weight);
@@ -240,7 +240,7 @@ impl GraphExecutor {
                         // Create embedding based on token_id (simplified: use position as index)
                         let token_id = input_ids.get(position).copied().unwrap_or(0);
                         let hidden_dim = emb.embedding.shape()[1];
-                        
+
                         // Generate embedding: simple hash-based initialization
                         let emb_data: Vec<f64> = (0..hidden_dim)
                             .map(|i| {
@@ -248,7 +248,7 @@ impl GraphExecutor {
                                 (seed.sin() * 1000.0).fract()
                             })
                             .collect();
-                        
+
                         let embedding = DenseTensor::new(emb_data, vec![1, hidden_dim]);
                         self.cache.insert(node_idx, embedding);
                     } else {
@@ -296,7 +296,7 @@ impl GraphExecutor {
                         // Weighted sum using edge weights or attention node weights
                         let hidden_dim = attn.output.shape()[1];
                         let mut result = DenseTensor::zeros(vec![1, hidden_dim]);
-                        
+
                         for (i, input) in inputs.iter().enumerate() {
                             // Get weight from edge or node
                             let weight = if i < edge_weights.len() {
@@ -306,7 +306,7 @@ impl GraphExecutor {
                             } else {
                                 1.0 / inputs.len() as f64
                             };
-                            
+
                             // Apply attention weight
                             let weighted = input.scale(weight);
                             result = result.add(&weighted);
@@ -331,7 +331,7 @@ impl GraphExecutor {
                         } else {
                             inputs[0].clone()
                         };
-                        
+
                         // Apply simplified FFN: just pass through with residual
                         // In full implementation, this would be: GeLU(x @ W1) @ W2
                         self.cache.insert(node_idx, aggregated);
@@ -349,7 +349,9 @@ impl GraphExecutor {
         let mut pruned_count = 0;
 
         // Collect edges to prune
-        let edges_to_prune: Vec<_> = self.graph.edges()
+        let edges_to_prune: Vec<_> = self
+            .graph
+            .edges()
             .filter(|edge_ref| {
                 if let GraphEdgeType::SelfAttention = edge_ref.data().edge_type {
                     if let Some(sa) = &edge_ref.data().self_attention {
@@ -381,15 +383,30 @@ impl GraphExecutor {
         for node in self.graph.nodes() {
             let label = match node.data.node_type {
                 GraphNodeType::TokenEmbedding => format!("TokenEmbed[{}]", node.data.position),
-                GraphNodeType::HiddenState => format!("Hidden[L{}P{}]", node.data.layer, node.data.position),
-                GraphNodeType::AttentionOutput => format!("Attn[L{}H{}]", node.data.layer, 
-                    node.data.attention_output.as_ref().map(|a| a.head).unwrap_or(0)),
-                GraphNodeType::FFNOutput => format!("FFN[L{}P{}]", node.data.layer, node.data.position),
+                GraphNodeType::HiddenState => {
+                    format!("Hidden[L{}P{}]", node.data.layer, node.data.position)
+                }
+                GraphNodeType::AttentionOutput => format!(
+                    "Attn[L{}H{}]",
+                    node.data.layer,
+                    node.data
+                        .attention_output
+                        .as_ref()
+                        .map(|a| a.head)
+                        .unwrap_or(0)
+                ),
+                GraphNodeType::FFNOutput => {
+                    format!("FFN[L{}P{}]", node.data.layer, node.data.position)
+                }
             };
-            dot.push_str(&format!("    n{} [label=\"{}\"];\n", node.index().index(), label));
+            dot.push_str(&format!(
+                "    n{} [label=\"{}\"];\n",
+                node.index().index(),
+                label
+            ));
         }
 
-        dot.push_str("\n");
+        dot.push('\n');
 
         // Add edges
         for edge in self.graph.edges() {
@@ -398,11 +415,15 @@ impl GraphExecutor {
                 GraphEdgeType::DataFlow => "style=solid, color=green",
                 GraphEdgeType::Residual => "style=dashed, color=red",
             };
-            dot.push_str(&format!("    n{} -> n{} [{}];\n", 
-                edge.source().index(), edge.target().index(), style));
+            dot.push_str(&format!(
+                "    n{} -> n{} [{}];\n",
+                edge.source().index(),
+                edge.target().index(),
+                style
+            ));
         }
 
-        dot.push_str("}");
+        dot.push('}');
         dot
     }
 
@@ -511,7 +532,8 @@ impl GraphTransformer {
                         SkipType::PreNorm,
                         residual_tensor,
                     );
-                    self.executor.add_edge(prev_node, attn_node_idx, residual_edge);
+                    self.executor
+                        .add_edge(prev_node, attn_node_idx, residual_edge);
                 }
             }
 
@@ -543,7 +565,8 @@ impl GraphTransformer {
                     SkipType::PostNorm,
                     residual_tensor,
                 );
-                self.executor.add_edge(attn_node, ffn_node_idx, residual_edge);
+                self.executor
+                    .add_edge(attn_node, ffn_node_idx, residual_edge);
             }
 
             prev_layer_nodes = ffn_nodes;
@@ -630,14 +653,38 @@ mod tests {
         let idx_b = executor.add_node(node_b);
         let idx_c = executor.add_node(node_c);
 
-        executor.add_edge(idx_a, idx_b, GraphEdge::data_flow(idx_a.index(), idx_b.index(), DataFlowOp::InputToAttention, 0));
-        executor.add_edge(idx_b, idx_c, GraphEdge::data_flow(idx_b.index(), idx_c.index(), DataFlowOp::AttentionToOutput, 0));
+        executor.add_edge(
+            idx_a,
+            idx_b,
+            GraphEdge::data_flow(
+                idx_a.index(),
+                idx_b.index(),
+                DataFlowOp::InputToAttention,
+                0,
+            ),
+        );
+        executor.add_edge(
+            idx_b,
+            idx_c,
+            GraphEdge::data_flow(
+                idx_b.index(),
+                idx_c.index(),
+                DataFlowOp::AttentionToOutput,
+                0,
+            ),
+        );
 
         let order = executor.topological_sort();
 
         // A should come before B, B should come before C
-        assert!(order.iter().position(|&x| x == idx_a).unwrap() < order.iter().position(|&x| x == idx_b).unwrap());
-        assert!(order.iter().position(|&x| x == idx_b).unwrap() < order.iter().position(|&x| x == idx_c).unwrap());
+        assert!(
+            order.iter().position(|&x| x == idx_a).unwrap()
+                < order.iter().position(|&x| x == idx_b).unwrap()
+        );
+        assert!(
+            order.iter().position(|&x| x == idx_b).unwrap()
+                < order.iter().position(|&x| x == idx_c).unwrap()
+        );
     }
 
     #[test]
@@ -669,7 +716,11 @@ mod tests {
 
         let idx1 = executor.add_node(node1);
         let idx2 = executor.add_node(node2);
-        executor.add_edge(idx1, idx2, GraphEdge::data_flow(idx1.index(), idx2.index(), DataFlowOp::InputToAttention, 0));
+        executor.add_edge(
+            idx1,
+            idx2,
+            GraphEdge::data_flow(idx1.index(), idx2.index(), DataFlowOp::InputToAttention, 0),
+        );
 
         let dot = executor.to_dot();
 

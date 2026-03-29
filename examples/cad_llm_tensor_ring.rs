@@ -7,9 +7,7 @@
 //! 4. Query compression ratios
 
 use god_gragh::tensor::{DenseTensor, TensorBase};
-use god_gragh::transformer::optimization::{
-    CompressionConfig, TensorRing, TensorRingCompressor,
-};
+use god_gragh::transformer::optimization::{CompressionConfig, TensorRingCompressor};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("=== CAD-LLM Tensor Ring Compression Example ===\n");
@@ -29,13 +27,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 2. Create a sample weight matrix
     println!("Step 2: Creating sample weight matrix...");
     let weight = DenseTensor::from_vec(
-        (0..256 * 512)
-            .map(|i| ((i % 100) as f64) / 100.0)
-            .collect(),
+        (0..256 * 512).map(|i| ((i % 100) as f64) / 100.0).collect(),
         vec![256, 512],
     );
     println!("  Weight shape: {:?}", weight.shape());
-    println!("  Parameters: {}\n", weight.shape().iter().product::<usize>());
+    println!(
+        "  Parameters: {}\n",
+        weight.shape().iter().product::<usize>()
+    );
 
     // 3. Create compressor and decompose
     println!("Step 3: Applying Tensor Ring decomposition...");
@@ -52,7 +51,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let original_data = weight.data();
     let recon_data = reconstructed.data();
-    
+
     let mse: f64 = original_data
         .iter()
         .zip(recon_data.iter())
@@ -80,9 +79,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("  Original parameters: {}", original_params);
     println!("  Compressed parameters: {}", compressed_params);
-    println!("  Parameters saved: {}", original_params - compressed_params);
-    println!("  Memory reduction: {:.1}%", 
-        (1.0 - compressed_params as f64 / original_params as f64) * 100.0);
+    println!(
+        "  Parameters saved: {}",
+        original_params - compressed_params
+    );
+    println!(
+        "  Memory reduction: {:.1}%",
+        (1.0 - compressed_params as f64 / original_params as f64) * 100.0
+    );
 
     println!("\n=== Example Complete ===");
     println!("\nKey takeaways:");
@@ -103,10 +107,7 @@ mod tests {
         let config = CompressionConfig::new().with_target_ranks(vec![16]);
         let compressor = TensorRingCompressor::new(config);
 
-        let weight = DenseTensor::from_vec(
-            vec![1.0; 64 * 64],
-            vec![64, 64],
-        );
+        let weight = DenseTensor::from_vec(vec![1.0; 64 * 64], vec![64, 64]);
 
         let ring = compressor.decompose(&weight).unwrap();
         assert!(ring.compression_ratio() > 1.0);
@@ -122,13 +123,14 @@ mod tests {
             let config = CompressionConfig::new().with_target_ranks(vec![rank]);
             let compressor = TensorRingCompressor::new(config);
 
-            let weight = DenseTensor::from_vec(
-                vec![1.0; 128 * 128],
-                vec![128, 128],
-            );
+            let weight = DenseTensor::from_vec(vec![1.0; 128 * 128], vec![128, 128]);
 
             let ring = compressor.decompose(&weight).unwrap();
-            println!("Rank {}: compression ratio = {:.2}x", rank, ring.compression_ratio());
+            println!(
+                "Rank {}: compression ratio = {:.2}x",
+                rank,
+                ring.compression_ratio()
+            );
         }
     }
 }

@@ -70,6 +70,7 @@ use crate::transformer::optimization::switch::{OperatorType, WeightTensor};
 use std::collections::HashMap;
 
 /// Edit operation types
+#[allow(missing_docs)]
 #[derive(Debug, Clone)]
 pub enum EditOperation {
     /// Add a node
@@ -89,10 +90,7 @@ pub enum EditOperation {
         weight_name: String,
     },
     /// Remove an edge
-    RemoveEdge {
-        from: usize,
-        to: usize,
-    },
+    RemoveEdge { from: usize, to: usize },
     /// Modify a node
     ModifyNode {
         node_id: usize,
@@ -239,7 +237,7 @@ impl<'a> CadStyleEditor<'a> {
     /// Constraint validation report
     pub fn solve_constraints(&mut self) -> GraphResult<ConstraintReport> {
         use crate::graph::traits::GraphOps;
-        
+
         let mut operations = Vec::new();
 
         // First, detect and fix defects
@@ -263,38 +261,46 @@ impl<'a> CadStyleEditor<'a> {
         // Execute the operations on the graph
         for operation in &operations {
             match operation {
-                EditOperation::AddEdge { from, to, weight_name } => {
+                EditOperation::AddEdge {
+                    from,
+                    to,
+                    weight_name,
+                } => {
                     // Find nodes by index and add edge
-                    let from_node = self.graph.nodes()
+                    let from_node = self
+                        .graph
+                        .nodes()
                         .find(|n| n.index().index() == *from)
                         .map(|n| n.index());
-                    let to_node = self.graph.nodes()
+                    let to_node = self
+                        .graph
+                        .nodes()
                         .find(|n| n.index().index() == *to)
                         .map(|n| n.index());
-                    
+
                     if let (Some(from_idx), Some(to_idx)) = (from_node, to_node) {
                         let weight = WeightTensor::new(weight_name.clone(), vec![1.0], vec![1]);
                         let _ = self.graph.add_edge(from_idx, to_idx, weight);
                     }
                 }
-                EditOperation::RemoveEdge { from, to } => {
+                EditOperation::RemoveEdge { .. } => {
                     // Find and remove edge
                     // Note: This requires implementing edge removal in the graph
                     // For now, we just record the operation
                 }
-                EditOperation::AddNode { node_id, operator_type } => {
+                EditOperation::AddNode { .. } => {
                     // Node already added during fix_isolated_node/fix_disconnected_component
                     // Just record the operation
                 }
-                EditOperation::RemoveNode { node_id, operator_type } => {
+                EditOperation::RemoveNode { .. } => {
                     // Note: Graph doesn't have a remove_node method yet
                     // Just record the operation for now
                 }
-                EditOperation::ModifyNode { node_id, old_type, new_type } => {
+                EditOperation::ModifyNode { .. } => {
                     // Note: This requires implementing node modification
                     // Just record the operation for now
                 }
-                EditOperation::ReplaceModule { path, old_module, new_module } => {
+                EditOperation::ReplaceModule { .. } => {
                     // Module replacement is handled in replace_module
                     // Just record the operation
                 }
@@ -355,13 +361,9 @@ impl<'a> CadStyleEditor<'a> {
     ///
     /// * `path` - Module path to replace
     /// * `new_module` - New module subgraph
-    pub fn replace_module(
-        &mut self,
-        path: &str,
-        new_module: SubGraph,
-    ) -> GraphResult<()> {
+    pub fn replace_module(&mut self, path: &str, new_module: SubGraph) -> GraphResult<()> {
         use crate::graph::traits::GraphOps;
-        
+
         let mut operations = Vec::new();
 
         // Extract old module first
@@ -370,7 +372,7 @@ impl<'a> CadStyleEditor<'a> {
         // Collect edges to remove (edges connected to old module nodes)
         let old_node_ids: Vec<usize> = old_module.nodes.iter().map(|(id, _)| *id).collect();
         let mut edges_to_remove = Vec::new();
-        
+
         for edge_ref in self.graph.edges() {
             let src = edge_ref.source().index();
             let dst = edge_ref.target().index();
@@ -401,7 +403,7 @@ impl<'a> CadStyleEditor<'a> {
             // Add node to graph
             let new_idx = self.graph.add_node(operator_type.clone())?;
             new_node_mapping.insert(*old_node_id, new_idx.index());
-            
+
             operations.push(EditOperation::AddNode {
                 node_id: new_idx.index(),
                 operator_type: operator_type.clone(),
@@ -410,17 +412,12 @@ impl<'a> CadStyleEditor<'a> {
 
         // Add new module edges
         for (from, to, weight_name) in &new_module.edges {
-            if let (Some(&new_from), Some(&new_to)) = (
-                new_node_mapping.get(from),
-                new_node_mapping.get(to),
-            ) {
+            if let (Some(&new_from), Some(&new_to)) =
+                (new_node_mapping.get(from), new_node_mapping.get(to))
+            {
                 // Create a default weight tensor
-                let weight = WeightTensor::new(
-                    weight_name.clone(),
-                    vec![1.0],
-                    vec![1],
-                );
-                
+                let _weight = WeightTensor::new(weight_name.clone(), vec![1.0], vec![1]);
+
                 // Note: We need to add the edge using the graph API
                 // This requires converting indices back to EdgeIndex
                 operations.push(EditOperation::AddEdge {
@@ -533,8 +530,8 @@ impl<'a> CadStyleEditor<'a> {
         steps: usize,
         _learning_rate: f64,
     ) -> GraphResult<OptimizationReport> {
-        use crate::tensor::differentiable::{DifferentiableGraph, GradientConfig};
         use crate::graph::traits::GraphBase;
+        use crate::tensor::differentiable::{DifferentiableGraph, GradientConfig};
         use std::collections::HashMap;
 
         // Convert current graph to differentiable graph
@@ -553,7 +550,7 @@ impl<'a> CadStyleEditor<'a> {
             diff_graph.add_learnable_edge(src, dst, 0.9);
         }
 
-        let mut initial_loss = loss_fn(&diff_graph);
+        let initial_loss = loss_fn(&diff_graph);
         let mut final_loss = initial_loss;
         let mut losses = vec![initial_loss];
         let initial_edge_count = diff_graph.num_edges();
@@ -567,21 +564,21 @@ impl<'a> CadStyleEditor<'a> {
 
             // Compute structure gradients using finite differences
             let mut gradients = HashMap::new();
-            
+
             // Get edge probabilities using public API
-            let edges: Vec<(usize, usize, f64)> = diff_graph.get_learnable_edges()
+            let edges: Vec<(usize, usize, f64)> = diff_graph
+                .get_learnable_edges()
                 .iter()
                 .map(|e| (e.src, e.dst, e.probability))
                 .collect();
-            
+
             for (src, dst, _prob) in edges {
                 // Finite difference approximation
                 let eps = 1e-5;
-                
+
                 // Get current probability
-                let current_prob = diff_graph.get_edge_probability(src, dst)
-                    .unwrap_or(0.5);
-                
+                let _current_prob = diff_graph.get_edge_probability(src, dst).unwrap_or(0.5);
+
                 // Compute gradient numerically
                 let grad = (loss_fn(&diff_graph) - loss) / eps;
                 gradients.insert((src, dst), grad);
@@ -594,7 +591,12 @@ impl<'a> CadStyleEditor<'a> {
             diff_graph.anneal_temperature();
 
             if step % 10 == 0 {
-                eprintln!("Step {}: loss={:.6}, temp={:.4}", step, loss, diff_graph.temperature());
+                eprintln!(
+                    "Step {}: loss={:.6}, temp={:.4}",
+                    step,
+                    loss,
+                    diff_graph.temperature()
+                );
             }
         }
 
@@ -602,7 +604,8 @@ impl<'a> CadStyleEditor<'a> {
         diff_graph.discretize();
 
         // Count pruned edges
-        let pruned_edges = diff_graph.get_learnable_edges()
+        let pruned_edges = diff_graph
+            .get_learnable_edges()
             .iter()
             .filter(|e| !e.exists)
             .count();
@@ -614,8 +617,7 @@ impl<'a> CadStyleEditor<'a> {
             let dst = edge_ref.target().index();
 
             // Check if edge should exist in optimized graph
-            let should_exist = diff_graph.get_edge_exists(src, dst)
-                .unwrap_or(true);
+            let should_exist = diff_graph.get_edge_exists(src, dst).unwrap_or(true);
 
             if !should_exist {
                 // Note: We can't modify edges through immutable reference
@@ -655,32 +657,33 @@ impl<'a> CadStyleEditor<'a> {
         node_id: usize,
         operations: &mut Vec<EditOperation>,
     ) -> GraphResult<()> {
-        
         // Collect all other node indices
-        let other_nodes: Vec<usize> = self.graph.nodes()
+        let other_nodes: Vec<usize> = self
+            .graph
+            .nodes()
             .map(|n| n.index().index())
             .filter(|&id| id != node_id)
             .collect();
-        
+
         if other_nodes.is_empty() {
             // No other nodes to connect to - this is a single-node graph
             return Ok(());
         }
-        
+
         // Find nearest node by index difference (simple heuristic)
         let nearest_node = other_nodes
             .iter()
             .min_by_key(|&&id| (id as i64 - node_id as i64).abs())
             .copied()
             .unwrap_or(other_nodes[0]);
-        
+
         // Add edge from isolated node to nearest node
         operations.push(EditOperation::AddEdge {
             from: node_id,
             to: nearest_node,
             weight_name: format!("fix_isolated_{}_to_{}", node_id, nearest_node),
         });
-        
+
         // Also add reverse edge for bidirectional connection (if graph is undirected conceptually)
         operations.push(EditOperation::AddEdge {
             from: nearest_node,
@@ -701,41 +704,46 @@ impl<'a> CadStyleEditor<'a> {
     ) -> GraphResult<()> {
         use crate::algorithms::community::connected_components;
         use crate::node::NodeIndex;
-        
+
         // Get all connected components
         let components = connected_components(self.graph);
-        
+
         if components.len() <= 1 {
             // Already connected
             return Ok(());
         }
-        
+
         // Find which component contains the component_start node
         let start_node_idx = NodeIndex::new(component_start, 0);
-        let component_containing_start = components.iter()
+        let _component_containing_start = components
+            .iter()
             .position(|comp| comp.contains(&start_node_idx))
             .unwrap_or(0);
-        
+
         // Assume the first component (index 0) is the main component
         let main_component = &components[0];
-        
+
         // Find a node in the main component to connect to
-        let target_node_idx = main_component.first()
-            .map(|n| n.index())
-            .unwrap_or(0);
-        
+        let target_node_idx = main_component.first().map(|n| n.index()).unwrap_or(0);
+
         // Connect the start node of disconnected component to main component
         operations.push(EditOperation::AddEdge {
             from: component_start,
             to: target_node_idx,
-            weight_name: format!("fix_disconnected_{}_to_{}", component_start, target_node_idx),
+            weight_name: format!(
+                "fix_disconnected_{}_to_{}",
+                component_start, target_node_idx
+            ),
         });
-        
+
         // Also add reverse edge for bidirectional connection
         operations.push(EditOperation::AddEdge {
             from: target_node_idx,
             to: component_start,
-            weight_name: format!("fix_disconnected_{}_to_{}", target_node_idx, component_start),
+            weight_name: format!(
+                "fix_disconnected_{}_to_{}",
+                target_node_idx, component_start
+            ),
         });
 
         Ok(())
@@ -847,14 +855,14 @@ mod tests {
     fn test_editor_creation() {
         let mut graph = Graph::<OperatorType, WeightTensor>::directed();
         let editor = CadStyleEditor::new(&mut graph);
-        
+
         assert_eq!(editor.history_len(), 0);
     }
 
     #[test]
     fn test_defect_detection() {
         let mut graph = Graph::<OperatorType, WeightTensor>::directed();
-        
+
         // Add an isolated node
         let _node = graph
             .add_node(OperatorType::Linear {
@@ -873,7 +881,7 @@ mod tests {
     #[test]
     fn test_module_extraction() {
         let mut graph = Graph::<OperatorType, WeightTensor>::directed();
-        
+
         let _node = graph
             .add_node(OperatorType::Attention {
                 num_heads: 8,
@@ -884,31 +892,41 @@ mod tests {
         let mut editor = CadStyleEditor::new(&mut graph);
         let subgraph = editor.extract_module("attention").unwrap();
 
-        assert!(subgraph.node_count() >= 0);
+        // Verify extract_module succeeded and cache was populated
+        let _node_count = subgraph.node_count();
         assert!(editor.module_cache().contains_key("attention"));
     }
 
     #[test]
     fn test_subgraph_equivalent() {
         let mut a = SubGraph::new();
-        a.nodes.push((0, OperatorType::Linear {
-            in_features: 512,
-            out_features: 512,
-        }));
+        a.nodes.push((
+            0,
+            OperatorType::Linear {
+                in_features: 512,
+                out_features: 512,
+            },
+        ));
 
         let mut b = SubGraph::new();
-        b.nodes.push((0, OperatorType::Linear {
-            in_features: 512,
-            out_features: 512,
-        }));
+        b.nodes.push((
+            0,
+            OperatorType::Linear {
+                in_features: 512,
+                out_features: 512,
+            },
+        ));
 
         assert!(subgraph_equivalent(&a, &b));
 
         let mut c = SubGraph::new();
-        c.nodes.push((0, OperatorType::Attention {
-            num_heads: 8,
-            hidden_dim: 512,
-        }));
+        c.nodes.push((
+            0,
+            OperatorType::Attention {
+                num_heads: 8,
+                hidden_dim: 512,
+            },
+        ));
 
         assert!(!subgraph_equivalent(&a, &c));
     }

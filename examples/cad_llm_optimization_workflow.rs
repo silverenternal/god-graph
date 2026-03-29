@@ -15,8 +15,8 @@ use god_gragh::graph::traits::{GraphBase, GraphOps};
 use god_gragh::graph::Graph;
 use god_gragh::transformer::optimization::switch::{ModelSwitch, OperatorType, WeightTensor};
 use god_gragh::transformer::optimization::{
-    CadStyleEditor, CompressionConfig, LieGroupConfig, LieGroupOptimizer,
-    TensorRingCompressor, TopologyConstraint,
+    CadStyleEditor, CompressionConfig, LieGroupConfig, LieGroupOptimizer, TensorRingCompressor,
+    TopologyConstraint,
 };
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -30,21 +30,27 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // =====================================================================
     println!("Step 1: Creating sample transformer computation graph...");
     let mut graph = create_sample_transformer_graph();
-    println!("  ✓ Graph created with {} nodes, {} edges\n", 
-             graph.node_count(), graph.edge_count());
+    println!(
+        "  ✓ Graph created with {} nodes, {} edges\n",
+        graph.node_count(),
+        graph.edge_count()
+    );
 
     // =====================================================================
     // Step 2: Topology Validation (Model Switch)
     // =====================================================================
     println!("Step 2: Validating topology with Model Switch...");
     let topology_report = ModelSwitch::validate_topology(&graph)?;
-    
+
     println!("  Node count: {}", topology_report.node_count);
     println!("  Edge count: {}", topology_report.edge_count);
-    println!("  Connected components: {}", topology_report.connected_components);
+    println!(
+        "  Connected components: {}",
+        topology_report.connected_components
+    );
     println!("  Is DAG: {}", topology_report.is_dag);
     println!("  Valid: {}", topology_report.is_valid);
-    
+
     if !topology_report.issues.is_empty() {
         println!("  Issues found:");
         for issue in &topology_report.issues {
@@ -61,10 +67,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .with_block_size(16)
         .with_orthogonalize(true)
         .with_target_layers(vec![".*".to_string()]); // Optimize all layers
-    
+
     let lie_optimizer = LieGroupOptimizer::new(lie_config);
     lie_optimizer.orthogonalize_weights(&mut graph)?;
-    
+
     let stats = lie_optimizer.statistics();
     println!("  ✓ Orthogonalization complete");
     if let Some(error) = stats.get("orthogonalization_error") {
@@ -81,28 +87,42 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .with_min_rank(4)
         .with_max_rank(16)
         .with_layers(vec![".*".to_string()]); // Compress all layers
-    
+
     let tr_compressor = TensorRingCompressor::new(tr_config);
     let compression_report = tr_compressor.compress_graph(&graph)?;
-    
+
     println!("  ✓ Compression analysis complete");
-    println!("  Original parameters: {}", compression_report.original_params);
-    println!("  Compressed parameters: {}", compression_report.compressed_params);
-    println!("  Compression ratio: {:.2}x", compression_report.compression_ratio);
+    println!(
+        "  Original parameters: {}",
+        compression_report.original_params
+    );
+    println!(
+        "  Compressed parameters: {}",
+        compression_report.compressed_params
+    );
+    println!(
+        "  Compression ratio: {:.2}x",
+        compression_report.compression_ratio
+    );
     println!("  Layers compressed: {}", compression_report.layers.len());
-    
+
     if !compression_report.layers.is_empty() {
         println!("\n  Layer details:");
         for (i, layer) in compression_report.layers.iter().take(5).enumerate() {
-            println!("    [{}] {}: {:.2}x ({} → {} params)",
-                     i + 1,
-                     layer.layer_name,
-                     layer.compression_ratio,
-                     layer.original_params,
-                     layer.compressed_params);
+            println!(
+                "    [{}] {}: {:.2}x ({} → {} params)",
+                i + 1,
+                layer.layer_name,
+                layer.compression_ratio,
+                layer.original_params,
+                layer.compressed_params
+            );
         }
         if compression_report.layers.len() > 5 {
-            println!("    ... and {} more layers", compression_report.layers.len() - 5);
+            println!(
+                "    ... and {} more layers",
+                compression_report.layers.len() - 5
+            );
         }
     }
     println!();
@@ -113,15 +133,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Step 5: Running CAD-style topology defect detection...");
     let mut cad_editor = CadStyleEditor::new(&mut graph);
     let defects = cad_editor.detect_defects()?;
-    
+
     println!("  ✓ Defect detection complete");
     println!("  Total defects found: {}", defects.len());
-    
+
     if !defects.is_empty() {
         println!("\n  Defect breakdown:");
         let mut defect_counts = std::collections::HashMap::new();
         for defect in &defects {
-            let count = defect_counts.entry(format!("{:?}", defect.defect_type))
+            let count = defect_counts
+                .entry(format!("{:?}", defect.defect_type))
                 .or_insert(0);
             *count += 1;
         }
@@ -135,19 +156,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Step 6: Constraint Definition and Solving
     // =====================================================================
     println!("Step 6: Defining and solving topological constraints...");
-    
+
     // Add residual connection constraints
     cad_editor.add_constraint(TopologyConstraint::ResidualConnection {
         from_layer: "attention".to_string(),
         to_layer: "output".to_string(),
     })?;
-    
+
     // Add gradient flow constraint
     cad_editor.add_constraint(TopologyConstraint::GradientFlow {
         from: "input".to_string(),
         to: "output".to_string(),
     })?;
-    
+
     let constraint_report = cad_editor.solve_constraints()?;
     println!("  ✓ Constraint solving complete");
     println!("  Satisfied: {}", constraint_report.satisfied_count);
@@ -161,18 +182,23 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let lie_config_blocks = LieGroupConfig::new()
         .with_block_size(8)
         .with_orthogonalize(false);
-    
+
     let lie_optimizer_blocks = LieGroupOptimizer::new(lie_config_blocks);
     let decomp_report = lie_optimizer_blocks.block_decompose(&mut graph)?;
-    
+
     println!("  ✓ Block decomposition complete");
     println!("  Total blocks: {}", decomp_report.total_blocks);
-    
+
     if !decomp_report.blocks.is_empty() {
         println!("\n  Block details:");
         for (i, block) in decomp_report.blocks.iter().take(5).enumerate() {
-            println!("    [{}] {}: {} blocks (size {})",
-                     i + 1, block.layer_name, block.num_blocks, block.block_size);
+            println!(
+                "    [{}] {}: {} blocks (size {})",
+                i + 1,
+                block.layer_name,
+                block.num_blocks,
+                block.block_size
+            );
         }
     }
     println!();
@@ -187,7 +213,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("║ Graph Statistics:                                         ║");
     println!("║   - Nodes: {:<52}║", topology_report.node_count);
     println!("║   - Edges: {:<52}║", topology_report.edge_count);
-    println!("║   - Components: {:<49}║", topology_report.connected_components);
+    println!(
+        "║   - Components: {:<49}║",
+        topology_report.connected_components
+    );
     println!("╠═══════════════════════════════════════════════════════════╣");
     println!("║ Orthogonalization:                                        ║");
     if let Some(error) = stats.get("orthogonalization_error") {
@@ -196,14 +225,24 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("║   - Status: Applied{:>35}║", "");
     println!("╠═══════════════════════════════════════════════════════════╣");
     println!("║ Compression:                                              ║");
-    println!("║   - Ratio: {:.2}x{:>46}║", compression_report.compression_ratio, "");
-    println!("║   - Original: {} params{:>32}║", compression_report.original_params, "");
-    println!("║   - Compressed: {} params{:>30}║", compression_report.compressed_params, "");
+    println!(
+        "║   - Ratio: {:.2}x{:>46}║",
+        compression_report.compression_ratio, ""
+    );
+    println!(
+        "║   - Original: {} params{:>32}║",
+        compression_report.original_params, ""
+    );
+    println!(
+        "║   - Compressed: {} params{:>30}║",
+        compression_report.compressed_params, ""
+    );
     println!("╠═══════════════════════════════════════════════════════════╣");
     println!("║ Topology Defects: {:<47}║", defects.len());
-    println!("║ Constraints: {} satisfied, {} violated{:>20}║", 
-             constraint_report.satisfied_count, 
-             constraint_report.violated_count, "");
+    println!(
+        "║ Constraints: {} satisfied, {} violated{:>20}║",
+        constraint_report.satisfied_count, constraint_report.violated_count, ""
+    );
     println!("╠═══════════════════════════════════════════════════════════╣");
     println!("║ Block Decomposition:                                      ║");
     println!("║   - Total blocks: {:>47}║", decomp_report.total_blocks);
@@ -222,31 +261,39 @@ fn create_sample_transformer_graph() -> Graph<OperatorType, WeightTensor> {
     let mut graph = Graph::directed();
 
     // Create embedding layer
-    let embed_node = graph.add_node(OperatorType::Embedding {
-        vocab_size: 1000,
-        embed_dim: 64,
-    }).unwrap();
+    let embed_node = graph
+        .add_node(OperatorType::Embedding {
+            vocab_size: 1000,
+            embed_dim: 64,
+        })
+        .unwrap();
 
     // Create transformer layers (simplified: 4 layers)
     let mut layer_nodes = Vec::new();
     for layer_idx in 0..4 {
         // Attention sublayer
-        let attn_node = graph.add_node(OperatorType::Attention {
-            num_heads: 8,
-            hidden_dim: 64,
-        }).unwrap();
+        let attn_node = graph
+            .add_node(OperatorType::Attention {
+                num_heads: 8,
+                hidden_dim: 64,
+            })
+            .unwrap();
 
         // MLP sublayer
-        let mlp_node = graph.add_node(OperatorType::MLP {
-            hidden_dim: 256,
-            activation: "silu".to_string(),
-        }).unwrap();
+        let mlp_node = graph
+            .add_node(OperatorType::MLP {
+                hidden_dim: 256,
+                activation: "silu".to_string(),
+            })
+            .unwrap();
 
         // Normalization sublayer
-        let norm_node = graph.add_node(OperatorType::Norm {
-            norm_type: "rmsnorm".to_string(),
-            eps: 1e-6,
-        }).unwrap();
+        let norm_node = graph
+            .add_node(OperatorType::Norm {
+                norm_type: "rmsnorm".to_string(),
+                eps: 1e-6,
+            })
+            .unwrap();
 
         layer_nodes.push((attn_node, mlp_node, norm_node));
 
@@ -254,7 +301,7 @@ fn create_sample_transformer_graph() -> Graph<OperatorType, WeightTensor> {
         if layer_idx == 0 {
             // First layer connects from embedding
             let weight = WeightTensor::new(
-                format!("embed_to_layer_0.weight"),
+                "embed_to_layer_0.weight".to_string(),
                 vec![1.0; 64 * 64],
                 vec![64, 64],
             );
@@ -287,10 +334,12 @@ fn create_sample_transformer_graph() -> Graph<OperatorType, WeightTensor> {
     }
 
     // Add output layer
-    let output_node = graph.add_node(OperatorType::Linear {
-        in_features: 64,
-        out_features: 1000,
-    }).unwrap();
+    let output_node = graph
+        .add_node(OperatorType::Linear {
+            in_features: 64,
+            out_features: 1000,
+        })
+        .unwrap();
 
     // Connect last layer to output
     let (_, last_mlp, _) = layer_nodes.last().unwrap();
@@ -299,12 +348,16 @@ fn create_sample_transformer_graph() -> Graph<OperatorType, WeightTensor> {
         generate_weight_data(64, 64, 4.0),
         vec![64, 64],
     );
-    graph.add_edge(*last_mlp, output_node, output_weight).unwrap();
+    graph
+        .add_edge(*last_mlp, output_node, output_weight)
+        .unwrap();
 
     // Add an isolated node (to demonstrate defect detection)
-    let _isolated = graph.add_node(OperatorType::Custom {
-        name: "unused_operation".to_string(),
-    }).unwrap();
+    let _isolated = graph
+        .add_node(OperatorType::Custom {
+            name: "unused_operation".to_string(),
+        })
+        .unwrap();
 
     graph
 }
@@ -312,10 +365,7 @@ fn create_sample_transformer_graph() -> Graph<OperatorType, WeightTensor> {
 /// Generate pseudo-random weight data for demonstration
 fn generate_weight_data(rows: usize, cols: usize, seed: f64) -> Vec<f64> {
     (0..rows * cols)
-        .map(|i| {
-            let x = (i as f64 + seed * 100.0).sin() * 0.1;
-            x
-        })
+        .map(|i| (i as f64 + seed * 100.0).sin() * 0.1)
         .collect()
 }
 

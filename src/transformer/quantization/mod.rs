@@ -6,8 +6,8 @@
 //! - Quantized matrix multiplication
 //! - Post-training quantization (PTQ)
 
-use crate::tensor::DenseTensor;
 use crate::tensor::traits::TensorBase;
+use crate::tensor::DenseTensor;
 
 /// Quantization data type
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -215,14 +215,15 @@ impl QuantizedTensor {
         let data = tensor.data();
 
         // Find min and max
-        let (min, max) = data.iter().fold((f64::INFINITY, f64::NEG_INFINITY), |(min, max): (f64, f64), &x| {
-            (min.min(x), max.max(x))
-        });
+        let (min, max) = data.iter().fold(
+            (f64::INFINITY, f64::NEG_INFINITY),
+            |(min, max): (f64, f64), &x| (min.min(x), max.max(x)),
+        );
 
         let scale = (max - min) / 15.0; // INT4 has 16 levels
 
         // Quantize to INT4 and pack
-        let mut packed_data = Vec::with_capacity((data.len() + 1) / 2);
+        let mut packed_data = Vec::with_capacity(data.len().div_ceil(2));
 
         for i in (0..data.len()).step_by(2) {
             let q0 = ((data[i] - min) / scale).round() as i32;
@@ -286,10 +287,7 @@ impl QuantizedTensor {
             // Per-tensor dequantization
             let scale = self.scale[0];
 
-            self.data
-                .iter()
-                .map(|&q| q as f64 * scale)
-                .collect()
+            self.data.iter().map(|&q| q as f64 * scale).collect()
         };
 
         DenseTensor::new(data, self.shape.clone())
@@ -330,7 +328,7 @@ impl QuantizedTensor {
         let total_elements = self.shape.iter().product::<usize>();
         match self.config.dtype {
             QuantDtype::INT8 => total_elements, // 1 byte per element
-            QuantDtype::INT4 => (total_elements + 1) / 2, // Packed: 2 elements per byte
+            QuantDtype::INT4 => total_elements.div_ceil(2), // Packed: 2 elements per byte
             QuantDtype::F32 => total_elements * 4, // 4 bytes per element
         }
     }
@@ -453,7 +451,7 @@ impl QuantizedMatMul {
         for i in 0..m {
             for j in 0..n {
                 let mut acc: i32 = 0;
-                
+
                 // Dot product in INT8, accumulate in INT32
                 for p in 0..k {
                     let a_val = a.data[i * k + p];
@@ -506,7 +504,7 @@ impl QuantizedMatMul {
                     // Load and replicate a[p] for this row block
                     for i in i_block..i_end {
                         let a_val = a.data[i * k + p] as i32;
-                        
+
                         // Process b row with loop unrolling
                         let mut j = j_block;
                         while j + 4 <= j_end {
@@ -594,7 +592,12 @@ mod tests {
 
         for (orig, recon) in original.iter().zip(reconstructed.iter()) {
             // INT8 quantization error should be within 1/255 of the range
-            assert!((orig - recon).abs() < 0.1, "Quantization error too large: orig={}, recon={}", orig, recon);
+            assert!(
+                (orig - recon).abs() < 0.1,
+                "Quantization error too large: orig={}, recon={}",
+                orig,
+                recon
+            );
         }
     }
 
@@ -658,7 +661,12 @@ mod tests {
 
         for (orig, recon) in original.iter().zip(reconstructed.iter()) {
             // Weight quantization error should be within acceptable range
-            assert!((orig - recon).abs() < 0.15, "Weight quantization error too large: orig={}, recon={}", orig, recon);
+            assert!(
+                (orig - recon).abs() < 0.15,
+                "Weight quantization error too large: orig={}, recon={}",
+                orig,
+                recon
+            );
         }
     }
 }

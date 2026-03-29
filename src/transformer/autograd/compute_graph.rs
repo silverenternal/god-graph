@@ -1,8 +1,8 @@
 //! Compute graph for tracking operations during forward pass
 
-use std::collections::HashMap;
-use crate::tensor::DenseTensor;
 use crate::tensor::traits::{TensorBase, TensorOps};
+use crate::tensor::DenseTensor;
+use std::collections::HashMap;
 
 /// Unique identifier for an operation node
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -169,9 +169,7 @@ impl ComputeGraph {
         // Create edges from input producers to this operation
         for &input_id in inputs {
             // Find the operation that produced this input
-            if let Some(producer_op) = self.nodes.iter().rev().find(|n| {
-                n.output == input_id
-            }) {
+            if let Some(producer_op) = self.nodes.iter().rev().find(|n| n.output == input_id) {
                 let edge = DataEdge {
                     from: producer_op.id,
                     to: op_id,
@@ -228,11 +226,12 @@ impl ComputeGraph {
         // Backpropagate in reverse topological order
         for op_id in topo_order.into_iter().rev() {
             // Clone node info to avoid borrow checker issues
-            let (node_op_type, node_inputs, node_output) = if let Some(node) = self.nodes.iter().find(|n| n.id == op_id) {
-                (node.op_type.clone(), node.inputs.clone(), node.output)
-            } else {
-                continue;
-            };
+            let (node_op_type, node_inputs, node_output) =
+                if let Some(node) = self.nodes.iter().find(|n| n.id == op_id) {
+                    (node.op_type.clone(), node.inputs.clone(), node.output)
+                } else {
+                    continue;
+                };
 
             let grad_output = self.gradients.get(&node_output).cloned();
 
@@ -281,10 +280,9 @@ impl ComputeGraph {
             OpType::Mul => {
                 // Element-wise multiplication: d(x*y)/dx = y, d(x*y)/dy = x
                 if inputs.len() >= 2 {
-                    if let (Some(x), Some(y)) = (
-                        self.values.get(&inputs[0]),
-                        self.values.get(&inputs[1]),
-                    ) {
+                    if let (Some(x), Some(y)) =
+                        (self.values.get(&inputs[0]), self.values.get(&inputs[1]))
+                    {
                         grads.insert(0, grad_output.mul(y));
                         grads.insert(1, grad_output.mul(x));
                     }
@@ -293,10 +291,9 @@ impl ComputeGraph {
             OpType::MatMul => {
                 // Matrix multiplication: d(X@W)/dX = d_out @ W.T, d(X@W)/dW = X.T @ d_out
                 if inputs.len() >= 2 {
-                    if let (Some(x), Some(w)) = (
-                        self.values.get(&inputs[0]),
-                        self.values.get(&inputs[1]),
-                    ) {
+                    if let (Some(x), Some(w)) =
+                        (self.values.get(&inputs[0]), self.values.get(&inputs[1]))
+                    {
                         // Gradient w.r.t. input
                         let w_t = w.transpose(None);
                         let grad_x = grad_output.matmul(&w_t);
@@ -338,7 +335,7 @@ impl ComputeGraph {
             }
             OpType::Transpose => {
                 // Transpose gradient is just transpose of gradient
-                if let Some(_) = inputs.first() {
+                if !inputs.is_empty() {
                     grads.insert(0, grad_output.transpose(None));
                 }
             }
@@ -435,53 +432,68 @@ mod tests {
     #[test]
     fn test_compute_graph_basic() {
         let mut graph = ComputeGraph::new();
-        
+
         // Create some tensors
         let x_id = graph.next_tensor_id();
         let w_id = graph.next_tensor_id();
-        
+
         let x = DenseTensor::new(vec![1.0, 2.0, 3.0], vec![1, 3]);
         let w = DenseTensor::new(vec![0.1, 0.2, 0.3], vec![3, 1]);
-        
+
         graph.store_value(x_id, x);
         graph.store_value(w_id, w);
-        
+
         // Record MatMul operation
         let out_id = graph.next_tensor_id();
         graph.record_op(OpType::MatMul, &[x_id, w_id], out_id);
-        
+
         // Compute output
         if let (Some(x), Some(w)) = (graph.get_value(x_id), graph.get_value(w_id)) {
             let out = x.matmul(w);
             graph.store_value(out_id, out);
         }
-        
+
         assert_eq!(graph.num_ops(), 1);
     }
 
     #[test]
     fn test_topological_sort() {
         let mut graph = ComputeGraph::new();
-        
+
         // Create a simple chain: x -> MatMul -> ReLU -> output
         let x_id = graph.next_tensor_id();
         let w_id = graph.next_tensor_id();
         let matmul_out = graph.next_tensor_id();
         let relu_out = graph.next_tensor_id();
-        
+
         graph.store_value(x_id, DenseTensor::new(vec![1.0, 2.0], vec![1, 2]));
         graph.store_value(w_id, DenseTensor::new(vec![0.1, 0.2], vec![2, 1]));
-        
+
         graph.record_op(OpType::MatMul, &[x_id, w_id], matmul_out);
         graph.record_op(OpType::ReLU, &[matmul_out], relu_out);
-        
+
         let order = graph.topological_sort();
         assert_eq!(order.len(), 2);
         // MatMul should come before ReLU
-        assert!(order.iter().position(|&id| {
-            graph.nodes.iter().any(|n| n.id == id && matches!(n.op_type, OpType::MatMul))
-        }).unwrap() < order.iter().position(|&id| {
-            graph.nodes.iter().any(|n| n.id == id && matches!(n.op_type, OpType::ReLU))
-        }).unwrap());
+        assert!(
+            order
+                .iter()
+                .position(|&id| {
+                    graph
+                        .nodes
+                        .iter()
+                        .any(|n| n.id == id && matches!(n.op_type, OpType::MatMul))
+                })
+                .unwrap()
+                < order
+                    .iter()
+                    .position(|&id| {
+                        graph
+                            .nodes
+                            .iter()
+                            .any(|n| n.id == id && matches!(n.op_type, OpType::ReLU))
+                    })
+                    .unwrap()
+        );
     }
 }

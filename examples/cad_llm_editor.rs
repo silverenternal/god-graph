@@ -9,10 +9,8 @@
 
 use god_gragh::graph::traits::{GraphBase, GraphOps};
 use god_gragh::graph::Graph;
-use god_gragh::transformer::optimization::{
-    CadStyleEditor, TopologyConstraint,
-};
 use god_gragh::transformer::optimization::switch::{OperatorType, WeightTensor};
+use god_gragh::transformer::optimization::{CadStyleEditor, TopologyConstraint};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("=== CAD-LLM Topology Editor Example ===\n");
@@ -52,13 +50,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Step 4: Solving constraints...");
     let report = editor.solve_constraints()?;
     println!("  All constraints satisfied: {}", report.all_satisfied);
-    println!("  Satisfied: {}/{}", report.satisfied_count, 
-             report.satisfied_count + report.violated_count);
-    
+    println!(
+        "  Satisfied: {}/{}",
+        report.satisfied_count,
+        report.satisfied_count + report.violated_count
+    );
+
     for detail in &report.constraint_details {
-        println!("    - {}: {}", 
-                 detail.description,
-                 if detail.satisfied { "✓" } else { "✗" });
+        println!(
+            "    - {}: {}",
+            detail.description,
+            if detail.satisfied { "✓" } else { "✗" }
+        );
     }
     println!();
 
@@ -68,21 +71,31 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("  Extracted module:");
     println!("    Nodes: {}", module.node_count());
     println!("    Edges: {}", module.edge_count());
-    println!("    Cached: {}\n", editor.module_cache().contains_key("attention"));
+    println!(
+        "    Cached: {}\n",
+        editor.module_cache().contains_key("attention")
+    );
 
     // 6. Validate assembly
     println!("Step 6: Validating assembly...");
     let assembly_report = editor.validate_assembly()?;
     println!("  Assembly valid: {}", assembly_report.is_valid);
     println!("  Modules checked: {}", assembly_report.module_count);
-    println!("  Interface mismatches: {}\n", assembly_report.interface_mismatches);
+    println!(
+        "  Interface mismatches: {}\n",
+        assembly_report.interface_mismatches
+    );
 
     // 7. Edit history
     println!("Step 7: Checking edit history...");
     println!("  History entries: {}", editor.history_len());
     for (i, entry) in editor.history().iter().enumerate() {
-        println!("    [{}] {} ({} operations)", 
-                 i, entry.description, entry.operations.len());
+        println!(
+            "    [{}] {} ({} operations)",
+            i,
+            entry.description,
+            entry.operations.len()
+        );
     }
     println!();
 
@@ -111,38 +124,48 @@ fn create_sample_transformer_graph() -> Graph<OperatorType, WeightTensor> {
     let mut graph = Graph::<OperatorType, WeightTensor>::directed();
 
     // Add embedding layer
-    let _embedding = graph.add_node(OperatorType::Embedding {
-        vocab_size: 32000,
-        embed_dim: 512,
-    }).unwrap();
+    let _embedding = graph
+        .add_node(OperatorType::Embedding {
+            vocab_size: 32000,
+            embed_dim: 512,
+        })
+        .unwrap();
 
     // Add attention layer
-    let _attention = graph.add_node(OperatorType::Attention {
-        num_heads: 8,
-        hidden_dim: 512,
-    }).unwrap();
+    let _attention = graph
+        .add_node(OperatorType::Attention {
+            num_heads: 8,
+            hidden_dim: 512,
+        })
+        .unwrap();
 
     // Add MLP layer
-    let _mlp = graph.add_node(OperatorType::MLP {
-        hidden_dim: 2048,
-        activation: "gelu".to_string(),
-    }).unwrap();
+    let _mlp = graph
+        .add_node(OperatorType::MLP {
+            hidden_dim: 2048,
+            activation: "gelu".to_string(),
+        })
+        .unwrap();
 
     // Add normalization
-    let _norm = graph.add_node(OperatorType::Norm {
-        norm_type: "layernorm".to_string(),
-        eps: 1e-6,
-    }).unwrap();
+    let _norm = graph
+        .add_node(OperatorType::Norm {
+            norm_type: "layernorm".to_string(),
+            eps: 1e-6,
+        })
+        .unwrap();
 
     // Add residual connections
     let _residual1 = graph.add_node(OperatorType::Residual).unwrap();
     let _residual2 = graph.add_node(OperatorType::Residual).unwrap();
 
     // Add LM head
-    let _lm_head = graph.add_node(OperatorType::Linear {
-        in_features: 512,
-        out_features: 32000,
-    }).unwrap();
+    let _lm_head = graph
+        .add_node(OperatorType::Linear {
+            in_features: 512,
+            out_features: 32000,
+        })
+        .unwrap();
 
     graph
 }
@@ -162,7 +185,13 @@ fn print_defects(defects: &[god_gragh::transformer::optimization::constraints::T
             god_gragh::transformer::optimization::constraints::Severity::Critical => "‼",
         };
 
-        println!("    [{}] {}: {:?} - {}", i + 1, severity, defect.defect_type, defect.description);
+        println!(
+            "    [{}] {}: {:?} - {}",
+            i + 1,
+            severity,
+            defect.defect_type,
+            defect.description
+        );
         if let Some(fix) = &defect.suggested_fix {
             println!("        → {}", fix);
         }
@@ -178,7 +207,7 @@ mod tests {
     fn test_editor_creation() {
         let mut graph = create_sample_transformer_graph();
         let editor = CadStyleEditor::new(&mut graph);
-        
+
         assert_eq!(editor.history_len(), 0);
     }
 
@@ -187,10 +216,12 @@ mod tests {
         let mut graph = Graph::<OperatorType, WeightTensor>::directed();
 
         // Add isolated node
-        graph.add_node(OperatorType::Linear {
-            in_features: 512,
-            out_features: 512,
-        }).unwrap();
+        graph
+            .add_node(OperatorType::Linear {
+                in_features: 512,
+                out_features: 512,
+            })
+            .unwrap();
 
         let editor = CadStyleEditor::new(&mut graph);
         let defects = editor.detect_defects().unwrap();
@@ -202,11 +233,13 @@ mod tests {
     fn test_constraint_solving() {
         let mut graph = create_sample_transformer_graph();
         let mut editor = CadStyleEditor::with_defaults(&mut graph);
-        
-        editor.add_constraint(TopologyConstraint::ResidualConnection {
-            from_layer: "attn".to_string(),
-            to_layer: "output".to_string(),
-        }).unwrap();
+
+        editor
+            .add_constraint(TopologyConstraint::ResidualConnection {
+                from_layer: "attn".to_string(),
+                to_layer: "output".to_string(),
+            })
+            .unwrap();
 
         let report = editor.solve_constraints().unwrap();
         assert!(report.satisfied_count + report.violated_count > 0);
@@ -216,7 +249,7 @@ mod tests {
     fn test_module_extraction() {
         let mut graph = create_sample_transformer_graph();
         let mut editor = CadStyleEditor::new(&mut graph);
-        
+
         let module = editor.extract_module("attention").unwrap();
         assert!(editor.module_cache().contains_key("attention"));
     }

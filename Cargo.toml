@@ -13,6 +13,7 @@ readme = "README.md"
 keywords = ["graph", "llm", "optimization", "tensor", "topology"]
 categories = ["data-structures", "algorithms", "science", "compilers"]
 exclude = [".github/", "benches/", "tests/", "examples/", "ROADMAP.json", ".qwen/"]
+autobenches = false
 
 [features]
 default = ["std", "parallel"]
@@ -225,6 +226,100 @@ required-features = ["tensor", "tensor-pool"]
 name = "transformer"
 harness = false
 required-features = ["transformer", "simd"]
+
+[[bench]]
+name = "large_scale_graph"
+harness = false
+required-features = ["rand"]
+
+[[bench]]
+name = "tensor_arena"
+harness = false
+required-features = ["tensor", "tensor-pool"]
+
+[[example]]
+name = "cad_llm_editor"
+required-features = ["tensor"]
+
+[[example]]
+name = "cad_llm_optimization_workflow"
+required-features = ["tensor"]
+
+[[example]]
+name = "cad_llm_orthogonalize"
+required-features = ["tensor"]
+
+[[example]]
+name = "cad_llm_switch"
+required-features = ["tensor"]
+
+[[example]]
+name = "cad_llm_tensor_ring"
+required-features = ["tensor"]
+
+[[example]]
+name = "cad_llm_validate_1b"
+required-features = ["tensor"]
+
+[[example]]
+name = "differentiable_attention_pruning"
+required-features = ["tensor"]
+
+[[example]]
+name = "differentiable_graph"
+required-features = ["tensor"]
+
+[[example]]
+name = "export_model_dot"
+required-features = ["tensor", "dot"]
+
+[[example]]
+name = "graph_transformer_execution"
+required-features = ["tensor"]
+
+[[example]]
+name = "lie_group_orthogonalization"
+required-features = ["tensor"]
+
+[[example]]
+name = "llama_forward"
+required-features = ["tensor"]
+
+[[example]]
+name = "llm_batch_simd"
+required-features = ["tensor", "simd"]
+
+[[example]]
+name = "llm_model_loader"
+required-features = ["tensor"]
+
+[[example]]
+name = "llm_text_gen"
+required-features = ["tensor"]
+
+[[example]]
+name = "neural_architecture_search"
+required-features = ["tensor"]
+
+[[example]]
+name = "tinyllama_validation"
+required-features = ["tensor"]
+
+[[example]]
+name = "topology_defect_detection"
+required-features = ["tensor"]
+
+[[example]]
+name = "transformer_advanced"
+required-features = ["tensor"]
+
+[[example]]
+name = "transformer_basic"
+required-features = ["tensor"]
+
+[[example]]
+name = "transformer_overview"
+required-features = ["tensor"]
 
 [profile.release]
 opt-level = 3

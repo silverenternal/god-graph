@@ -14,9 +14,9 @@
 
 #[cfg(all(feature = "transformer", feature = "safetensors"))]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    use std::env;
     use god_gragh::transformer::loader::ModelConfig;
     use god_gragh::transformer::loader::SafetensorsLoader;
+    use std::env;
 
     println!("=== God-Graph LLM Model Loader ===\n");
 
@@ -25,7 +25,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     if args.len() < 2 {
         println!("Usage:");
-        println!("  cargo run --example llm_model_loader --features transformer,safetensors -- [MODEL]");
+        println!(
+            "  cargo run --example llm_model_loader --features transformer,safetensors -- [MODEL]"
+        );
         println!();
         println!("Models:");
         println!("  llama-2-7b    - LLaMA-2-7B");
@@ -52,7 +54,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         if !model_dir.exists() {
             println!("\nModel not found. Please download using:");
-            println!("  huggingface-cli download {} --local-dir {}", hf_repo, model_dir.display());
+            println!(
+                "  huggingface-cli download {} --local-dir {}",
+                hf_repo,
+                model_dir.display()
+            );
             return Ok(());
         }
 
@@ -86,7 +92,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Find Safetensors files
     let model_files = find_safetensors_files(&model_path)?;
-    
+
     if model_files.is_empty() {
         return Err("No .safetensors files found".into());
     }
@@ -105,7 +111,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     if let Some(config) = model_config.as_llama() {
         let param_count = estimate_parameters_llama(config);
         println!("\n✅ Model info:");
-        println!("  Estimated parameters: ~{:.1}B", param_count as f64 / 1_000_000_000.0);
+        println!(
+            "  Estimated parameters: ~{:.1}B",
+            param_count as f64 / 1_000_000_000.0
+        );
         println!("  Model type: LLaMA architecture");
     } else if model_config.as_mistral().is_some() {
         println!("\n✅ Model info:");
@@ -114,10 +123,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("\n=== Model Loading Complete ===");
     println!("\n💡 See docs/transformer_guide.md for complete usage examples.");
-    
+
     Ok(())
 }
 
+#[allow(dead_code)]
 fn get_hf_repo(model_name: &str) -> Result<String, Box<dyn std::error::Error>> {
     match model_name.to_lowercase().as_str() {
         "llama-2-7b" => Ok("meta-llama/Llama-2-7b-hf".to_string()),
@@ -127,11 +137,14 @@ fn get_hf_repo(model_name: &str) -> Result<String, Box<dyn std::error::Error>> {
     }
 }
 
+#[allow(dead_code)]
 fn get_hf_cache_dir() -> std::path::PathBuf {
     if let Ok(cache_dir) = std::env::var("HF_HOME") {
         std::path::PathBuf::from(cache_dir).join("hub")
     } else if let Ok(cache_dir) = std::env::var("XDG_CACHE_HOME") {
-        std::path::PathBuf::from(cache_dir).join("huggingface").join("hub")
+        std::path::PathBuf::from(cache_dir)
+            .join("huggingface")
+            .join("hub")
     } else {
         std::path::PathBuf::from(std::env::var("HOME").unwrap_or_else(|_| ".".to_string()))
             .join(".cache")
@@ -140,10 +153,13 @@ fn get_hf_cache_dir() -> std::path::PathBuf {
     }
 }
 
-fn find_safetensors_files(dir: &std::path::Path) -> Result<Vec<std::path::PathBuf>, Box<dyn std::error::Error>> {
+#[allow(dead_code)]
+fn find_safetensors_files(
+    dir: &std::path::Path,
+) -> Result<Vec<std::path::PathBuf>, Box<dyn std::error::Error>> {
     let mut files = Vec::new();
-    
-    if dir.is_file() && dir.extension().map_or(false, |e| e == "safetensors") {
+
+    if dir.is_file() && dir.extension().is_some_and(|e| e == "safetensors") {
         files.push(dir.to_path_buf());
         return Ok(files);
     }
@@ -151,7 +167,7 @@ fn find_safetensors_files(dir: &std::path::Path) -> Result<Vec<std::path::PathBu
     if let Ok(entries) = std::fs::read_dir(dir) {
         for entry in entries.flatten() {
             let path = entry.path();
-            if path.is_file() && path.extension().map_or(false, |e| e == "safetensors") {
+            if path.is_file() && path.extension().is_some_and(|e| e == "safetensors") {
                 files.push(path);
             }
         }
@@ -161,6 +177,7 @@ fn find_safetensors_files(dir: &std::path::Path) -> Result<Vec<std::path::PathBu
     Ok(files)
 }
 
+#[allow(dead_code)]
 fn estimate_parameters_llama(config: &god_gragh::transformer::loader::LlamaConfig) -> usize {
     let embed_params = config.vocab_size * config.hidden_size;
     let attn_params = config.hidden_size * config.hidden_size * 4;

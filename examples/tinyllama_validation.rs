@@ -54,9 +54,8 @@ mod validation {
 
     /// Get the path to the TinyLlama model directory
     fn get_tinyllama_model_path() -> Option<String> {
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
-            .unwrap_or_else(|_| ".".to_string());
-        
+        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap_or_else(|_| ".".to_string());
+
         // Try multiple possible paths
         let possible_paths = vec![
             Path::new(&manifest_dir).join("models/tinyllama/model.safetensors"),
@@ -68,7 +67,7 @@ mod validation {
                 return Some(path.to_string_lossy().to_string());
             }
         }
-        
+
         None
     }
 
@@ -131,7 +130,12 @@ mod validation {
     }
 
     /// Compute model statistics
-    fn compute_model_stats(graph: &god_gragh::graph::Graph<god_gragh::transformer::optimization::switch::OperatorType, WeightTensor>) -> ModelStats {
+    fn compute_model_stats(
+        graph: &god_gragh::graph::Graph<
+            god_gragh::transformer::optimization::switch::OperatorType,
+            WeightTensor,
+        >,
+    ) -> ModelStats {
         let mut weight_stats = Vec::new();
         let mut total_params = 0;
 
@@ -153,7 +157,12 @@ mod validation {
     }
 
     /// Validate all weights are finite (no NaN/Inf)
-    fn validate_weights_finite(graph: &god_gragh::graph::Graph<god_gragh::transformer::optimization::switch::OperatorType, WeightTensor>) -> Result<(), String> {
+    fn validate_weights_finite(
+        graph: &god_gragh::graph::Graph<
+            god_gragh::transformer::optimization::switch::OperatorType,
+            WeightTensor,
+        >,
+    ) -> Result<(), String> {
         for edge_ref in graph.edges() {
             let weight = edge_ref.data();
             for (i, &val) in weight.data.iter().enumerate() {
@@ -251,7 +260,12 @@ mod validation {
         for (layer_type, weights) in &by_type {
             let count = weights.len();
             let params: usize = weights.iter().map(|w| w.numel).sum();
-            println!("  {:20}: {:4} weights, {:>10} params", layer_type, count, format_number(params));
+            println!(
+                "  {:20}: {:4} weights, {:>10} params",
+                layer_type,
+                count,
+                format_number(params)
+            );
         }
         println!();
 
@@ -260,8 +274,13 @@ mod validation {
         let mut sorted_stats = stats.weight_stats.clone();
         sorted_stats.sort_by(|a, b| b.numel.cmp(&a.numel));
         for (i, ws) in sorted_stats.iter().take(10).enumerate() {
-            println!("  {:2}. {:50} {:>12} params, shape: {:?}", 
-                i + 1, ws.name, format_number(ws.numel), ws.shape);
+            println!(
+                "  {:2}. {:50} {:>12} params, shape: {:?}",
+                i + 1,
+                ws.name,
+                format_number(ws.numel),
+                ws.shape
+            );
         }
     }
 
@@ -271,12 +290,16 @@ mod validation {
         println!("ORTHOGONALIZATION REPORT");
         println!("{}", "=".repeat(70));
         println!("Total weights:        {}", report.total_weights);
-        println!("Orthogonalized:       {} ({:.1}%)", 
+        println!(
+            "Orthogonalized:       {} ({:.1}%)",
             report.orthogonalized_weights,
-            report.orthogonalized_weights as f64 / report.total_weights as f64 * 100.0);
-        println!("Skipped (non-2D):     {} ({:.1}%)", 
+            report.orthogonalized_weights as f64 / report.total_weights as f64 * 100.0
+        );
+        println!(
+            "Skipped (non-2D):     {} ({:.1}%)",
             report.skipped_weights,
-            report.skipped_weights as f64 / report.total_weights as f64 * 100.0);
+            report.skipped_weights as f64 / report.total_weights as f64 * 100.0
+        );
         println!();
         println!("Error statistics:");
         println!("  Average error:      {:.2e}", report.avg_error);
@@ -304,7 +327,7 @@ mod validation {
         println!("\n{}", "=".repeat(70));
         println!("VALIDATION SUMMARY");
         println!("{}", "=".repeat(70));
-        
+
         let mut all_passed = true;
 
         // Finite check
@@ -317,9 +340,15 @@ mod validation {
 
         // Orthogonalization quality
         if ortho_report.avg_error < 1e-6 {
-            println!("✓ Orthogonalization:      PASSED (avg error: {:.2e})", ortho_report.avg_error);
+            println!(
+                "✓ Orthogonalization:      PASSED (avg error: {:.2e})",
+                ortho_report.avg_error
+            );
         } else {
-            println!("✗ Orthogonalization:      FAILED (avg error: {:.2e})", ortho_report.avg_error);
+            println!(
+                "✗ Orthogonalization:      FAILED (avg error: {:.2e})",
+                ortho_report.avg_error
+            );
             all_passed = false;
         }
 
@@ -394,7 +423,7 @@ mod validation {
         println!("\nStep 5: Computing orthogonalization metrics...");
         let orthogonalized_count = errors.len();
         let skipped_count = stats.total_weights - orthogonalized_count;
-        
+
         let avg_error = errors.iter().sum::<f64>() / errors.len() as f64;
         let max_error = errors.iter().cloned().fold(0.0_f64, f64::max);
         let min_error = errors.iter().cloned().fold(f64::MAX, f64::min);
@@ -415,15 +444,17 @@ mod validation {
         println!("\nStep 6: Verifying orthogonalized weights...");
         let mut verified_count = 0;
         let tolerance = 1e-6;
-        
+
         for edge_ref in graph.edges() {
             let weight = edge_ref.data();
             if check_weight_orthogonality(weight, tolerance) {
                 verified_count += 1;
             }
         }
-        println!("  ✓ {} weights verified as orthogonal (tolerance: {:.0e})", 
-            verified_count, tolerance);
+        println!(
+            "  ✓ {} weights verified as orthogonal (tolerance: {:.0e})",
+            verified_count, tolerance
+        );
 
         // Step 7: Final validation summary
         print_validation_summary(finite_check, &ortho_report);

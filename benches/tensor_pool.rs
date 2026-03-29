@@ -3,9 +3,9 @@
 //! This module benchmarks the tensor memory pool performance,
 //! measuring allocation reuse, hit rate, and throughput.
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
-use god_gragh::tensor::pool::{TensorPool, PoolConfig};
+use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use god_gragh::tensor::dense::DenseTensor;
+use god_gragh::tensor::pool::{PoolConfig, TensorPool};
 
 /// Benchmark: iterative allocation without pool
 fn bench_iterative_allocation_without_pool(c: &mut Criterion) {
@@ -95,7 +95,10 @@ fn bench_small_tensor_allocation_with_pool(c: &mut Criterion) {
         });
 
         let stats = pool.stats();
-        eprintln!("Small tensor Pool hit rate: {:.2}%", stats.hit_rate() * 100.0);
+        eprintln!(
+            "Small tensor Pool hit rate: {:.2}%",
+            stats.hit_rate() * 100.0
+        );
     });
 }
 
@@ -111,7 +114,10 @@ fn bench_large_tensor_allocation_with_pool(c: &mut Criterion) {
         });
 
         let stats = pool.stats();
-        eprintln!("Large tensor Pool hit rate: {:.2}%", stats.hit_rate() * 100.0);
+        eprintln!(
+            "Large tensor Pool hit rate: {:.2}%",
+            stats.hit_rate() * 100.0
+        );
     });
 }
 
@@ -153,7 +159,11 @@ fn bench_pool_varying_batch_sizes(c: &mut Criterion) {
                 });
 
                 let stats = pool.stats();
-                eprintln!("Batch {} - Pool hit rate: {:.2}%", batch_size, stats.hit_rate() * 100.0);
+                eprintln!(
+                    "Batch {} - Pool hit rate: {:.2}%",
+                    batch_size,
+                    stats.hit_rate() * 100.0
+                );
             },
         );
     }
@@ -175,7 +185,10 @@ fn bench_pool_warm_vs_cold(c: &mut Criterion) {
         });
 
         let stats = pool.stats();
-        eprintln!("Cold pool - Pool hit rate: {:.2}%", stats.hit_rate() * 100.0);
+        eprintln!(
+            "Cold pool - Pool hit rate: {:.2}%",
+            stats.hit_rate() * 100.0
+        );
     });
 
     // Warm pool (with preallocation)
@@ -189,7 +202,10 @@ fn bench_pool_warm_vs_cold(c: &mut Criterion) {
         });
 
         let stats = pool.stats();
-        eprintln!("Warm pool - Pool hit rate: {:.2}%", stats.hit_rate() * 100.0);
+        eprintln!(
+            "Warm pool - Pool hit rate: {:.2}%",
+            stats.hit_rate() * 100.0
+        );
     });
 
     group.finish();

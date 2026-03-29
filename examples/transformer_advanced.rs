@@ -7,10 +7,10 @@
 
 #[cfg(feature = "transformer")]
 fn main() {
-    use god_gragh::tensor::DenseTensor;
     use god_gragh::tensor::traits::TensorBase;
+    use god_gragh::tensor::DenseTensor;
+    use god_gragh::transformer::quantization::{QuantizationConfig, QuantizedTensor};
     use god_gragh::transformer::sparse_attention::SparseMask;
-    use god_gragh::transformer::quantization::{QuantizedTensor, QuantizationConfig};
 
     println!("=== Advanced Transformer Features Example ===\n");
 
@@ -24,9 +24,14 @@ fn main() {
     println!("Sliding Window Attention:");
     println!("  Sequence length: {}", seq_len);
     println!("  Window size: {}", window_size);
-    println!("  Total non-zero blocks: {}", sliding_mask.col_indices.len());
-    println!("  Sparsity: {:.1}% non-zero", 
-             100.0 * sliding_mask.col_indices.len() as f64 / (seq_len * seq_len) as f64);
+    println!(
+        "  Total non-zero blocks: {}",
+        sliding_mask.col_indices.len()
+    );
+    println!(
+        "  Sparsity: {:.1}% non-zero",
+        100.0 * sliding_mask.col_indices.len() as f64 / (seq_len * seq_len) as f64
+    );
 
     // Block sparse attention
     let block_size = 16;
@@ -35,9 +40,14 @@ fn main() {
     println!("\nBlock Sparse Attention:");
     println!("  Block size: {}", block_size);
     println!("  Num blocks to attend: {}", num_blocks);
-    println!("  Total non-zero blocks: {}", block_sparse_mask.col_indices.len());
-    println!("  Sparsity: {:.1}% non-zero",
-             100.0 * block_sparse_mask.col_indices.len() as f64 / (seq_len * seq_len) as f64);
+    println!(
+        "  Total non-zero blocks: {}",
+        block_sparse_mask.col_indices.len()
+    );
+    println!(
+        "  Sparsity: {:.1}% non-zero",
+        100.0 * block_sparse_mask.col_indices.len() as f64 / (seq_len * seq_len) as f64
+    );
     println!();
 
     // Feature 2: Quantization
@@ -83,7 +93,10 @@ fn main() {
 
     println!("Per-channel INT8 quantization:");
     println!("  Quantization axis: 0");
-    println!("  Compression ratio: {:.2}x", quantized_pc.compression_ratio());
+    println!(
+        "  Compression ratio: {:.2}x",
+        quantized_pc.compression_ratio()
+    );
 
     let dequantized_pc = quantized_pc.dequantize();
     let recon_data_pc = dequantized_pc.data();

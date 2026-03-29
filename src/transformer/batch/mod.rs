@@ -5,10 +5,10 @@
 //! - Continuous batching (vLLM-style)
 //! - Request scheduling
 
-use crate::tensor::DenseTensor;
-use super::model::LlamaModel;
 use super::generation::GenerationConfig;
 use super::kv_cache::KVCache;
+use super::model::LlamaModel;
+use crate::tensor::DenseTensor;
 
 /// Batch data for inference
 #[derive(Debug, Clone)]
@@ -46,17 +46,24 @@ impl BatchData {
         let batch_size = input_ids.len();
         let mut mask_data = Vec::with_capacity(batch_size * max_len * max_len);
 
-        for (_i, &seq_len) in seq_lengths.iter().enumerate() {
+        for &seq_len in seq_lengths.iter() {
             for j in 0..max_len {
                 for k in 0..max_len {
                     // Valid positions can attend to each other
                     let can_attend = (j < seq_len && k < seq_len) as u8 as f64;
-                    mask_data.push(if can_attend == 1.0 { 0.0 } else { f64::NEG_INFINITY });
+                    mask_data.push(if can_attend == 1.0 {
+                        0.0
+                    } else {
+                        f64::NEG_INFINITY
+                    });
                 }
             }
         }
 
-        let attention_mask = Some(DenseTensor::new(mask_data, vec![batch_size, max_len, max_len]));
+        let attention_mask = Some(DenseTensor::new(
+            mask_data,
+            vec![batch_size, max_len, max_len],
+        ));
 
         Self {
             input_ids: padded_ids,
@@ -177,13 +184,7 @@ impl RequestScheduler {
     /// Schedule requests for next batch
     pub fn schedule(&mut self) -> Vec<&mut InferenceRequest> {
         // Move completed active requests to completed
-        self.active.retain(|req| {
-            if req.completed {
-                false
-            } else {
-                true
-            }
-        });
+        self.active.retain(|req| !req.completed);
 
         // Move pending to active if there's capacity
         while !self.pending.is_empty() && self.active.len() < self.max_batch_size {
@@ -212,8 +213,7 @@ impl RequestScheduler {
 
     /// Remove and return completed requests
     pub fn pop_completed(&mut self) -> Vec<InferenceRequest> {
-        let completed = std::mem::take(&mut self.completed);
-        completed
+        std::mem::take(&mut self.completed)
     }
 }
 
@@ -265,7 +265,8 @@ impl<'a> BatchInference<'a> {
         self.batch_size = batch_size;
 
         // Run model forward pass with batched input
-        self.model.forward(&batch.input_ids, batch.attention_mask.as_ref())
+        self.model
+            .forward(&batch.input_ids, batch.attention_mask.as_ref())
     }
 
     /// Run single step of generation for batch
@@ -304,9 +305,9 @@ impl<'a> BatchInference<'a> {
 
             // Sample or greedy
             let token = if req.config.do_sample {
-                self.sample_from_probs(&probs.data())
+                self.sample_from_probs(probs.data())
             } else {
-                self.argmax(&probs.data())
+                self.argmax(probs.data())
             };
 
             tokens.push(token);
@@ -397,7 +398,10 @@ pub mod utils {
     use super::*;
 
     /// Pad sequences to same length
-    pub fn pad_sequences(sequences: &[Vec<usize>], pad_token: usize) -> (Vec<Vec<usize>>, Vec<usize>) {
+    pub fn pad_sequences(
+        sequences: &[Vec<usize>],
+        pad_token: usize,
+    ) -> (Vec<Vec<usize>>, Vec<usize>) {
         let max_len = sequences.iter().map(|s| s.len()).max().unwrap_or(0);
         let mut padded = Vec::new();
         let mut lengths = Vec::new();
@@ -421,11 +425,15 @@ pub mod utils {
 
         let mut data = Vec::with_capacity(batch_size * max_len * max_len);
 
-        for (_i, &seq_len) in lengths.iter().enumerate() {
+        for &seq_len in lengths.iter() {
             for j in 0..max_len {
                 for k in 0..max_len {
                     let can_attend = (j < seq_len && k < seq_len) as u8 as f64;
-                    data.push(if can_attend == 1.0 { 0.0 } else { f64::NEG_INFINITY });
+                    data.push(if can_attend == 1.0 {
+                        0.0
+                    } else {
+                        f64::NEG_INFINITY
+                    });
                 }
             }
         }
@@ -437,10 +445,10 @@ pub mod utils {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::transformer::model::LlamaModel;
-    use crate::transformer::layers::{MultiHeadAttention, FeedForward, RMSNorm};
-    use crate::transformer::loader::LlamaConfig;
     use crate::tensor::DenseTensor;
+    use crate::transformer::layers::{FeedForward, MultiHeadAttention, RMSNorm};
+    use crate::transformer::loader::LlamaConfig;
+    use crate::transformer::model::LlamaModel;
 
     fn create_test_model() -> LlamaModel {
         let config = LlamaConfig::llama_7b();
@@ -464,7 +472,10 @@ mod tests {
         let post_attention_layernorm = RMSNorm::default(hidden_dim);
 
         let layer = super::super::model::LlamaDecoderLayer::new(
-            self_attn, mlp, input_layernorm, post_attention_layernorm
+            self_attn,
+            mlp,
+            input_layernorm,
+            post_attention_layernorm,
         );
 
         let layers = vec![layer; 2];
@@ -475,11 +486,7 @@ mod tests {
 
     #[test]
     fn test_batch_data_creation() {
-        let input_ids = vec![
-            vec![1, 2, 3],
-            vec![4, 5],
-            vec![6, 7, 8, 9],
-        ];
+        let input_ids = vec![vec![1, 2, 3], vec![4, 5], vec![6, 7, 8, 9]];
 
         let batch = BatchData::new(input_ids.clone());
 
@@ -527,19 +534,11 @@ mod tests {
 
     #[test]
     fn test_pad_sequences() {
-        let sequences = vec![
-            vec![1, 2],
-            vec![3, 4, 5],
-            vec![6],
-        ];
+        let sequences = vec![vec![1, 2], vec![3, 4, 5], vec![6]];
 
         let (padded, lengths) = utils::pad_sequences(&sequences, 0);
 
-        assert_eq!(padded, vec![
-            vec![1, 2, 0],
-            vec![3, 4, 5],
-            vec![6, 0, 0],
-        ]);
+        assert_eq!(padded, vec![vec![1, 2, 0], vec![3, 4, 5], vec![6, 0, 0],]);
         assert_eq!(lengths, vec![2, 3, 1]);
     }
 }

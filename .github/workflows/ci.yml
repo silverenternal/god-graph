@@ -94,7 +94,7 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ matrix.rust }}-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Run tests
-        run: cargo test ${{ matrix.features }} --lib --tests
+        run: cargo test ${{ matrix.features }} --lib --tests -- --test-threads=1
 
       - name: Run doctests
         run: cargo test ${{ matrix.features }} --doc

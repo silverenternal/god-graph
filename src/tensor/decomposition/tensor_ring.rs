@@ -99,7 +99,7 @@ pub fn tensor_ring_decompose(
         // Reconstruction: W(i,j) = Tr(G₁(:,i,:) × G₂(:,j,:))
         let (m, n) = (shape[0], shape[1]);
         let (r0, r1, r2) = (ranks[0], ranks[1], ranks[2]);
-        
+
         // For TR, we need r0 == r2 (ring closure)
         if r0 != r2 {
             return Err(TensorError::ShapeMismatch {
@@ -107,16 +107,16 @@ pub fn tensor_ring_decompose(
                 got: vec![r0],
             });
         }
-        
+
         // Use SVD-based initialization
         let (u, s, v) = crate::tensor::decomposition::svd_decompose(tensor, Some(r1))?;
-        
+
         let u_data = u.data();
         let s_data = s.data();
         let v_data = v.data();
-        
+
         let k = r1; // truncated rank
-        
+
         // Core 1: G₁ ∈ R^(r0 × m × r1)
         // G₁(α, i, β) = U(i, β) * sqrt(S(β)) * δ(α, β) if r0 >= r1
         // We use a simplified initialization: G₁(α, i, β) = U(i, β) * sqrt(S(β)) when α = β
@@ -125,13 +125,14 @@ pub fn tensor_ring_decompose(
             for i in 0..m {
                 for beta in 0..r1 {
                     if alpha == beta && alpha < k {
-                        g1_data[alpha * m * r1 + i * r1 + beta] = u_data[i * k + alpha] * s_data[alpha].sqrt();
+                        g1_data[alpha * m * r1 + i * r1 + beta] =
+                            u_data[i * k + alpha] * s_data[alpha].sqrt();
                     }
                 }
             }
         }
         let g1 = DenseTensor::from_vec(g1_data, vec![r0, m, r1]);
-        
+
         // Core 2: G₂ ∈ R^(r1 × n × r0)
         // G₂(β, j, α) = V(j, β) * sqrt(S(β)) * δ(α, β)
         let mut g2_data = vec![0.0; r1 * n * r0];
@@ -139,13 +140,14 @@ pub fn tensor_ring_decompose(
             for j in 0..n {
                 for alpha in 0..r0 {
                     if alpha == beta && beta < k {
-                        g2_data[beta * n * r0 + j * r0 + alpha] = v_data[j * k + beta] * s_data[beta].sqrt();
+                        g2_data[beta * n * r0 + j * r0 + alpha] =
+                            v_data[j * k + beta] * s_data[beta].sqrt();
                     }
                 }
             }
         }
         let g2 = DenseTensor::from_vec(g2_data, vec![r1, n, r0]);
-        
+
         cores.push(g1);
         cores.push(g2);
     } else {
@@ -181,17 +183,17 @@ pub fn tensor_ring_reconstruct(tr: &TensorRing) -> Result<DenseTensor, TensorErr
 
         let m = g1_shape[1]; // First dimension (from G1)
         let n = g2_shape[1]; // Second dimension (from G2)
-        
+
         let r0 = g1_shape[0]; // G1 first index
         let r1 = g1_shape[2]; // G1 third index (should equal G2 first index)
-        
+
         if r1 != g2_shape[0] {
             return Err(TensorError::ShapeMismatch {
                 expected: vec![r1],
                 got: vec![g2_shape[0]],
             });
         }
-        
+
         if r0 != g2_shape[2] {
             return Err(TensorError::ShapeMismatch {
                 expected: vec![r0],
@@ -264,10 +266,8 @@ mod tests {
 
     #[test]
     fn test_tensor_ring_2d() {
-        let tensor = DenseTensor::from_vec(
-            vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0],
-            vec![4, 2],
-        );
+        let tensor =
+            DenseTensor::from_vec(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0], vec![4, 2]);
 
         let ranks = vec![2, 2, 2];
         let tr = tensor_ring_decompose(&tensor, &ranks).unwrap();
@@ -281,10 +281,8 @@ mod tests {
     fn test_tensor_ring_reconstruct() {
         // Use a low-rank matrix for perfect reconstruction
         // Create a rank-1 matrix: outer product of [1, 2, 3, 4] and [1, 1]
-        let tensor = DenseTensor::from_vec(
-            vec![1.0, 1.0, 2.0, 2.0, 3.0, 3.0, 4.0, 4.0],
-            vec![4, 2],
-        );
+        let tensor =
+            DenseTensor::from_vec(vec![1.0, 1.0, 2.0, 2.0, 3.0, 3.0, 4.0, 4.0], vec![4, 2]);
 
         let ranks = vec![2, 2, 2];
         let tr = tensor_ring_decompose(&tensor, &ranks).unwrap();
@@ -321,14 +319,11 @@ mod tests {
         // Let's verify the calculation is correct
         assert!(tr.compression_ratio() > 0.0);
     }
-    
+
     #[test]
     fn test_tensor_ring_rank1() {
         // Test with a pure rank-1 matrix for perfect TR reconstruction
-        let tensor = DenseTensor::from_vec(
-            vec![2.0, 4.0, 3.0, 6.0],
-            vec![2, 2],
-        );
+        let tensor = DenseTensor::from_vec(vec![2.0, 4.0, 3.0, 6.0], vec![2, 2]);
 
         let ranks = vec![1, 1, 1];
         let tr = tensor_ring_decompose(&tensor, &ranks).unwrap();
@@ -336,7 +331,7 @@ mod tests {
 
         let orig_data = tensor.data();
         let recon_data = reconstructed.data();
-        
+
         for (a, b) in orig_data.iter().zip(recon_data.iter()) {
             assert!((a - b).abs() < 1e-4, "Mismatch: {} vs {}", a, b);
         }

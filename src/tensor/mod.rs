@@ -97,7 +97,9 @@ pub use types::DegreeMatrix;
 pub use backend::{NdArrayStorage, TensorStorage, UnifiedStorage};
 
 #[cfg(feature = "tensor-pool")]
-pub use pool::{ArenaStats, ArenaTensor, PoolConfig, PoolStats, PooledTensor, TensorArena, TensorPool};
+pub use pool::{
+    ArenaStats, ArenaTensor, PoolConfig, PoolStats, PooledTensor, TensorArena, TensorPool,
+};
 
 #[cfg(feature = "tensor-autograd")]
 pub use pool::GradientCheckpoint;
@@ -109,14 +111,10 @@ pub use gnn::{
 };
 
 #[cfg(feature = "tensor")]
-pub use graph_tensor::{
-    GraphFeatureExtractor, GraphReconstructor,
-};
+pub use graph_tensor::{GraphFeatureExtractor, GraphReconstructor};
 
 #[cfg(feature = "tensor-sparse")]
-pub use graph_tensor::{
-    GraphAdjacencyMatrix, GraphBatch, GraphTensorExt,
-};
+pub use graph_tensor::{GraphAdjacencyMatrix, GraphBatch, GraphTensorExt};
 
 #[cfg(feature = "tensor")]
 pub use differentiable::{

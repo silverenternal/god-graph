@@ -22,10 +22,8 @@
 
 #[cfg(feature = "tensor")]
 mod topology_defect_detection {
-    use god_gragh::tensor::differentiable::{
-        DifferentiableGraph, GradientConfig, GraphTransformer, ThresholdEditPolicy,
-    };
-    use std::collections::{HashMap, HashSet};
+    use god_gragh::tensor::differentiable::{DifferentiableGraph, GradientConfig};
+    use std::collections::HashMap;
 
     /// Represents a detected topology defect
     #[derive(Debug, Clone)]
@@ -37,6 +35,7 @@ mod topology_defect_detection {
     }
 
     #[derive(Debug, Clone)]
+    #[allow(dead_code)]
     pub enum DefectType {
         MissingConnection,
         RedundantConnection,
@@ -116,7 +115,10 @@ mod topology_defect_detection {
         println!("Input loss gradients:");
         for ((src, dst), &grad) in &loss_gradients {
             let classification = classify_gradient(grad);
-            println!("  {}→{}: ∂L/∂A = {:.3} [{}]", src, dst, grad, classification);
+            println!(
+                "  {}→{}: ∂L/∂A = {:.3} [{}]",
+                src, dst, grad, classification
+            );
         }
 
         // Compute structure gradients
@@ -424,7 +426,7 @@ mod topology_defect_detection {
         sorted_defects.sort_by(|a, b| b.severity.partial_cmp(&a.severity).unwrap());
 
         for (i, defect) in sorted_defects.iter().enumerate() {
-            let severity_icon = match (defect.severity * 10.0) as u32 {
+            let _severity_icon = match (defect.severity * 10.0) as u32 {
                 0..=3 => "🟢",
                 4..=6 => "🟡",
                 _ => "🔴",
@@ -537,7 +539,7 @@ mod topology_defect_detection {
         for node in 0..graph.num_nodes() {
             let in_degree = prob_matrix
                 .iter()
-                .filter(|row| row.get(node).map_or(false, |&p| p > threshold))
+                .filter(|row| row.get(node).is_some_and(|&p| p > threshold))
                 .count();
 
             let out_degree = prob_matrix
@@ -570,7 +572,14 @@ mod topology_defect_detection {
 
         for node in 0..num_nodes {
             if !visited[node] {
-                dfs_cycle(node, &prob_matrix, &mut visited, &mut rec_stack, &mut path, &mut cycles);
+                dfs_cycle(
+                    node,
+                    &prob_matrix,
+                    &mut visited,
+                    &mut rec_stack,
+                    &mut path,
+                    &mut cycles,
+                );
             }
         }
 
@@ -590,7 +599,7 @@ mod topology_defect_detection {
         path.push(node);
 
         for next in 0..prob_matrix.len() {
-            if prob_matrix[node].get(next).map_or(false, |&p| p > 0.5) {
+            if prob_matrix[node].get(next).is_some_and(|&p| p > 0.5) {
                 if !visited[next] {
                     dfs_cycle(next, prob_matrix, visited, rec_stack, path, cycles);
                 } else if rec_stack[next] {

@@ -66,7 +66,7 @@ impl ErrorAccumulator {
     pub fn record_error(&mut self, layer_name: &str, error: f64) {
         self.layer_errors
             .entry(layer_name.to_string())
-            .or_insert_with(Vec::new)
+            .or_default()
             .push(error);
 
         self.total_error += error;
@@ -88,10 +88,7 @@ impl ErrorAccumulator {
     where
         I: IntoIterator<Item = f64>,
     {
-        let layer_vec = self
-            .layer_errors
-            .entry(layer_name.to_string())
-            .or_insert_with(Vec::new);
+        let layer_vec = self.layer_errors.entry(layer_name.to_string()).or_default();
 
         for error in errors {
             layer_vec.push(error);
@@ -155,21 +152,11 @@ impl ErrorAccumulator {
         let mean = total / count as f64;
 
         // Compute standard deviation
-        let variance = all_errors
-            .iter()
-            .map(|&e| (e - mean).powi(2))
-            .sum::<f64>()
-            / count as f64;
+        let variance = all_errors.iter().map(|&e| (e - mean).powi(2)).sum::<f64>() / count as f64;
         let std_dev = variance.sqrt();
 
-        let min = all_errors
-            .iter()
-            .cloned()
-            .fold(f64::INFINITY, f64::min);
-        let max = all_errors
-            .iter()
-            .cloned()
-            .fold(f64::NEG_INFINITY, f64::max);
+        let min = all_errors.iter().cloned().fold(f64::INFINITY, f64::min);
+        let max = all_errors.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
 
         ErrorStatistics {
             mean,
@@ -197,11 +184,8 @@ impl ErrorAccumulator {
                 let min = errors.iter().cloned().fold(f64::INFINITY, f64::min);
 
                 // Compute layer standard deviation
-                let variance = errors
-                    .iter()
-                    .map(|&e| (e - mean).powi(2))
-                    .sum::<f64>()
-                    / count as f64;
+                let variance =
+                    errors.iter().map(|&e| (e - mean).powi(2)).sum::<f64>() / count as f64;
                 let std_dev = variance.sqrt();
 
                 LayerErrorStats {
@@ -216,7 +200,11 @@ impl ErrorAccumulator {
             .collect();
 
         // Sort by max error (descending) to highlight problematic layers
-        layer_stats.sort_by(|a, b| b.max.partial_cmp(&a.max).unwrap_or(std::cmp::Ordering::Equal));
+        layer_stats.sort_by(|a, b| {
+            b.max
+                .partial_cmp(&a.max)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
 
         ErrorReport {
             global_stats,
@@ -302,20 +290,64 @@ pub struct ErrorReport {
 impl fmt::Display for ErrorReport {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f)?;
-        writeln!(f, "╔══════════════════════════════════════════════════════════╗")?;
-        writeln!(f, "║           ERROR ACCUMULATION REPORT                      ║")?;
-        writeln!(f, "╠══════════════════════════════════════════════════════════╣")?;
-        writeln!(f, "║ GLOBAL STATISTICS                                        ║")?;
-        writeln!(f, "╟──────────────────────────────────────────────────────────╢")?;
+        writeln!(
+            f,
+            "╔══════════════════════════════════════════════════════════╗"
+        )?;
+        writeln!(
+            f,
+            "║           ERROR ACCUMULATION REPORT                      ║"
+        )?;
+        writeln!(
+            f,
+            "╠══════════════════════════════════════════════════════════╣"
+        )?;
+        writeln!(
+            f,
+            "║ GLOBAL STATISTICS                                        ║"
+        )?;
+        writeln!(
+            f,
+            "╟──────────────────────────────────────────────────────────╢"
+        )?;
         writeln!(f, "║   Total Recordings: {:>20} ║", self.global_stats.count)?;
-        writeln!(f, "║   Mean Error:       {:>20.2e} ║", self.global_stats.mean)?;
-        writeln!(f, "║   Std Dev:          {:>20.2e} ║", self.global_stats.std_dev)?;
-        writeln!(f, "║   Min Error:        {:>20.2e} ║", self.global_stats.min)?;
-        writeln!(f, "║   Max Error:        {:>20.2e} ║", self.global_stats.max)?;
-        writeln!(f, "║   Total Error:      {:>20.2e} ║", self.global_stats.total)?;
-        writeln!(f, "╟──────────────────────────────────────────────────────────╢")?;
-        writeln!(f, "║ PER-LAYER STATISTICS (sorted by max error)             ║")?;
-        writeln!(f, "╟──────────────────────────────────────────────────────────╢")?;
+        writeln!(
+            f,
+            "║   Mean Error:       {:>20.2e} ║",
+            self.global_stats.mean
+        )?;
+        writeln!(
+            f,
+            "║   Std Dev:          {:>20.2e} ║",
+            self.global_stats.std_dev
+        )?;
+        writeln!(
+            f,
+            "║   Min Error:        {:>20.2e} ║",
+            self.global_stats.min
+        )?;
+        writeln!(
+            f,
+            "║   Max Error:        {:>20.2e} ║",
+            self.global_stats.max
+        )?;
+        writeln!(
+            f,
+            "║   Total Error:      {:>20.2e} ║",
+            self.global_stats.total
+        )?;
+        writeln!(
+            f,
+            "╟──────────────────────────────────────────────────────────╢"
+        )?;
+        writeln!(
+            f,
+            "║ PER-LAYER STATISTICS (sorted by max error)             ║"
+        )?;
+        writeln!(
+            f,
+            "╟──────────────────────────────────────────────────────────╢"
+        )?;
 
         // Show top 10 layers by max error
         let display_count = self.layer_stats.len().min(10);
@@ -337,7 +369,10 @@ impl fmt::Display for ErrorReport {
             )?;
         }
 
-        writeln!(f, "╚══════════════════════════════════════════════════════════╝")?;
+        writeln!(
+            f,
+            "╚══════════════════════════════════════════════════════════╝"
+        )?;
         Ok(())
     }
 }
@@ -373,7 +408,7 @@ mod tests {
         let mut accumulator = ErrorAccumulator::new();
 
         // Record known errors
-        let errors = vec![1.0e-14, 2.0e-14, 3.0e-14, 4.0e-14, 5.0e-14];
+        let errors = [1.0e-14, 2.0e-14, 3.0e-14, 4.0e-14, 5.0e-14];
         for (i, &error) in errors.iter().enumerate() {
             accumulator.record_error(&format!("layer_{}", i), error);
         }

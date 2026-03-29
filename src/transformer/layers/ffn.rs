@@ -1,7 +1,7 @@
 //! Feed-Forward Network implementations
 
+use crate::tensor::traits::{TensorBase, TensorOps};
 use crate::tensor::DenseTensor;
-use crate::tensor::traits::{TensorOps, TensorBase};
 
 /// Feed-Forward Network types
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -68,7 +68,7 @@ impl FeedForward {
     pub fn standard(fc1: DenseTensor, fc2: DenseTensor, activation: Activation) -> Self {
         let hidden_dim = fc1.shape()[0];
         let intermediate_dim = fc1.shape()[1];
-        
+
         Self {
             ff_type: FeedForwardType::Standard,
             fc1: Some(fc1),
@@ -91,7 +91,7 @@ impl FeedForward {
     pub fn swiglu(gate_proj: DenseTensor, up_proj: DenseTensor, down_proj: DenseTensor) -> Self {
         let hidden_dim = gate_proj.shape()[0];
         let intermediate_dim = gate_proj.shape()[1];
-        
+
         Self {
             ff_type: FeedForwardType::SwiGLU,
             fc1: None,
@@ -114,7 +114,7 @@ impl FeedForward {
     pub fn geglu(gate_proj: DenseTensor, up_proj: DenseTensor, down_proj: DenseTensor) -> Self {
         let hidden_dim = gate_proj.shape()[0];
         let intermediate_dim = gate_proj.shape()[1];
-        
+
         Self {
             ff_type: FeedForwardType::GeGLU,
             fc1: None,

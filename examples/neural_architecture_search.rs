@@ -27,14 +27,14 @@
 //! - **Operations**: Conv3x3, Conv5x5, MaxPool, AvgPool, Skip, etc.
 
 #[cfg(feature = "tensor")]
+#[allow(clippy::needless_range_loop, clippy::map_unwrap_or)]
 mod neural_architecture_search {
-    use god_gragh::tensor::differentiable::{
-        DifferentiableGraph, GradientConfig, GraphTransformer, ThresholdEditPolicy,
-    };
+    use god_gragh::tensor::differentiable::{DifferentiableGraph, GradientConfig};
     use std::collections::HashMap;
 
     /// Operation types in the search space
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+    #[allow(dead_code)]
     pub enum OperationType {
         Conv3x3,
         Conv5x5,
@@ -58,6 +58,7 @@ mod neural_architecture_search {
             }
         }
 
+        #[allow(dead_code)]
         pub fn latency_cost(&self) -> f64 {
             // Relative latency cost (normalized)
             match self {
@@ -128,8 +129,11 @@ mod neural_architecture_search {
             OperationType::SkipConnect,
         ];
         for op in &operations {
-            println!("  - {}: cost = {:.1}M params (for 64 channels)", 
-                op.name(), op.param_count(64) as f64 / 1e6);
+            println!(
+                "  - {}: cost = {:.1}M params (for 64 channels)",
+                op.name(),
+                op.param_count(64) as f64 / 1e6
+            );
         }
     }
 
@@ -156,7 +160,7 @@ mod neural_architecture_search {
 
         // Simulate gradients based on a target architecture:
         // Optimal: 0→1→2→3→4 (chain) with skip 0→2
-        let target_edges = vec![(0, 1), (1, 2), (2, 3), (3, 4), (0, 2)];
+        let target_edges = [(0, 1), (1, 2), (2, 3), (3, 4), (0, 2)];
 
         for i in 0..num_nodes {
             for j in (i + 1)..num_nodes {
@@ -177,7 +181,10 @@ mod neural_architecture_search {
             } else {
                 "UNCERTAIN"
             };
-            println!("  {}→{}: ∂L_val/∂α = {:.3} [{}]", src, dst, grad, recommendation);
+            println!(
+                "  {}→{}: ∂L_val/∂α = {:.3} [{}]",
+                src, dst, grad, recommendation
+            );
         }
 
         // Compute structure gradients and update
@@ -220,8 +227,11 @@ mod neural_architecture_search {
             }
         }
 
-        println!("\nFinal architecture has {} edges (from {} possible)",
-            kept_edges.len(), num_nodes * (num_nodes - 1) / 2);
+        println!(
+            "\nFinal architecture has {} edges (from {} possible)",
+            kept_edges.len(),
+            num_nodes * (num_nodes - 1) / 2
+        );
     }
 
     /// Example 3: Multi-objective NAS (accuracy + latency)
@@ -229,10 +239,9 @@ mod neural_architecture_search {
         println!("\n=== Example 3: Multi-Objective NAS (Accuracy + Latency) ===\n");
 
         let num_nodes = 5;
-        
+
         // Configure with sparsity to encourage efficient architectures
-        let config = GradientConfig::new(1.0, true, 0.1, 0.01)
-            .with_sparsity(0.05); // Encourage fewer connections
+        let config = GradientConfig::new(1.0, true, 0.1, 0.01).with_sparsity(0.05); // Encourage fewer connections
 
         let mut graph = DifferentiableGraph::<Vec<f64>>::with_config(num_nodes, config);
 
@@ -254,11 +263,14 @@ mod neural_architecture_search {
         // Loss = L_accuracy + λ * L_latency
         let latency_weight = 0.1;
 
-        println!("\nRunning multi-objective optimization (λ = {:.2}):", latency_weight);
-        
+        println!(
+            "\nRunning multi-objective optimization (λ = {:.2}):",
+            latency_weight
+        );
+
         for step in 0..15 {
             let mut accuracy_gradients = HashMap::new();
-            
+
             // Simulate accuracy gradients (same as before)
             for i in 0..num_nodes {
                 for j in (i + 1)..num_nodes {
@@ -302,7 +314,7 @@ mod neural_architecture_search {
         // Search architecture on Task A (e.g., ImageNet classification)
         println!("Phase 1: Search on Task A (source task)...");
         let mut graph_a = DifferentiableGraph::<Vec<f64>>::new(5);
-        
+
         for i in 0..5 {
             for j in (i + 1)..5 {
                 graph_a.add_learnable_edge(i, j, 0.5);
@@ -331,7 +343,7 @@ mod neural_architecture_search {
         println!("  Strategy: Initialize with Task A architecture, fine-tune");
 
         let mut graph_b = DifferentiableGraph::<Vec<f64>>::new(5);
-        
+
         // Copy architecture from Task A
         let prob_matrix_a = graph_a.get_probability_matrix();
         for i in 0..5 {
@@ -400,7 +412,7 @@ mod neural_architecture_search {
 
         // Expand search space
         println!("\nStage 2: Expanding search space to 6 nodes...");
-        
+
         // Create new larger graph
         let new_nodes = 6;
         let mut new_graph = DifferentiableGraph::<Vec<f64>>::new(new_nodes);
@@ -528,7 +540,7 @@ mod neural_architecture_search {
     fn print_architecture_with_cost<T: Clone + Default>(graph: &DifferentiableGraph<T>) {
         let prob_matrix = graph.get_probability_matrix();
         let mut total_cost = 0.0;
-        
+
         for (i, row) in prob_matrix.iter().enumerate() {
             for (j, &prob) in row.iter().enumerate() {
                 if prob > 0.01 {
@@ -545,7 +557,7 @@ mod neural_architecture_search {
     fn compute_architecture_cost<T: Clone + Default>(graph: &DifferentiableGraph<T>) -> f64 {
         let prob_matrix = graph.get_probability_matrix();
         let mut total_cost = 0.0;
-        
+
         for (i, row) in prob_matrix.iter().enumerate() {
             for (j, &prob) in row.iter().enumerate() {
                 if prob > 0.01 {
@@ -554,7 +566,7 @@ mod neural_architecture_search {
                 }
             }
         }
-        
+
         total_cost
     }
 
@@ -562,7 +574,7 @@ mod neural_architecture_search {
         // Simple BFS to find longest path
         let num_nodes = graph.num_nodes();
         let prob_matrix = graph.get_probability_matrix();
-        
+
         let mut max_depth = 0;
         for start in 0..num_nodes {
             let mut visited = vec![false; num_nodes];
@@ -573,7 +585,7 @@ mod neural_architecture_search {
                 max_depth = max_depth.max(depth);
 
                 for next in 0..num_nodes {
-                    if !visited[next] && prob_matrix[node].get(next).map_or(false, |&p| p > 0.5) {
+                    if !visited[next] && prob_matrix[node].get(next).is_some_and(|&p| p > 0.5) {
                         visited[next] = true;
                         queue.push((next, depth + 1));
                     }
@@ -587,7 +599,7 @@ mod neural_architecture_search {
     fn count_skip_connections<T: Clone + Default>(graph: &DifferentiableGraph<T>) -> usize {
         let prob_matrix = graph.get_probability_matrix();
         let mut count = 0;
-        
+
         for (i, row) in prob_matrix.iter().enumerate() {
             for (j, &prob) in row.iter().enumerate() {
                 if prob > 0.5 && j > i + 1 {
@@ -595,7 +607,7 @@ mod neural_architecture_search {
                 }
             }
         }
-        
+
         count
     }
 
@@ -607,14 +619,17 @@ mod neural_architecture_search {
             .flat_map(|row| row.iter())
             .filter(|&&p| p > 0.5)
             .count();
-        
+
         1.0 - (active_edges as f64 / total_possible as f64)
     }
 
-    fn estimate_flops<T: Clone + Default>(graph: &DifferentiableGraph<T>, channels: usize) -> usize {
+    fn estimate_flops<T: Clone + Default>(
+        graph: &DifferentiableGraph<T>,
+        channels: usize,
+    ) -> usize {
         let prob_matrix = graph.get_probability_matrix();
         let mut flops = 0;
-        
+
         for (i, row) in prob_matrix.iter().enumerate() {
             for (j, &prob) in row.iter().enumerate() {
                 if prob > 0.5 {
@@ -625,16 +640,19 @@ mod neural_architecture_search {
                 }
             }
         }
-        
+
         flops
     }
 
-    fn estimate_parameters<T: Clone + Default>(graph: &DifferentiableGraph<T>, channels: usize) -> usize {
+    fn estimate_parameters<T: Clone + Default>(
+        graph: &DifferentiableGraph<T>,
+        channels: usize,
+    ) -> usize {
         let prob_matrix = graph.get_probability_matrix();
         let mut params = 0;
 
-        for (_i, row) in prob_matrix.iter().enumerate() {
-            for (_j, &prob) in row.iter().enumerate() {
+        for row in prob_matrix.iter() {
+            for &prob in row.iter() {
                 if prob > 0.5 {
                     // Estimate Conv3x3 parameters
                     let op_params = channels * channels * 3 * 3;
@@ -649,7 +667,7 @@ mod neural_architecture_search {
     fn print_architecture_diagram<T: Clone + Default>(graph: &DifferentiableGraph<T>) {
         let num_nodes = graph.num_nodes();
         let prob_matrix = graph.get_probability_matrix();
-        
+
         // Print nodes
         print!("  ");
         for i in 0..num_nodes {
@@ -659,7 +677,7 @@ mod neural_architecture_search {
             }
         }
         println!();
-        
+
         // Print connections
         for i in 0..num_nodes {
             for j in (i + 1)..num_nodes {

@@ -14,20 +14,22 @@
 //!
 //! The model will be stored in the `models/` directory.
 
-#[cfg(test)]
+#[cfg(all(test, feature = "safetensors"))]
 mod tests {
     use god_gragh::graph::traits::{GraphBase, GraphOps, GraphQuery};
-    use god_gragh::tensor::TensorBase;
     use god_gragh::tensor::decomposition::qr::is_orthogonal;
     use god_gragh::tensor::DenseTensor;
+    use god_gragh::tensor::TensorBase;
     use god_gragh::transformer::optimization::lie_group::orthogonalize_weights_in_place;
     use god_gragh::transformer::optimization::switch::{ModelSwitch, OperatorType, WeightTensor};
-    use god_gragh::transformer::optimization::{LieGroupConfig, TensorRingCompressor, CompressionConfig};
+    use god_gragh::transformer::optimization::{
+        CompressionConfig, LieGroupConfig, TensorRingCompressor,
+    };
 
     /// Get the path to the TinyLlama model directory
     fn get_tinyllama_model_path() -> Option<String> {
         let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap_or_else(|_| ".".to_string());
-        
+
         // Try multiple possible paths
         let possible_paths = vec![
             std::path::Path::new(&manifest_dir).join("models/tinyllama/model.safetensors"),
@@ -39,7 +41,7 @@ mod tests {
                 return Some(path.to_string_lossy().to_string());
             }
         }
-        
+
         None
     }
 
@@ -110,7 +112,7 @@ mod tests {
         // Compute original weight statistics
         let mut original_norm_sum = 0.0;
         let mut weight_count = 0;
-        
+
         for edge_ref in graph.edges() {
             let weight = edge_ref.data();
             let norm: f64 = weight.data.iter().map(|&x| x * x).sum::<f64>().sqrt();
@@ -118,7 +120,10 @@ mod tests {
             weight_count += 1;
         }
 
-        eprintln!("Original model: {} weights, total norm: {:.2e}", weight_count, original_norm_sum);
+        eprintln!(
+            "Original model: {} weights, total norm: {:.2e}",
+            weight_count, original_norm_sum
+        );
 
         // Apply orthogonalization
         let config = LieGroupConfig::new()
@@ -152,7 +157,7 @@ mod tests {
         let mut orthogonalized_count = 0;
         for edge_ref in graph.edges() {
             let weight = edge_ref.data();
-            
+
             // Skip non-2D tensors
             if weight.shape.len() != 2 {
                 continue;
@@ -165,12 +170,18 @@ mod tests {
                     orthogonalized_count += 1;
                 } else {
                     let error = compute_orthogonality_error(&tensor);
-                    eprintln!("Warning: Weight {} not orthogonal (error: {:.2e})", weight.name, error);
+                    eprintln!(
+                        "Warning: Weight {} not orthogonal (error: {:.2e})",
+                        weight.name, error
+                    );
                 }
             }
         }
 
-        eprintln!("✓ {} weights successfully orthogonalized", orthogonalized_count);
+        eprintln!(
+            "✓ {} weights successfully orthogonalized",
+            orthogonalized_count
+        );
     }
 
     /// Test TinyLlama tensor ring compression
@@ -242,7 +253,10 @@ mod tests {
             .expect("Failed to orthogonalize weights");
 
         let avg_ortho_error = ortho_errors.iter().sum::<f64>() / ortho_errors.len() as f64;
-        eprintln!("  Orthogonalization complete (avg error: {:.2e})", avg_ortho_error);
+        eprintln!(
+            "  Orthogonalization complete (avg error: {:.2e})",
+            avg_ortho_error
+        );
 
         // Verify optimization didn't introduce NaN/Inf
         for edge_ref in graph.edges() {

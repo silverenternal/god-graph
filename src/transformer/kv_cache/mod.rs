@@ -3,8 +3,8 @@
 //! KV Cache caches key and value states to avoid recomputing them
 //! during autoregressive generation, significantly improving inference speed.
 
-use crate::tensor::DenseTensor;
 use crate::tensor::traits::TensorBase;
+use crate::tensor::DenseTensor;
 
 /// KV Cache for caching key and value states during generation
 #[derive(Debug, Clone)]
@@ -33,16 +33,17 @@ impl KVCache {
     /// * `max_seq_len` - Maximum sequence length to cache
     /// * `hidden_dim` - Hidden dimension
     /// * `num_kv_heads` - Number of KV heads (for GQA)
-    pub fn new(num_layers: usize, max_seq_len: usize, hidden_dim: usize, num_kv_heads: usize) -> Self {
+    pub fn new(
+        num_layers: usize,
+        max_seq_len: usize,
+        hidden_dim: usize,
+        num_kv_heads: usize,
+    ) -> Self {
         let head_dim = hidden_dim / num_kv_heads;
-        let key_cache = vec![
-            DenseTensor::zeros(vec![max_seq_len, num_kv_heads, head_dim]);
-            num_layers
-        ];
-        let value_cache = vec![
-            DenseTensor::zeros(vec![max_seq_len, num_kv_heads, head_dim]);
-            num_layers
-        ];
+        let key_cache =
+            vec![DenseTensor::zeros(vec![max_seq_len, num_kv_heads, head_dim]); num_layers];
+        let value_cache =
+            vec![DenseTensor::zeros(vec![max_seq_len, num_kv_heads, head_dim]); num_layers];
 
         Self {
             key_cache,
@@ -91,7 +92,12 @@ impl KVCache {
 
     /// Copy tensor to cache at specified position (static method to avoid borrow issues)
     #[inline]
-    fn copy_to_cache_static(cache: &mut DenseTensor, tensor: &DenseTensor, position: usize, num_kv_heads: usize) {
+    fn copy_to_cache_static(
+        cache: &mut DenseTensor,
+        tensor: &DenseTensor,
+        position: usize,
+        num_kv_heads: usize,
+    ) {
         let batch_size = tensor.shape()[0];
         let head_dim = tensor.shape()[2];
 
@@ -307,17 +313,19 @@ impl PagedKVCache {
         num_kv_heads: usize,
         block_size: usize,
     ) -> Self {
-        let num_blocks = (max_seq_len + block_size - 1) / block_size;
+        let num_blocks = max_seq_len.div_ceil(block_size);
         let head_dim = hidden_dim / num_kv_heads;
 
-        let key_blocks = vec![
-            DenseTensor::zeros(vec![num_blocks, block_size, num_kv_heads, head_dim]);
-            num_layers
-        ];
-        let value_blocks = vec![
-            DenseTensor::zeros(vec![num_blocks, block_size, num_kv_heads, head_dim]);
-            num_layers
-        ];
+        let key_blocks =
+            vec![
+                DenseTensor::zeros(vec![num_blocks, block_size, num_kv_heads, head_dim]);
+                num_layers
+            ];
+        let value_blocks =
+            vec![
+                DenseTensor::zeros(vec![num_blocks, block_size, num_kv_heads, head_dim]);
+                num_layers
+            ];
 
         Self {
             block_size,
@@ -363,11 +371,25 @@ impl PagedKVCache {
         let block_offset = self.current_len % self.block_size;
 
         if let Some(key_block) = self.key_blocks.get_mut(layer) {
-            Self::copy_to_block_static(key_block, block_id, block_offset, key, self.block_size, self.num_kv_heads);
+            Self::copy_to_block_static(
+                key_block,
+                block_id,
+                block_offset,
+                key,
+                self.block_size,
+                self.num_kv_heads,
+            );
         }
 
         if let Some(value_block) = self.value_blocks.get_mut(layer) {
-            Self::copy_to_block_static(value_block, block_id, block_offset, value, self.block_size, self.num_kv_heads);
+            Self::copy_to_block_static(
+                value_block,
+                block_id,
+                block_offset,
+                value,
+                self.block_size,
+                self.num_kv_heads,
+            );
         }
 
         self.current_len += 1;
@@ -453,8 +475,8 @@ mod tests {
         let mut cache = KVCache::new(2, 512, 4096, 8);
 
         for i in 0..5 {
-            let key = DenseTensor::full(&vec![1, 8, 512], i as f64);
-            let value = DenseTensor::full(&vec![1, 8, 512], i as f64 * 2.0);
+            let key = DenseTensor::full(&[1, 8, 512], i as f64);
+            let value = DenseTensor::full(&[1, 8, 512], i as f64 * 2.0);
             cache.append(0, &key, &value);
         }
 
@@ -483,8 +505,8 @@ mod tests {
         let mut cache = PagedKVCache::new(2, 128, 4096, 8, 16);
 
         for i in 0..20 {
-            let key = DenseTensor::full(&vec![1, 8, 512], i as f64);
-            let value = DenseTensor::full(&vec![1, 8, 512], i as f64);
+            let key = DenseTensor::full(&[1, 8, 512], i as f64);
+            let value = DenseTensor::full(&[1, 8, 512], i as f64);
             cache.append(0, &key, &value);
         }
 
