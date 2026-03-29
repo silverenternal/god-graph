@@ -20,6 +20,7 @@ pub mod kv_cache;
 #[cfg(feature = "tensor-sparse")]
 pub mod sparse_attention;
 pub mod batch;
+#[cfg(feature = "tensor")]
 pub mod quantization;
 pub mod perf;
 pub mod optimization;

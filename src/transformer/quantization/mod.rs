@@ -6,6 +6,8 @@
 //! - Quantized matrix multiplication
 //! - Post-training quantization (PTQ)
 
+#![cfg(feature = "tensor")]
+
 use crate::tensor::DenseTensor;
 use crate::tensor::traits::TensorBase;
 
