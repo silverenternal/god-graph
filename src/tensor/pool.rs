@@ -627,10 +627,7 @@ impl TensorArena {
             borrowed: false,
         };
 
-        self.free_lists
-            .entry(key)
-            .or_default()
-            .push(slice);
+        self.free_lists.entry(key).or_default().push(slice);
 
         self.stats.deallocation_count += 1;
         self.stats.bytes_in_use -= tensor.len * core::mem::size_of::<f64>();

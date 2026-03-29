@@ -440,6 +440,7 @@ mod differentiable_graph_example {
     }
 
     #[cfg(not(feature = "transformer"))]
+    #[allow(dead_code)]
     pub fn build_mini_transformer() -> god_gragh::graph::Graph<usize, f64> {
         use god_gragh::graph::traits::GraphOps;
         use god_gragh::graph::Graph;

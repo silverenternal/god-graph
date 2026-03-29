@@ -88,10 +88,7 @@ impl ErrorAccumulator {
     where
         I: IntoIterator<Item = f64>,
     {
-        let layer_vec = self
-            .layer_errors
-            .entry(layer_name.to_string())
-            .or_default();
+        let layer_vec = self.layer_errors.entry(layer_name.to_string()).or_default();
 
         for error in errors {
             layer_vec.push(error);
@@ -411,7 +408,7 @@ mod tests {
         let mut accumulator = ErrorAccumulator::new();
 
         // Record known errors
-        let errors = vec![1.0e-14, 2.0e-14, 3.0e-14, 4.0e-14, 5.0e-14];
+        let errors = [1.0e-14, 2.0e-14, 3.0e-14, 4.0e-14, 5.0e-14];
         for (i, &error) in errors.iter().enumerate() {
             accumulator.record_error(&format!("layer_{}", i), error);
         }

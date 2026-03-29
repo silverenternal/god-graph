@@ -202,9 +202,7 @@ impl LlamaWeightMapper {
         tensors: &'a HashMap<String, DenseTensor>,
     ) -> GraphResult<&'a DenseTensor> {
         let name = format!("model.layers.{}.{}", layer_idx, component);
-        tensors
-            .get(&name)
-            .ok_or(GraphError::NotFound(name))
+        tensors.get(&name).ok_or(GraphError::NotFound(name))
     }
 }
 

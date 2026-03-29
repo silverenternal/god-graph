@@ -76,6 +76,7 @@ pub enum TopologyConstraint {
     /// Gradient flow path must exist
     GradientFlow { from: String, to: String },
     /// Custom constraint function
+    #[allow(clippy::type_complexity)]
     Custom(Box<dyn Fn(&Graph<OperatorType, WeightTensor>) -> GraphResult<bool> + Send + Sync>),
 }
 

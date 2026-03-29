@@ -255,7 +255,7 @@ fn bench_arena_memory_efficiency(c: &mut Criterion) {
 ///
 /// 模拟真实场景中的多种形状混合分配
 fn bench_arena_mixed_shapes(c: &mut Criterion) {
-    let shape_sets = vec![
+    let shape_sets = [
         vec![vec![16, 16], vec![32, 32], vec![64, 64]],
         vec![vec![8, 8, 8], vec![16, 16, 16]],
         vec![vec![4, 4, 4, 4], vec![8, 8, 8, 8]],

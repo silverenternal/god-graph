@@ -41,6 +41,7 @@ impl Dtype {
     }
 
     /// Parse dtype from string
+    #[allow(clippy::should_implement_trait)]
     pub fn from_str(s: &str) -> Option<Self> {
         match s {
             "F32" | "f32" | "FLOAT32" => Some(Dtype::F32),

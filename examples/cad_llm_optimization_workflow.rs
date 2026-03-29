@@ -301,7 +301,7 @@ fn create_sample_transformer_graph() -> Graph<OperatorType, WeightTensor> {
         if layer_idx == 0 {
             // First layer connects from embedding
             let weight = WeightTensor::new(
-                format!("embed_to_layer_0.weight"),
+                "embed_to_layer_0.weight".to_string(),
                 vec![1.0; 64 * 64],
                 vec![64, 64],
             );
@@ -365,10 +365,7 @@ fn create_sample_transformer_graph() -> Graph<OperatorType, WeightTensor> {
 /// Generate pseudo-random weight data for demonstration
 fn generate_weight_data(rows: usize, cols: usize, seed: f64) -> Vec<f64> {
     (0..rows * cols)
-        .map(|i| {
-            let x = (i as f64 + seed * 100.0).sin() * 0.1;
-            x
-        })
+        .map(|i| (i as f64 + seed * 100.0).sin() * 0.1)
         .collect()
 }
 

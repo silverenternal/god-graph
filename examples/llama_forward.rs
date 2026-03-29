@@ -25,7 +25,6 @@ use god_gragh::transformer::layers::{FeedForward, MultiHeadAttention, RMSNorm};
 use god_gragh::transformer::model::{
     LlamaConfig, LlamaDecoderLayer, LlamaModel, LlamaModelGraphBuilder,
 };
-use std::path::Path;
 
 /// Model size presets
 enum ModelSize {
@@ -101,7 +100,7 @@ fn create_test_model(config: &LlamaConfig) -> LlamaModel {
 }
 
 /// Create a single decoder layer with random weights
-fn create_decoder_layer(config: &LlamaConfig, layer_idx: usize) -> LlamaDecoderLayer {
+fn create_decoder_layer(config: &LlamaConfig, _layer_idx: usize) -> LlamaDecoderLayer {
     let hidden_dim = config.hidden_size;
     let num_heads = config.num_attention_heads;
 

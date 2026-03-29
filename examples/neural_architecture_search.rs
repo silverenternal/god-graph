@@ -27,14 +27,14 @@
 //! - **Operations**: Conv3x3, Conv5x5, MaxPool, AvgPool, Skip, etc.
 
 #[cfg(feature = "tensor")]
+#[allow(clippy::needless_range_loop, clippy::map_unwrap_or)]
 mod neural_architecture_search {
-    use god_gragh::tensor::differentiable::{
-        DifferentiableGraph, GradientConfig, GraphTransformer, ThresholdEditPolicy,
-    };
+    use god_gragh::tensor::differentiable::{DifferentiableGraph, GradientConfig};
     use std::collections::HashMap;
 
     /// Operation types in the search space
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+    #[allow(dead_code)]
     pub enum OperationType {
         Conv3x3,
         Conv5x5,
@@ -58,6 +58,7 @@ mod neural_architecture_search {
             }
         }
 
+        #[allow(dead_code)]
         pub fn latency_cost(&self) -> f64 {
             // Relative latency cost (normalized)
             match self {
@@ -159,7 +160,7 @@ mod neural_architecture_search {
 
         // Simulate gradients based on a target architecture:
         // Optimal: 0→1→2→3→4 (chain) with skip 0→2
-        let target_edges = vec![(0, 1), (1, 2), (2, 3), (3, 4), (0, 2)];
+        let target_edges = [(0, 1), (1, 2), (2, 3), (3, 4), (0, 2)];
 
         for i in 0..num_nodes {
             for j in (i + 1)..num_nodes {
@@ -584,7 +585,7 @@ mod neural_architecture_search {
                 max_depth = max_depth.max(depth);
 
                 for next in 0..num_nodes {
-                    if !visited[next] && prob_matrix[node].get(next).map_or(false, |&p| p > 0.5) {
+                    if !visited[next] && prob_matrix[node].get(next).is_some_and(|&p| p > 0.5) {
                         visited[next] = true;
                         queue.push((next, depth + 1));
                     }
@@ -650,8 +651,8 @@ mod neural_architecture_search {
         let prob_matrix = graph.get_probability_matrix();
         let mut params = 0;
 
-        for (_i, row) in prob_matrix.iter().enumerate() {
-            for (_j, &prob) in row.iter().enumerate() {
+        for row in prob_matrix.iter() {
+            for &prob in row.iter() {
                 if prob > 0.5 {
                     // Estimate Conv3x3 parameters
                     let op_params = channels * channels * 3 * 3;

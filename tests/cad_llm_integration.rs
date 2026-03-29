@@ -567,7 +567,7 @@ mod tests {
         );
         println!("  - Layers compressed: {}", compression_report.layers.len());
 
-        assert!(compression_report.layers.len() > 0);
+        assert!(!compression_report.layers.is_empty());
     }
 
     /// Test Lie group orthogonalization quality
@@ -718,7 +718,7 @@ mod tests {
         }
 
         // Should detect at least the isolated node
-        assert!(defects.len() > 0, "Should detect at least one defect");
+        assert!(!defects.is_empty(), "Should detect at least one defect");
     }
 
     /// Test mixed precision compression strategy

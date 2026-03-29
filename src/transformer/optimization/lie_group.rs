@@ -620,6 +620,37 @@ pub fn decompose_into_so_blocks(
     Ok(blocks)
 }
 
+/// Orthogonalize all weights in a graph in-place (zero-copy)
+///
+/// This function orthogonalizes each weight tensor in the graph without cloning data,
+/// achieving true zero-copy optimization.
+///
+/// # Arguments
+/// * `config` - Lie group configuration
+/// * `graph` - Graph containing weights to orthogonalize
+///
+/// # Returns
+/// Vector of orthogonalization errors for each weight
+pub fn orthogonalize_weights_in_place(
+    config: &LieGroupConfig,
+    graph: &mut Graph<OperatorType, WeightTensor>,
+) -> GraphResult<Vec<f64>> {
+    use crate::graph::traits::GraphQuery;
+
+    let mut errors = Vec::new();
+    let optimizer = LieGroupOptimizer::new(config.clone());
+
+    // Collect edge indices first to avoid borrow checker issues
+    let edge_indices: Vec<_> = graph.edges().map(|e| e.index()).collect();
+
+    for edge_idx in edge_indices {
+        let error = optimizer.orthogonalize_single_weight(graph, edge_idx)?;
+        errors.push(error);
+    }
+
+    Ok(errors)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -672,35 +703,4 @@ mod tests {
         let result = optimizer.cayley_transform(&tensor);
         assert!(result.is_ok());
     }
-}
-
-/// Orthogonalize all weights in a graph in-place (zero-copy)
-///
-/// This function orthogonalizes each weight tensor in the graph without cloning data,
-/// achieving true zero-copy optimization.
-///
-/// # Arguments
-/// * `config` - Lie group configuration
-/// * `graph` - Graph containing weights to orthogonalize
-///
-/// # Returns
-/// Vector of orthogonalization errors for each weight
-pub fn orthogonalize_weights_in_place(
-    config: &LieGroupConfig,
-    graph: &mut Graph<OperatorType, WeightTensor>,
-) -> GraphResult<Vec<f64>> {
-    use crate::graph::traits::GraphQuery;
-
-    let mut errors = Vec::new();
-    let optimizer = LieGroupOptimizer::new(config.clone());
-
-    // Collect edge indices first to avoid borrow checker issues
-    let edge_indices: Vec<_> = graph.edges().map(|e| e.index()).collect();
-
-    for edge_idx in edge_indices {
-        let error = optimizer.orthogonalize_single_weight(graph, edge_idx)?;
-        errors.push(error);
-    }
-
-    Ok(errors)
 }

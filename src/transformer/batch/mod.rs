@@ -184,8 +184,7 @@ impl RequestScheduler {
     /// Schedule requests for next batch
     pub fn schedule(&mut self) -> Vec<&mut InferenceRequest> {
         // Move completed active requests to completed
-        self.active
-            .retain(|req| !req.completed);
+        self.active.retain(|req| !req.completed);
 
         // Move pending to active if there's capacity
         while !self.pending.is_empty() && self.active.len() < self.max_batch_size {
@@ -214,7 +213,6 @@ impl RequestScheduler {
 
     /// Remove and return completed requests
     pub fn pop_completed(&mut self) -> Vec<InferenceRequest> {
-        
         std::mem::take(&mut self.completed)
     }
 }

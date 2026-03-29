@@ -323,7 +323,6 @@ impl SparseAttention {
     /// * `head_dim` - Head dimension
     /// * `center_ratio` - Ratio of center tokens
     pub fn star(head_dim: usize, _center_ratio: f64) -> Self {
-        
         Self::new(SparsePattern::Star, head_dim)
     }
 
@@ -470,8 +469,8 @@ impl SlidingWindowAttention {
 
                     // Normalize
                     if total_weight > 0.0 {
-                        for d in 0..head_dim {
-                            attn_output[d] /= total_weight;
+                        for val in attn_output.iter_mut().take(head_dim) {
+                            *val /= total_weight;
                         }
                     }
 

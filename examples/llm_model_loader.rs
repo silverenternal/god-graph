@@ -127,6 +127,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+#[allow(dead_code)]
 fn get_hf_repo(model_name: &str) -> Result<String, Box<dyn std::error::Error>> {
     match model_name.to_lowercase().as_str() {
         "llama-2-7b" => Ok("meta-llama/Llama-2-7b-hf".to_string()),
@@ -136,6 +137,7 @@ fn get_hf_repo(model_name: &str) -> Result<String, Box<dyn std::error::Error>> {
     }
 }
 
+#[allow(dead_code)]
 fn get_hf_cache_dir() -> std::path::PathBuf {
     if let Ok(cache_dir) = std::env::var("HF_HOME") {
         std::path::PathBuf::from(cache_dir).join("hub")
@@ -151,12 +153,13 @@ fn get_hf_cache_dir() -> std::path::PathBuf {
     }
 }
 
+#[allow(dead_code)]
 fn find_safetensors_files(
     dir: &std::path::Path,
 ) -> Result<Vec<std::path::PathBuf>, Box<dyn std::error::Error>> {
     let mut files = Vec::new();
 
-    if dir.is_file() && dir.extension().map_or(false, |e| e == "safetensors") {
+    if dir.is_file() && dir.extension().is_some_and(|e| e == "safetensors") {
         files.push(dir.to_path_buf());
         return Ok(files);
     }
@@ -164,7 +167,7 @@ fn find_safetensors_files(
     if let Ok(entries) = std::fs::read_dir(dir) {
         for entry in entries.flatten() {
             let path = entry.path();
-            if path.is_file() && path.extension().map_or(false, |e| e == "safetensors") {
+            if path.is_file() && path.extension().is_some_and(|e| e == "safetensors") {
                 files.push(path);
             }
         }
@@ -174,6 +177,7 @@ fn find_safetensors_files(
     Ok(files)
 }
 
+#[allow(dead_code)]
 fn estimate_parameters_llama(config: &god_gragh::transformer::loader::LlamaConfig) -> usize {
     let embed_params = config.vocab_size * config.hidden_size;
     let attn_params = config.hidden_size * config.hidden_size * 4;

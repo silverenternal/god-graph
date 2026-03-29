@@ -475,8 +475,8 @@ mod tests {
         let mut cache = KVCache::new(2, 512, 4096, 8);
 
         for i in 0..5 {
-            let key = DenseTensor::full(&vec![1, 8, 512], i as f64);
-            let value = DenseTensor::full(&vec![1, 8, 512], i as f64 * 2.0);
+            let key = DenseTensor::full(&[1, 8, 512], i as f64);
+            let value = DenseTensor::full(&[1, 8, 512], i as f64 * 2.0);
             cache.append(0, &key, &value);
         }
 
@@ -505,8 +505,8 @@ mod tests {
         let mut cache = PagedKVCache::new(2, 128, 4096, 8, 16);
 
         for i in 0..20 {
-            let key = DenseTensor::full(&vec![1, 8, 512], i as f64);
-            let value = DenseTensor::full(&vec![1, 8, 512], i as f64);
+            let key = DenseTensor::full(&[1, 8, 512], i as f64);
+            let value = DenseTensor::full(&[1, 8, 512], i as f64);
             cache.append(0, &key, &value);
         }
 

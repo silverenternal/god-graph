@@ -7,7 +7,7 @@
 //! 4. Query compression ratios
 
 use god_gragh::tensor::{DenseTensor, TensorBase};
-use god_gragh::transformer::optimization::{CompressionConfig, TensorRing, TensorRingCompressor};
+use god_gragh::transformer::optimization::{CompressionConfig, TensorRingCompressor};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("=== CAD-LLM Tensor Ring Compression Example ===\n");

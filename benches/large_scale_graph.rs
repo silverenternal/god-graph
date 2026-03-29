@@ -32,11 +32,12 @@ use rand::Rng;
 ///
 /// * `num_nodes` - Number of nodes
 /// * `m` - Number of edges to attach from a new node to existing nodes
+#[allow(dead_code)]
 fn generate_barabasi_albert_graph(num_nodes: usize, m: usize) -> Graph<usize, f64> {
     use rand::SeedableRng;
     use rand_chacha::ChaCha8Rng;
 
-    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    let _rng = ChaCha8Rng::seed_from_u64(42);
     let mut graph: Graph<usize, f64> = Graph::with_capacity(num_nodes, num_nodes * m);
 
     if num_nodes == 0 {
@@ -67,7 +68,7 @@ fn generate_barabasi_albert_graph(num_nodes: usize, m: usize) -> Graph<usize, f6
 
     // Add remaining nodes with preferential attachment
     let mut rng = rand::thread_rng();
-    let total_degree_initial: usize = degrees.iter().sum();
+    let _total_degree_initial: usize = degrees.iter().sum();
 
     for new_idx in initial_size..num_nodes {
         let new_node = graph.add_node(new_idx).unwrap();

@@ -374,6 +374,51 @@ impl<'a> TextGenerator<'a> {
 mod tests {
     use super::*;
 
+    fn create_test_model() -> LlamaModel {
+        use super::super::layers::{FeedForward, MultiHeadAttention, RMSNorm};
+        use super::super::loader::LlamaConfig;
+        use super::super::model::LlamaModel;
+        use crate::tensor::DenseTensor;
+
+        // Use tiny dimensions to avoid OOM in tests
+        let mut config = LlamaConfig::llama_7b();
+        config.vocab_size = 64;
+        config.hidden_size = 16;
+        config.intermediate_size = 32;
+        config.num_attention_heads = 2;
+
+        let embed_tokens = DenseTensor::ones(vec![config.vocab_size, config.hidden_size]);
+
+        let hidden_dim = config.hidden_size;
+        let num_heads = config.num_attention_heads;
+
+        let w_q = DenseTensor::ones(vec![hidden_dim, hidden_dim]);
+        let w_k = DenseTensor::ones(vec![hidden_dim, hidden_dim]);
+        let w_v = DenseTensor::ones(vec![hidden_dim, hidden_dim]);
+        let w_o = DenseTensor::ones(vec![hidden_dim, hidden_dim]);
+        let self_attn = MultiHeadAttention::standard(w_q, w_k, w_v, w_o, num_heads);
+
+        let gate_proj = DenseTensor::ones(vec![hidden_dim, config.intermediate_size]);
+        let up_proj = DenseTensor::ones(vec![hidden_dim, config.intermediate_size]);
+        let down_proj = DenseTensor::ones(vec![config.intermediate_size, hidden_dim]);
+        let mlp = FeedForward::swiglu(gate_proj, up_proj, down_proj);
+
+        let input_layernorm = RMSNorm::default(hidden_dim);
+        let post_attention_layernorm = RMSNorm::default(hidden_dim);
+
+        let layer = super::super::model::LlamaDecoderLayer::new(
+            self_attn,
+            mlp,
+            input_layernorm,
+            post_attention_layernorm,
+        );
+
+        let layers = vec![layer; 2];
+        let norm = RMSNorm::default(hidden_dim);
+
+        LlamaModel::new(config, embed_tokens, layers, norm, None)
+    }
+
     #[test]
     fn test_generation_config() {
         let config = GenerationConfig::default();
@@ -407,44 +452,4 @@ mod tests {
         let top2 = generator.topk_indices(&data, 2);
         assert_eq!(top2, vec![3, 1]);
     }
-}
-
-#[cfg(test)]
-fn create_test_model() -> LlamaModel {
-    use super::layers::{FeedForward, MultiHeadAttention, RMSNorm};
-    use super::loader::LlamaConfig;
-    use super::model::LlamaModel;
-    use crate::tensor::DenseTensor;
-
-    let config = LlamaConfig::llama_7b();
-    let embed_tokens = DenseTensor::ones(vec![config.vocab_size, config.hidden_size]);
-
-    let hidden_dim = config.hidden_size;
-    let num_heads = config.num_attention_heads;
-
-    let w_q = DenseTensor::ones(vec![hidden_dim, hidden_dim]);
-    let w_k = DenseTensor::ones(vec![hidden_dim, hidden_dim]);
-    let w_v = DenseTensor::ones(vec![hidden_dim, hidden_dim]);
-    let w_o = DenseTensor::ones(vec![hidden_dim, hidden_dim]);
-    let self_attn = MultiHeadAttention::standard(w_q, w_k, w_v, w_o, num_heads);
-
-    let gate_proj = DenseTensor::ones(vec![hidden_dim, config.intermediate_size]);
-    let up_proj = DenseTensor::ones(vec![hidden_dim, config.intermediate_size]);
-    let down_proj = DenseTensor::ones(vec![config.intermediate_size, hidden_dim]);
-    let mlp = FeedForward::swiglu(gate_proj, up_proj, down_proj);
-
-    let input_layernorm = RMSNorm::default(hidden_dim);
-    let post_attention_layernorm = RMSNorm::default(hidden_dim);
-
-    let layer = super::model::LlamaDecoderLayer::new(
-        self_attn,
-        mlp,
-        input_layernorm,
-        post_attention_layernorm,
-    );
-
-    let layers = vec![layer; 2]; // Use 2 layers for testing
-    let norm = RMSNorm::default(hidden_dim);
-
-    LlamaModel::new(config, embed_tokens, layers, norm, None)
 }

@@ -13,6 +13,7 @@ readme = "README.md"
 keywords = ["graph", "llm", "optimization", "tensor", "topology"]
 categories = ["data-structures", "algorithms", "science", "compilers"]
 exclude = [".github/", "benches/", "tests/", "examples/", "ROADMAP.json", ".qwen/"]
+autobenches = false
 
 [features]
 default = ["std", "parallel"]
@@ -233,11 +234,6 @@ required-features = ["rand"]
 
 [[bench]]
 name = "tensor_arena"
-harness = false
-required-features = ["tensor", "tensor-pool"]
-
-[[bench]]
-name = "transformer_inference"
 harness = false
 required-features = ["tensor", "tensor-pool"]
 
