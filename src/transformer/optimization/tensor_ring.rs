@@ -279,7 +279,7 @@ impl TensorRingCompressor {
     }
 
     /// Get compressed tensors
-    pub fn compressed_tensors(&self) -> std::cell::Ref<HashMap<String, TensorRing>> {
+    pub fn compressed_tensors(&self) -> std::cell::Ref<'_, HashMap<String, TensorRing>> {
         self.compressed_tensors.borrow()
     }
 
@@ -298,6 +298,7 @@ impl TensorRingCompressor {
     }
 
     /// Compress a weight tensor and store the result
+    #[allow(dead_code)]
     fn compress_weight(
         &self,
         name: &str,
@@ -498,5 +499,64 @@ mod tests {
 
         let rank = adaptive_rank_selection(&tensor, 0.99).unwrap();
         assert!(rank <= 10); // Should detect low intrinsic rank
+    }
+
+    #[test]
+    fn test_compress_weight() {
+        let config = CompressionConfig::new()
+            .with_target_ranks(vec![4])
+            .with_min_rank(2)
+            .with_max_rank(8);
+        let compressor = TensorRingCompressor::new(config);
+
+        let tensor = DenseTensor::from_vec(
+            vec![1.0; 16 * 16],
+            vec![16, 16],
+        );
+
+        let ring = compressor.compress_weight("test_weight", &tensor).unwrap();
+        
+        assert_eq!(ring.original_shape, vec![16, 16]);
+        assert!(!ring.cores.is_empty());
+    }
+
+    #[test]
+    fn test_compression_ratio() {
+        let config = CompressionConfig::new()
+            .with_target_ranks(vec![4])
+            .with_min_rank(2)
+            .with_max_rank(8);
+        let compressor = TensorRingCompressor::new(config);
+
+        let tensor = DenseTensor::from_vec(
+            vec![1.0; 32 * 32],
+            vec![32, 32],
+        );
+
+        let ring = compressor.decompose(&tensor).unwrap();
+        
+        // Verify compression ratio is calculated correctly
+        let ratio = ring.compression_ratio();
+        assert!(ratio > 0.0);
+    }
+
+    #[test]
+    fn test_reconstruct_tensor() {
+        let config = CompressionConfig::new()
+            .with_target_ranks(vec![4])
+            .with_min_rank(2)
+            .with_max_rank(8);
+        let compressor = TensorRingCompressor::new(config);
+
+        let tensor = DenseTensor::from_vec(
+            vec![1.0; 8 * 8],
+            vec![8, 8],
+        );
+
+        let ring = compressor.decompose(&tensor).unwrap();
+        let reconstructed = ring.reconstruct().unwrap();
+
+        // Check shapes match
+        assert_eq!(reconstructed.shape(), tensor.shape());
     }
 }

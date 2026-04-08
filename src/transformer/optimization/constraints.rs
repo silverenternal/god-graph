@@ -67,17 +67,23 @@ pub struct TopologyDefect {
 pub enum TopologyConstraint {
     /// Residual connection must exist between specific nodes
     ResidualConnection {
+        /// Source layer name
         from_layer: String,
+        /// Target layer name
         to_layer: String,
     },
     /// Attention heads must have balanced weight norms
     AttentionHeadBalance {
+        /// Layer name
         layer: String,
+        /// Tolerance threshold
         tolerance: f64,
     },
     /// Gradient flow path must exist
     GradientFlow {
+        /// Source node/layer
         from: String,
+        /// Target node/layer
         to: String,
     },
     /// Custom constraint function

@@ -160,17 +160,17 @@ impl LieGroupOptimizer {
     }
 
     /// Get optimization statistics
-    pub fn statistics(&self) -> std::cell::Ref<HashMap<String, f64>> {
+    pub fn statistics(&self) -> std::cell::Ref<'_, HashMap<String, f64>> {
         self.statistics.borrow()
     }
 
     /// Get the error accumulator for detailed error analysis
-    pub fn error_accumulator(&self) -> std::cell::Ref<ErrorAccumulator> {
+    pub fn error_accumulator(&self) -> std::cell::Ref<'_, ErrorAccumulator> {
         self.error_accumulator.borrow()
     }
 
     /// Get a mutable reference to the error accumulator
-    pub fn error_accumulator_mut(&self) -> std::cell::RefMut<ErrorAccumulator> {
+    pub fn error_accumulator_mut(&self) -> std::cell::RefMut<'_, ErrorAccumulator> {
         self.error_accumulator.borrow_mut()
     }
 
@@ -263,6 +263,7 @@ impl LieGroupOptimizer {
     }
 
     /// Check orthogonality of a tensor (W^T W ≈ I)
+    #[allow(dead_code)]
     fn check_orthogonality(tensor: &DenseTensor) -> f64 {
         let shape = tensor.shape();
         if shape.len() != 2 {
@@ -659,9 +660,9 @@ mod tests {
         let config = LieGroupConfig::new()
             .with_block_size(64)
             .with_orthogonalize(true);
-        
+
         let optimizer = LieGroupOptimizer::new(config);
-        
+
         let tensor = DenseTensor::from_vec(
             vec![1.0, 2.0, 3.0, 4.0],
             vec![2, 2],
@@ -669,6 +670,72 @@ mod tests {
 
         let result = optimizer.cayley_transform(&tensor);
         assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_orthogonalize_single_weight() {
+        use crate::graph::Graph;
+        use crate::graph::traits::GraphOps;
+
+        let config = LieGroupConfig::new()
+            .with_block_size(2)
+            .with_orthogonalize(true);
+
+        let optimizer = LieGroupOptimizer::new(config);
+        let mut graph = Graph::<OperatorType, WeightTensor>::directed();
+
+        let from = graph.add_node(OperatorType::Linear { in_features: 2, out_features: 2 }).unwrap();
+        let to = graph.add_node(OperatorType::Linear { in_features: 2, out_features: 2 }).unwrap();
+        
+        let weight = WeightTensor::new(
+            "test".to_string(),
+            vec![1.0, 0.0, 0.0, 1.0],
+            vec![2, 2],
+        );
+        let edge = graph.add_edge(from, to, weight).unwrap();
+
+        let error = optimizer.orthogonalize_single_weight(&mut graph, edge);
+        assert!(error.is_ok());
+    }
+
+    #[test]
+    fn test_error_accumulator() {
+        let config = LieGroupConfig::new().with_orthogonalize(true);
+        let optimizer = LieGroupOptimizer::new(config);
+
+        // Record some errors
+        {
+            let mut acc = optimizer.error_accumulator_mut();
+            acc.record_error("layer1", 0.01);
+            acc.record_error("layer2", 0.02);
+        }
+
+        // Check error accumulator has recorded errors
+        let acc = optimizer.error_accumulator();
+        assert_eq!(acc.num_layers(), 2);
+        assert!(acc.get_layer_errors("layer1").is_some());
+        assert!(acc.get_layer_errors("layer2").is_some());
+    }
+
+    #[test]
+    fn test_check_orthogonality() {
+        // Identity matrix should be perfectly orthogonal
+        let identity = DenseTensor::from_vec(
+            vec![1.0, 0.0, 0.0, 1.0],
+            vec![2, 2],
+        );
+
+        let error = LieGroupOptimizer::check_orthogonality(&identity);
+        assert!(error < 1e-10);
+
+        // Non-orthogonal matrix should have higher error
+        let non_ortho = DenseTensor::from_vec(
+            vec![1.0, 1.0, 1.0, 1.0],
+            vec![2, 2],
+        );
+
+        let error = LieGroupOptimizer::check_orthogonality(&non_ortho);
+        assert!(error > 0.1);
     }
 }
 

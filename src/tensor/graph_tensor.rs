@@ -273,6 +273,7 @@ where
 }
 
 /// Reconstruct graph from tensor representations
+#[allow(dead_code)]
 pub struct GraphReconstructor {
     directed: bool,
 }

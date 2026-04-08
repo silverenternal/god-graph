@@ -48,33 +48,44 @@ use std::collections::HashMap;
 pub enum OperatorType {
     /// Multi-head attention operator
     Attention {
+        /// Number of attention heads
         num_heads: usize,
+        /// Hidden dimension size
         hidden_dim: usize,
     },
     /// Feed-forward network (MLP)
     MLP {
+        /// Hidden layer dimension
         hidden_dim: usize,
+        /// Activation function name (e.g., "gelu", "silu")
         activation: String,
     },
     /// Layer normalization
     Norm {
+        /// Normalization type (e.g., "layer", "rms")
         norm_type: String,
+        /// Epsilon value for numerical stability
         eps: f64,
     },
     /// Embedding lookup
     Embedding {
+        /// Vocabulary size
         vocab_size: usize,
+        /// Embedding dimension
         embed_dim: usize,
     },
     /// Linear projection
     Linear {
+        /// Input feature dimension
         in_features: usize,
+        /// Output feature dimension
         out_features: usize,
     },
     /// Residual connection (identity)
     Residual,
     /// Custom operator
     Custom {
+        /// Custom operator name
         name: String,
     },
 }
@@ -683,6 +694,7 @@ impl ModelSwitch {
     }
 
     /// Infer operator type from tensor name
+    #[allow(dead_code)]
     fn infer_operator_from_name(name: &str) -> OperatorType {
         let name_lower = name.to_lowercase();
         
