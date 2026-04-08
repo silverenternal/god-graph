@@ -6,12 +6,19 @@
 //! 3. Add and solve constraints
 //! 4. Extract and replace modules
 //! 5. Use edit history for rollback
+//!
+//! Requires the `cad-llm` feature to run.
 
-use god_gragh::graph::traits::{GraphBase, GraphOps};
-use god_gragh::graph::Graph;
-use god_gragh::transformer::optimization::switch::{OperatorType, WeightTensor};
-use god_gragh::transformer::optimization::{CadStyleEditor, TopologyConstraint};
+#[cfg(feature = "cad-llm")]
+use god_graph::graph::traits::{GraphBase, GraphOps};
+#[cfg(feature = "cad-llm")]
+use god_graph::graph::Graph;
+#[cfg(feature = "cad-llm")]
+use god_graph::transformer::optimization::switch::{OperatorType, WeightTensor};
+#[cfg(feature = "cad-llm")]
+use god_graph::transformer::optimization::{CadStyleEditor, TopologyConstraint};
 
+#[cfg(feature = "cad-llm")]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("=== CAD-LLM Topology Editor Example ===\n");
 
@@ -119,6 +126,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+#[cfg(feature = "cad-llm")]
 /// Create a sample transformer computation graph
 fn create_sample_transformer_graph() -> Graph<OperatorType, WeightTensor> {
     let mut graph = Graph::<OperatorType, WeightTensor>::directed();
@@ -170,8 +178,9 @@ fn create_sample_transformer_graph() -> Graph<OperatorType, WeightTensor> {
     graph
 }
 
+#[cfg(feature = "cad-llm")]
 /// Print topology defects in a readable format
-fn print_defects(defects: &[god_gragh::transformer::optimization::constraints::TopologyDefect]) {
+fn print_defects(defects: &[god_graph::transformer::optimization::constraints::TopologyDefect]) {
     if defects.is_empty() {
         println!("    No defects found!");
         return;
@@ -179,10 +188,10 @@ fn print_defects(defects: &[god_gragh::transformer::optimization::constraints::T
 
     for (i, defect) in defects.iter().enumerate() {
         let severity = match defect.severity {
-            god_gragh::transformer::optimization::constraints::Severity::Info => "ℹ",
-            god_gragh::transformer::optimization::constraints::Severity::Warning => "⚠",
-            god_gragh::transformer::optimization::constraints::Severity::Error => "✗",
-            god_gragh::transformer::optimization::constraints::Severity::Critical => "‼",
+            god_graph::transformer::optimization::constraints::Severity::Info => "ℹ",
+            god_graph::transformer::optimization::constraints::Severity::Warning => "⚠",
+            god_graph::transformer::optimization::constraints::Severity::Error => "✗",
+            god_graph::transformer::optimization::constraints::Severity::Critical => "‼",
         };
 
         println!(
@@ -198,10 +207,10 @@ fn print_defects(defects: &[god_gragh::transformer::optimization::constraints::T
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "cad-llm"))]
 mod tests {
     use super::*;
-    use god_gragh::transformer::optimization::constraints::Severity;
+    use god_graph::transformer::optimization::constraints::Severity;
 
     #[test]
     fn test_editor_creation() {
@@ -253,4 +262,10 @@ mod tests {
         let module = editor.extract_module("attention").unwrap();
         assert!(editor.module_cache().contains_key("attention"));
     }
+}
+
+#[cfg(not(feature = "cad-llm"))]
+fn main() {
+    println!("This example requires the 'cad-llm' feature.");
+    println!("Run with: cargo run --example cad_llm_editor --features cad-llm");
 }

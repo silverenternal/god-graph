@@ -10,8 +10,8 @@
 
 extern crate test;
 
-use god_gragh::tensor::{DenseTensor, TensorBase, TensorOps};
-use god_gragh::transformer::{
+use god_graph::tensor::{DenseTensor, TensorBase, TensorOps};
+use god_graph::transformer::{
     perf::{benchmark, matmul_with_buffer, softmax_inplace_simd, TransformerMemoryPool},
     quantization::{QuantizationConfig, QuantizedMatMul, QuantizedTensor},
     FeedForward, MultiHeadAttention, RMSNorm, RoPE,
@@ -264,7 +264,7 @@ fn bench_batched_inference_throughput(b: &mut Bencher) {
 /// Benchmark KV cache update efficiency
 #[bench]
 fn bench_kv_cache_update(b: &mut Bencher) {
-    use god_gragh::transformer::kv_cache::KVCache;
+    use god_graph::transformer::kv_cache::KVCache;
 
     let num_layers = 12;
     let max_seq_len = 512;
@@ -284,7 +284,7 @@ fn bench_kv_cache_update(b: &mut Bencher) {
 /// Benchmark end-to-end LLaMA forward pass
 #[bench]
 fn bench_llama_forward(b: &mut Bencher) {
-    use god_gragh::transformer::model::{LlamaConfig, LlamaModel};
+    use god_graph::transformer::model::{LlamaConfig, LlamaModel};
 
     let config = LlamaConfig {
         vocab_size: 1000,

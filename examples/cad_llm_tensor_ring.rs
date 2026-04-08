@@ -5,10 +5,15 @@
 //! 2. Decompose weight tensors using Tensor Ring
 //! 3. Reconstruct and verify accuracy
 //! 4. Query compression ratios
+//!
+//! Requires the `tensor` feature.
 
-use god_gragh::tensor::{DenseTensor, TensorBase};
-use god_gragh::transformer::optimization::{CompressionConfig, TensorRingCompressor};
+#[cfg(feature = "tensor")]
+use god_graph::tensor::{DenseTensor, TensorBase};
+#[cfg(feature = "tensor")]
+use god_graph::transformer::optimization::{CompressionConfig, TensorRingCompressor};
 
+#[cfg(feature = "tensor")]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("=== CAD-LLM Tensor Ring Compression Example ===\n");
 

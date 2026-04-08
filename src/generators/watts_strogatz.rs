@@ -50,8 +50,8 @@ where
     // 随机重连
     #[cfg(feature = "rand")]
     {
-        use rand::{Rng, SeedableRng};
-        let mut rng = rand::rngs::StdRng::seed_from_u64(42);
+        use rand::Rng;
+        let mut rng = rand::thread_rng();
 
         for i in 0..n {
             for _j in 1..=half_k {

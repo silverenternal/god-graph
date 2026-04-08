@@ -8,8 +8,8 @@
 //! - 形状感知复用效果
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
-use god_gragh::tensor::dense::DenseTensor;
-use god_gragh::tensor::pool::{PoolConfig, TensorArena, TensorPool};
+use god_graph::tensor::dense::DenseTensor;
+use god_graph::tensor::pool::{PoolConfig, TensorArena, TensorPool};
 
 /// TensorArena vs TensorPool: 基础分配性能对比
 fn bench_arena_vs_pool_allocation(c: &mut Criterion) {

@@ -18,22 +18,17 @@
 //! - ✅ Dynamic edge pruning (weak attention removal)
 //! - ✅ Custom connection experiments (long-range, sparse attention)
 //! - ✅ Topology defect detection
-//! - ✅ Educational/research purposes
 //!
-//! **GraphTransformer is NOT for**:
-//! - ❌ High-performance inference (use llama.cpp or vllm)
-//! - ❌ Large-scale training (use PyTorch or JAX)
-//!
-//! ## Running this example
-//!
-//! ```bash
-//! cargo run --example graph_transformer_execution --features tensor
-//! ```
+//! Requires the `transformer` feature.
 
-use god_gragh::tensor::traits::TensorBase;
-use god_gragh::tensor::DenseTensor;
-use god_gragh::transformer::graph_transformer::GraphTransformer;
+#[cfg(feature = "transformer")]
+use god_graph::tensor::traits::TensorBase;
+#[cfg(feature = "transformer")]
+use god_graph::tensor::DenseTensor;
+#[cfg(feature = "transformer")]
+use god_graph::transformer::graph_transformer::GraphTransformer;
 
+#[cfg(feature = "transformer")]
 fn main() {
     println!("=== GraphTransformer Execution Example ===\n");
 
@@ -139,6 +134,7 @@ fn main() {
     println!("=== Example completed successfully! ===");
 }
 
+#[cfg(feature = "transformer")]
 /// Analyze attention patterns in the graph
 fn analyze_attention_patterns(transformer: &GraphTransformer) {
     // Note: In a real implementation, we would inspect edge weights
@@ -152,9 +148,10 @@ fn analyze_attention_patterns(transformer: &GraphTransformer) {
     );
 }
 
+#[cfg(feature = "transformer")]
 /// Demonstrate edge tensor passing with Q/K/V projections
 fn demonstrate_edge_tensor_passing() {
-    use god_gragh::transformer::graph_transformer::edges::{DataFlowOp, GraphEdge, SkipType};
+    use god_graph::transformer::graph_transformer::edges::{DataFlowOp, GraphEdge, SkipType};
 
     println!("  Edge tensor passing semantics:");
 
@@ -197,10 +194,10 @@ fn demonstrate_edge_tensor_passing() {
     println!("    4. Attention weights determine contribution of each message");
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "transformer"))]
 mod tests {
     use super::*;
-    use god_gragh::transformer::graph_transformer::edges::{DataFlowOp, GraphEdge};
+    use god_graph::transformer::graph_transformer::edges::{DataFlowOp, GraphEdge};
 
     #[test]
     fn test_graph_transformer_basic_execution() {
@@ -243,4 +240,10 @@ mod tests {
         assert!(dot.contains("digraph Transformer"));
         assert!(dot.contains("rankdir=TB"));
     }
+}
+
+#[cfg(not(feature = "transformer"))]
+fn main() {
+    println!("This example requires the 'transformer' feature.");
+    println!("Run with: cargo run --example graph_transformer_execution --features transformer");
 }

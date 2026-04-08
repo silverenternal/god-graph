@@ -10,7 +10,7 @@ use core::marker::PhantomData;
 use crate::edge::EdgeIndex;
 use crate::node::NodeIndex;
 use crate::tensor::dense::DenseTensor;
-use crate::tensor::traits::{TensorBase, TensorOps};
+use crate::tensor::traits::TensorBase;
 
 #[cfg(feature = "tensor-sparse")]
 use crate::tensor::sparse::SparseTensor;

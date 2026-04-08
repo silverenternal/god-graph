@@ -18,11 +18,18 @@
 //! # Export graph to DOT
 //! cargo run --features "tensor,safetensors,tensor-pool,transformer" --example llama_forward -- --export-dot graph.dot
 //! ```
+//!
+//! Requires the `tensor`, `safetensors`, `tensor-pool`, and `transformer` features.
 
-use god_gragh::tensor::traits::TensorBase;
-use god_gragh::tensor::DenseTensor;
-use god_gragh::transformer::layers::{FeedForward, MultiHeadAttention, RMSNorm};
-use god_gragh::transformer::model::{
+#[cfg(all(feature = "tensor", feature = "safetensors", feature = "tensor-pool", feature = "transformer"))]
+#[allow(unused_imports)]
+use god_graph::tensor::traits::TensorBase;
+#[cfg(all(feature = "tensor", feature = "safetensors", feature = "tensor-pool", feature = "transformer"))]
+use god_graph::tensor::DenseTensor;
+#[cfg(all(feature = "tensor", feature = "safetensors", feature = "tensor-pool", feature = "transformer"))]
+use god_graph::transformer::layers::{FeedForward, MultiHeadAttention, RMSNorm};
+#[cfg(all(feature = "tensor", feature = "safetensors", feature = "tensor-pool", feature = "transformer"))]
+use god_graph::transformer::model::{
     LlamaConfig, LlamaDecoderLayer, LlamaModel, LlamaModelGraphBuilder,
 };
 
@@ -207,6 +214,7 @@ fn print_help() {
     println!("  cargo run --example llama_forward -- -i 10,20,30,40,50");
 }
 
+#[cfg(all(feature = "tensor", feature = "safetensors", feature = "tensor-pool", feature = "transformer"))]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("╔══════════════════════════════════════════════════════════╗");
     println!("║           LLaMA Forward Pass Example                    ║");
@@ -276,4 +284,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("╚══════════════════════════════════════════════════════════╝");
 
     Ok(())
+}
+
+#[cfg(not(all(feature = "tensor", feature = "safetensors", feature = "tensor-pool", feature = "transformer")))]
+fn main() {
+    println!("This example requires the 'tensor', 'safetensors', 'tensor-pool', and 'transformer' features.");
+    println!("Run with: cargo run --example llama_forward --features tensor,safetensors,tensor-pool,transformer");
 }

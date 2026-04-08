@@ -7,14 +7,14 @@
 //! 4. Export back to Safetensors
 
 #[cfg(feature = "safetensors")]
-use god_gragh::transformer::optimization::ModelSwitch;
+use god_graph::transformer::optimization::ModelSwitch;
 
 #[cfg(feature = "safetensors")]
-use god_gragh::graph::traits::{GraphBase, GraphOps};
+use god_graph::graph::traits::{GraphBase, GraphOps};
 #[cfg(feature = "safetensors")]
-use god_gragh::graph::Graph;
+use god_graph::graph::Graph;
 #[cfg(feature = "safetensors")]
-use god_gragh::transformer::optimization::switch::{OperatorType, WeightTensor};
+use god_graph::transformer::optimization::switch::{OperatorType, WeightTensor};
 
 #[cfg(feature = "safetensors")]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -156,8 +156,8 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use god_gragh::graph::Graph;
-    use god_gragh::transformer::optimization::switch::{OperatorType, WeightTensor};
+    use god_graph::graph::Graph;
+    use god_graph::transformer::optimization::switch::{OperatorType, WeightTensor};
 
     #[test]
     #[cfg(feature = "safetensors")]

@@ -5,12 +5,12 @@
 
 #[cfg(feature = "transformer")]
 fn main() {
-    use god_gragh::tensor::traits::TensorBase;
-    use god_gragh::tensor::DenseTensor;
-    use god_gragh::transformer::generation::{GenerationConfig, TextGenerator};
-    use god_gragh::transformer::layers::{FeedForward, MultiHeadAttention, RMSNorm};
-    use god_gragh::transformer::loader::LlamaConfig;
-    use god_gragh::transformer::model::{LlamaDecoderLayer, LlamaModel};
+    use god_graph::tensor::traits::TensorBase;
+    use god_graph::tensor::DenseTensor;
+    use god_graph::transformer::generation::{GenerationConfig, TextGenerator};
+    use god_graph::transformer::layers::{FeedForward, MultiHeadAttention, RMSNorm};
+    use god_graph::transformer::loader::LlamaConfig;
+    use god_graph::transformer::model::{LlamaDecoderLayer, LlamaModel};
 
     println!("=== Transformer Model Example ===\n");
 

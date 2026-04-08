@@ -6,14 +6,18 @@
 //! - Tensor Ring Compression (M3)
 //! - Lie Group Optimization (M2)
 //! - CAD-Style Editor (M4)
+//!
+//! Requires the `cad-llm` feature.
 
-#[cfg(all(test, feature = "tensor"))]
+#![cfg(all(test, feature = "cad-llm"))]
+
+#[cfg(test)]
 mod tests {
-    use god_gragh::graph::traits::GraphOps;
-    use god_gragh::graph::Graph;
-    use god_gragh::tensor::{DenseTensor, TensorBase, TensorOps};
-    use god_gragh::transformer::optimization::switch::{ModelSwitch, OperatorType, WeightTensor};
-    use god_gragh::transformer::optimization::{
+    use god_graph::graph::traits::GraphOps;
+    use god_graph::graph::Graph;
+    use god_graph::tensor::{DenseTensor, TensorBase, TensorOps};
+    use god_graph::transformer::optimization::switch::{ModelSwitch, OperatorType, WeightTensor};
+    use god_graph::transformer::optimization::{
         CadStyleEditor, CompressionConfig, LieGroupConfig, LieGroupOptimizer, TensorRingCompressor,
         TopologyConstraint,
     };
@@ -245,7 +249,7 @@ mod tests {
         let graph = create_test_graph();
 
         let report =
-            god_gragh::transformer::optimization::constraints::validate_assembly(&graph).unwrap();
+            god_graph::transformer::optimization::constraints::validate_assembly(&graph).unwrap();
 
         println!("Assembly valid: {}", report.is_valid);
         println!("Modules: {}", report.module_count);
@@ -332,7 +336,7 @@ mod tests {
     #[test]
     #[cfg(feature = "tensor")]
     fn test_orthogonalization_quality() {
-        use god_gragh::tensor::decomposition::qr::{debug_matrix, is_orthogonal, orthogonalize};
+        use god_graph::tensor::decomposition::qr::{debug_matrix, is_orthogonal, orthogonalize};
 
         // Create a well-conditioned matrix using sinusoidal patterns
         // This avoids linear dependence issues from repetitive values
@@ -415,7 +419,7 @@ mod tests {
     #[test]
     #[cfg(feature = "tensor")]
     fn test_lie_group_graph_integration() {
-        use god_gragh::transformer::optimization::switch::OperatorType;
+        use god_graph::transformer::optimization::switch::OperatorType;
 
         // Create a test graph with weight tensors on edges
         let mut graph: Graph<OperatorType, WeightTensor> = Graph::directed();
@@ -456,7 +460,7 @@ mod tests {
     #[test]
     #[cfg(feature = "tensor")]
     fn test_tensor_ring_graph_integration() {
-        use god_gragh::transformer::optimization::switch::OperatorType;
+        use god_graph::transformer::optimization::switch::OperatorType;
 
         // Create a test graph with weight tensors on edges
         let mut graph: Graph<OperatorType, WeightTensor> = Graph::directed();
@@ -512,7 +516,7 @@ mod tests {
     #[test]
     #[cfg(feature = "tensor")]
     fn test_complete_phase0_workflow() {
-        use god_gragh::transformer::optimization::switch::OperatorType;
+        use god_graph::transformer::optimization::switch::OperatorType;
 
         // Create a test graph simulating a small transformer layer
         let mut graph: Graph<OperatorType, WeightTensor> = Graph::directed();
@@ -575,7 +579,7 @@ mod tests {
     #[test]
     #[cfg(feature = "tensor")]
     fn test_lie_group_orthogonalization_quality() {
-        use god_gragh::tensor::decomposition::qr::orthogonalize;
+        use god_graph::tensor::decomposition::qr::orthogonalize;
 
         // Create a square matrix for orthogonalization
         let data: Vec<f64> = (0..256).map(|i| ((i % 50) as f64) / 50.0).collect();
@@ -598,7 +602,7 @@ mod tests {
     #[test]
     #[cfg(feature = "tensor")]
     fn test_tensor_ring_compress_reconstruct() {
-        use god_gragh::tensor::TensorBase;
+        use god_graph::tensor::TensorBase;
 
         // Create a low-rank test matrix (easier to compress)
         let u_data: Vec<f64> = (0..100 * 5).map(|i| (i % 10) as f64 / 10.0).collect();
@@ -641,7 +645,7 @@ mod tests {
     /// Verifies that SO(k) blocks are properly orthogonal
     #[test]
     fn test_block_decomposition_orthogonality() {
-        use god_gragh::transformer::optimization::decompose_into_so_blocks;
+        use god_graph::transformer::optimization::decompose_into_so_blocks;
 
         // Create a test matrix
         let tensor =
@@ -725,7 +729,7 @@ mod tests {
     #[test]
     #[cfg(feature = "tensor")]
     fn test_mixed_precision_compression() {
-        use god_gragh::transformer::optimization::mixed_precision_compress;
+        use god_graph::transformer::optimization::mixed_precision_compress;
 
         // Create tensors with different importance (use larger matrices for stable compression)
         let mut tensors = std::collections::HashMap::new();

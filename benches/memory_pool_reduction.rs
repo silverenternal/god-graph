@@ -4,8 +4,8 @@
 //! by comparing allocation patterns with and without the tensor pool.
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
-use god_gragh::tensor::dense::DenseTensor;
-use god_gragh::tensor::pool::{PoolConfig, TensorPool};
+use god_graph::tensor::dense::DenseTensor;
+use god_graph::tensor::pool::{PoolConfig, TensorPool};
 
 /// Baseline: Iterative allocation without pool (simulates typical GNN/Transformer training)
 fn bench_iterative_allocation_without_pool(c: &mut Criterion) {

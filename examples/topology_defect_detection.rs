@@ -22,7 +22,7 @@
 
 #[cfg(feature = "tensor")]
 mod topology_defect_detection {
-    use god_gragh::tensor::differentiable::{DifferentiableGraph, GradientConfig};
+    use god_graph::tensor::differentiable::{DifferentiableGraph, GradientConfig};
     use std::collections::HashMap;
 
     /// Represents a detected topology defect
@@ -35,7 +35,6 @@ mod topology_defect_detection {
     }
 
     #[derive(Debug, Clone)]
-    #[allow(dead_code)]
     pub enum DefectType {
         MissingConnection,
         RedundantConnection,
@@ -691,7 +690,7 @@ mod tests {
     #[cfg(feature = "tensor")]
     #[test]
     fn test_topology_defect_compiles() {
-        use god_gragh::tensor::differentiable::DifferentiableGraph;
+        use god_graph::tensor::differentiable::DifferentiableGraph;
 
         let _graph = DifferentiableGraph::<Vec<f64>>::new(4);
     }

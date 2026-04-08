@@ -50,8 +50,8 @@
 use std::collections::HashMap;
 
 use crate::errors::{GraphError, GraphResult};
-use crate::graph::traits::{GraphBase, GraphOps, GraphQuery};
 use crate::graph::Graph;
+use crate::graph::traits::{GraphBase, GraphOps, GraphQuery};
 use crate::tensor::dense::DenseTensor;
 use crate::tensor::differentiable::GradientConfig;
 use crate::tensor::traits::TensorBase;
@@ -169,7 +169,7 @@ impl EdgeData {
     /// 更新权重
     pub fn update_weight(&mut self, gradient: &DenseTensor, learning_rate: f64) {
         use crate::tensor::traits::TensorOps;
-
+        
         // 简单的 SGD 更新：w = w - lr * grad
         let lr_tensor = DenseTensor::scalar(learning_rate);
         let scaled_grad = gradient.mul(&lr_tensor);
@@ -269,50 +269,64 @@ impl UnifiedGraph {
     }
 
     /// 获取边数据（通过边索引）
-    pub fn get_edge_data(&self, edge_idx: usize) -> Option<&EdgeData> {
+    ///
+    /// # Arguments
+    ///
+    /// * `edge_idx` - 边索引
+    ///
+    /// # Returns
+    ///
+    /// 如果边存在，返回边数据引用；否则返回错误
+    pub fn get_edge_data(&self, edge_idx: usize) -> Result<&EdgeData, GraphError> {
         use crate::edge::EdgeIndex;
 
         let idx = EdgeIndex::new(edge_idx, 0);
-        self.graph.get_edge(idx).ok()
+        self.graph.get_edge(idx)
     }
 
     /// 获取边数据（可变引用，使用 IndexMut trait）
-    pub fn get_edge_data_mut(&mut self, edge_idx: usize) -> Option<&mut EdgeData> {
+    ///
+    /// # Arguments
+    ///
+    /// * `edge_idx` - 边索引
+    ///
+    /// # Returns
+    ///
+    /// 如果边存在，返回边数据可变引用；否则返回错误
+    pub fn get_edge_data_mut(&mut self, edge_idx: usize) -> Result<&mut EdgeData, GraphError> {
         use crate::edge::EdgeIndex;
 
         let idx = EdgeIndex::new(edge_idx, 0);
 
         // 检查边是否存在
-        if self.graph.get_edge(idx).is_err() {
-            return None;
-        }
+        self.graph.get_edge(idx)?;
 
         // 使用 IndexMut trait 获取可变引用
-        Some(&mut self.graph[idx])
+        Ok(&mut self.graph[idx])
     }
 
     /// 前向传播
     ///
     /// 通过图结构计算输出
     pub fn forward(&mut self, input: &DenseTensor) -> GraphResult<DenseTensor> {
-        use crate::algorithms::traversal::topological_sort;
         use crate::tensor::traits::TensorOps;
-
+        use crate::algorithms::traversal::topological_sort;
+        
         // 按拓扑序执行节点
         let sorted = topological_sort(&self.graph)
             .map_err(|e| GraphError::InvalidFormat(format!("Topological sort failed: {}", e)))?;
-
+        
         let mut current = input.clone();
-
+        
         for node_idx in sorted {
             // 获取入边（使用 incident_edges）
             let incoming: Vec<_> = self.graph.incident_edges(node_idx).collect();
-
+            
             if incoming.is_empty() {
                 // 输入节点
                 continue;
             }
-
+            
             // 聚合入边信息（简单求和）
             let mut aggregated = DenseTensor::zeros(current.shape().to_vec());
             for edge_idx in incoming {
@@ -325,18 +339,18 @@ impl UnifiedGraph {
                     }
                 }
             }
-
+            
             // 应用激活（ReLU）
             current = aggregated.relu();
         }
-
+        
         Ok(current)
     }
 
     /// 计算损失（简单的 MSE 损失示例）
     pub fn compute_loss(&mut self, target: &DenseTensor, output: &DenseTensor) -> DenseTensor {
         use crate::tensor::traits::TensorOps;
-
+        
         // MSE: (output - target)^2
         let diff = output.sub(target);
         diff.mul(&diff)
@@ -350,10 +364,7 @@ impl UnifiedGraph {
     }
 
     /// 计算结构梯度（基于边存在概率的梯度）
-    pub fn compute_structure_gradients(
-        &mut self,
-        _loss: &DenseTensor,
-    ) -> GraphResult<HashMap<(usize, usize), f64>> {
+    pub fn compute_structure_gradients(&mut self, _loss: &DenseTensor) -> GraphResult<HashMap<(usize, usize), f64>> {
         let mut gradients = HashMap::new();
 
         // 收集所有边索引
@@ -362,7 +373,7 @@ impl UnifiedGraph {
         for edge_idx in edge_indices {
             let edge_idx_val = edge_idx.index();
             // 获取边数据的克隆（避免借用问题）
-            let edge_data_clone = self.get_edge_data(edge_idx_val).cloned();
+            let edge_data_clone = self.get_edge_data(edge_idx_val).cloned().ok();
 
             if let Some(edge_data) = edge_data_clone {
                 // 简化：使用边权重的梯度范数作为结构梯度
@@ -391,19 +402,19 @@ impl UnifiedGraph {
     pub fn joint_optimization_step(&mut self, loss: &DenseTensor) -> GraphResult<()> {
         // 1. 反向传播（简化版本）
         self.backward(loss)?;
-
+        
         // 2. 计算结构梯度
         let structure_grads = self.compute_structure_gradients(loss)?;
-
+        
         // 3. 更新边参数（先克隆配置避免借用冲突）
         let edge_indices: Vec<_> = self.graph.edges().map(|e| e.index).collect();
         let temperature = self.config.gradient_config.temperature;
         let structure_lr = self.config.structure_learning_rate;
         let discretization_threshold = self.config.discretization_threshold;
-
+        
         for edge_idx in edge_indices {
             let edge_idx_val = edge_idx.index();
-            if let Some(edge_data) = self.get_edge_data_mut(edge_idx_val) {
+            if let Ok(edge_data) = self.get_edge_data_mut(edge_idx_val) {
                 // 更新结构 logits
                 if let Some(&struct_grad) = structure_grads.get(&(edge_idx_val, 0)) {
                     edge_data.update_logits(struct_grad, structure_lr);
@@ -416,10 +427,10 @@ impl UnifiedGraph {
                 edge_data.discretize(temperature, discretization_threshold);
             }
         }
-
+        
         // 4. 剪枝弱边（存在概率低于阈值的边）
         self.prune_weak_edges()?;
-
+        
         Ok(())
     }
 
@@ -429,21 +440,19 @@ impl UnifiedGraph {
     pub fn prune_weak_edges(&mut self) -> GraphResult<usize> {
         let mut pruned = 0;
         let threshold = self.config.discretization_threshold;
-
+        
         // 收集要删除的边索引
-        let edges_to_remove: Vec<_> = self
-            .graph
-            .edges()
+        let edges_to_remove: Vec<_> = self.graph.edges()
             .filter(|e| !e.data.exists && e.data.existence_prob < threshold)
             .map(|e| e.index)
             .collect();
-
+        
         // 删除边
         for edge_idx in edges_to_remove {
             let _ = self.graph.remove_edge(edge_idx);
             pruned += 1;
         }
-
+        
         Ok(pruned)
     }
 
@@ -451,16 +460,16 @@ impl UnifiedGraph {
     pub fn discretize(&mut self) -> GraphResult<()> {
         let temperature = self.config.gradient_config.temperature;
         let threshold = self.config.discretization_threshold;
-
+        
         let edge_indices: Vec<_> = self.graph.edges().map(|e| e.index).collect();
-
+        
         for edge_idx in edge_indices {
             let edge_idx_val = edge_idx.index();
-            if let Some(edge_data) = self.get_edge_data_mut(edge_idx_val) {
+            if let Ok(edge_data) = self.get_edge_data_mut(edge_idx_val) {
                 edge_data.discretize(temperature, threshold);
             }
         }
-
+        
         Ok(())
     }
 
@@ -557,10 +566,11 @@ mod tests {
 
         // 添加边（权重形状需要匹配：[out_features, in_features]）
         // 对于输入 [1, 3]，权重应该是 [3, 3] 才能进行矩阵乘法
-        let weight = DenseTensor::from_vec(
-            vec![0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9],
-            vec![3, 3],
-        );
+        let weight = DenseTensor::from_vec(vec![
+            0.1, 0.2, 0.3,
+            0.4, 0.5, 0.6,
+            0.7, 0.8, 0.9,
+        ], vec![3, 3]);
         let _edge = graph.add_edge(_n1, _n2, weight, 0.8).unwrap();
 
         let initial_edges = graph.edge_count();

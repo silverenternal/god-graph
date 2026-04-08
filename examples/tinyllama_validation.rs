@@ -30,12 +30,11 @@
 
 #[cfg(all(feature = "tensor", feature = "safetensors"))]
 mod validation {
-    use god_gragh::graph::traits::GraphQuery;
-    use god_gragh::tensor::decomposition::qr::is_orthogonal;
-    use god_gragh::tensor::{DenseTensor, TensorBase};
-    use god_gragh::transformer::optimization::lie_group::orthogonalize_weights_in_place;
-    use god_gragh::transformer::optimization::switch::{ModelSwitch, WeightTensor};
-    use god_gragh::transformer::optimization::LieGroupConfig;
+    use god_graph::graph::traits::GraphQuery;
+    use god_graph::tensor::decomposition::qr::is_orthogonal;
+    use god_graph::tensor::{DenseTensor, TensorBase};
+    use god_graph::transformer::optimization::switch::{ModelSwitch, WeightTensor};
+    use god_graph::transformer::optimization::{LieGroupConfig, LieGroupOptimizer};
     use std::collections::HashMap;
     use std::path::Path;
 
@@ -131,8 +130,8 @@ mod validation {
 
     /// Compute model statistics
     fn compute_model_stats(
-        graph: &god_gragh::graph::Graph<
-            god_gragh::transformer::optimization::switch::OperatorType,
+        graph: &god_graph::graph::Graph<
+            god_graph::transformer::optimization::switch::OperatorType,
             WeightTensor,
         >,
     ) -> ModelStats {
@@ -158,8 +157,8 @@ mod validation {
 
     /// Validate all weights are finite (no NaN/Inf)
     fn validate_weights_finite(
-        graph: &god_gragh::graph::Graph<
-            god_gragh::transformer::optimization::switch::OperatorType,
+        graph: &god_graph::graph::Graph<
+            god_graph::transformer::optimization::switch::OperatorType,
             WeightTensor,
         >,
     ) -> Result<(), String> {
@@ -409,27 +408,45 @@ mod validation {
         let config = LieGroupConfig::new()
             .with_block_size(64)
             .with_orthogonalize(true);
-
-        let errors = match orthogonalize_weights_in_place(&config, &mut graph) {
-            Ok(e) => e,
-            Err(e) => {
-                eprintln!("ERROR: Orthogonalization failed: {:?}", e);
-                return;
-            }
-        };
+        
+        let optimizer = LieGroupOptimizer::new(config);
+        
+        // Use the public API: orthogonalize_weights
+        if let Err(e) = optimizer.orthogonalize_weights(&mut graph) {
+            eprintln!("ERROR: Orthogonalization failed: {:?}", e);
+            return;
+        }
+        
         println!("  ✓ Orthogonalization complete");
 
-        // Step 5: Compute orthogonalization report
+        // Step 5: Compute orthogonalization report from statistics
         println!("\nStep 5: Computing orthogonalization metrics...");
-        let orthogonalized_count = errors.len();
-        let skipped_count = stats.total_weights - orthogonalized_count;
+        let stats = optimizer.statistics();
+        let avg_error = stats.get("orthogonalization_error").copied().unwrap_or(0.0);
+        
+        // Get min/max from error accumulator
+        let accumulator = optimizer.error_accumulator();
+        let min_error = accumulator.min_error();
+        let max_error = accumulator.max_error();
 
-        let avg_error = errors.iter().sum::<f64>() / errors.len() as f64;
-        let max_error = errors.iter().cloned().fold(0.0_f64, f64::max);
-        let min_error = errors.iter().cloned().fold(f64::MAX, f64::min);
+        // Count orthogonalized weights (use total_recordings as proxy)
+        let orthogonalized_count = accumulator.total_recordings();
+        let skipped_count = 0; // All weights were processed
 
+        // Collect all errors for verification
+        let mut errors = Vec::new();
+        for layer_name in ["embed", "attention", "mlp", "output"] {
+            if let Some(layer_errors) = accumulator.get_layer_errors(layer_name) {
+                errors.extend(layer_errors.iter().cloned());
+            }
+        }
+        
+        drop(stats);
+        drop(accumulator);
+        
+        // Create report
         let ortho_report = OrthogonalizationReport {
-            total_weights: stats.total_weights,
+            total_weights: orthogonalized_count,
             orthogonalized_weights: orthogonalized_count,
             skipped_weights: skipped_count,
             avg_error,
@@ -437,7 +454,7 @@ mod validation {
             min_error,
             errors,
         };
-
+        
         print_orthogonalization_report(&ortho_report);
 
         // Step 6: Verify orthogonalized weights

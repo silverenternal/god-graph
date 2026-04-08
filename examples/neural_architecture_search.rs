@@ -27,14 +27,15 @@
 //! - **Operations**: Conv3x3, Conv5x5, MaxPool, AvgPool, Skip, etc.
 
 #[cfg(feature = "tensor")]
-#[allow(clippy::needless_range_loop, clippy::map_unwrap_or)]
 mod neural_architecture_search {
-    use god_gragh::tensor::differentiable::{DifferentiableGraph, GradientConfig};
+    #[allow(unused_imports)]
+    use god_graph::tensor::differentiable::{
+        DifferentiableGraph, GradientConfig, GraphTransformer, ThresholdEditPolicy,
+    };
     use std::collections::HashMap;
 
     /// Operation types in the search space
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-    #[allow(dead_code)]
     pub enum OperationType {
         Conv3x3,
         Conv5x5,
@@ -58,7 +59,6 @@ mod neural_architecture_search {
             }
         }
 
-        #[allow(dead_code)]
         pub fn latency_cost(&self) -> f64 {
             // Relative latency cost (normalized)
             match self {
@@ -346,10 +346,9 @@ mod neural_architecture_search {
 
         // Copy architecture from Task A
         let prob_matrix_a = graph_a.get_probability_matrix();
-        for i in 0..5 {
-            for j in (i + 1)..5 {
-                let transferred_prob = prob_matrix_a[i][j];
-                graph_b.add_learnable_edge(i, j, transferred_prob);
+        for (i, row) in prob_matrix_a.iter().enumerate().take(5) {
+            for (j, &prob) in row.iter().enumerate().skip(i + 1).take(5 - i - 1) {
+                graph_b.add_learnable_edge(i, j, prob);
             }
         }
 
@@ -419,9 +418,14 @@ mod neural_architecture_search {
 
         // Transfer learned architecture
         let prob_matrix = graph.get_probability_matrix();
-        for i in 0..initial_nodes {
-            for j in (i + 1)..initial_nodes {
-                new_graph.add_learnable_edge(i, j, prob_matrix[i][j]);
+        for (i, row) in prob_matrix.iter().enumerate().take(initial_nodes) {
+            for (j, &prob) in row
+                .iter()
+                .enumerate()
+                .skip(i + 1)
+                .take(initial_nodes - i - 1)
+            {
+                new_graph.add_learnable_edge(i, j, prob);
             }
         }
 
@@ -584,8 +588,8 @@ mod neural_architecture_search {
             while let Some((node, depth)) = queue.pop() {
                 max_depth = max_depth.max(depth);
 
-                for next in 0..num_nodes {
-                    if !visited[next] && prob_matrix[node].get(next).is_some_and(|&p| p > 0.5) {
+                for (next, &prob) in prob_matrix[node].iter().enumerate() {
+                    if !visited[next] && prob > 0.5 {
                         visited[next] = true;
                         queue.push((next, depth + 1));
                     }
@@ -679,9 +683,8 @@ mod neural_architecture_search {
         println!();
 
         // Print connections
-        for i in 0..num_nodes {
-            for j in (i + 1)..num_nodes {
-                let prob = prob_matrix[i][j];
+        for (i, row) in prob_matrix.iter().enumerate().take(num_nodes) {
+            for (j, &prob) in row.iter().enumerate().skip(i + 1).take(num_nodes - i - 1) {
                 if prob > 0.5 {
                     let style = if prob > 0.8 { "═══" } else { "---" };
                     println!("  {}{}{}", style, style, style);
@@ -716,7 +719,7 @@ mod tests {
     #[cfg(feature = "tensor")]
     #[test]
     fn test_nas_compiles() {
-        use god_gragh::tensor::differentiable::DifferentiableGraph;
+        use god_graph::tensor::differentiable::DifferentiableGraph;
 
         let _graph = DifferentiableGraph::<Vec<f64>>::new(4);
     }

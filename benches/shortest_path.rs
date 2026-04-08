@@ -1,9 +1,9 @@
 //! 最短路径算法性能基准测试
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
-use god_gragh::algorithms::shortest_path::{astar, bellman_ford, dijkstra};
-use god_gragh::graph::traits::{GraphOps, GraphQuery};
-use god_gragh::graph::Graph;
+use god_graph::algorithms::shortest_path::{astar, bellman_ford, dijkstra};
+use god_graph::graph::traits::{GraphOps, GraphQuery};
+use god_graph::graph::Graph;
 
 fn create_weighted_graph(size: usize) -> Graph<usize, f64> {
     let mut graph: Graph<usize, f64> = Graph::with_capacity(size, size * 3);
@@ -105,7 +105,7 @@ fn bench_astar(c: &mut Criterion) {
                 let goal = nodes[nodes.len() - 1];
 
                 // 曼哈顿距离启发式
-                let heuristic = move |node: god_gragh::node::NodeIndex| -> f64 {
+                let heuristic = move |node: god_graph::node::NodeIndex| -> f64 {
                     let idx = node.index();
                     let row = idx / cols;
                     let col = idx % cols;

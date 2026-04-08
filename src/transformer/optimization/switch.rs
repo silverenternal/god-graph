@@ -37,31 +37,35 @@
 //! # fn main() {}
 //! ```
 
-#[cfg(feature = "safetensors")]
-use crate::errors::GraphError;
 use crate::errors::GraphResult;
 use crate::graph::traits::{GraphBase, GraphQuery};
 use crate::graph::Graph;
 use smallvec::SmallVec;
 use std::collections::HashMap;
-#[cfg(feature = "safetensors")]
-use std::path::Path;
 
 /// Operator types for LLM computation graph nodes
-#[allow(missing_docs)]
 #[derive(Debug, Clone, PartialEq)]
 pub enum OperatorType {
     /// Multi-head attention operator
-    Attention { num_heads: usize, hidden_dim: usize },
+    Attention {
+        num_heads: usize,
+        hidden_dim: usize,
+    },
     /// Feed-forward network (MLP)
     MLP {
         hidden_dim: usize,
         activation: String,
     },
     /// Layer normalization
-    Norm { norm_type: String, eps: f64 },
+    Norm {
+        norm_type: String,
+        eps: f64,
+    },
     /// Embedding lookup
-    Embedding { vocab_size: usize, embed_dim: usize },
+    Embedding {
+        vocab_size: usize,
+        embed_dim: usize,
+    },
     /// Linear projection
     Linear {
         in_features: usize,
@@ -70,7 +74,9 @@ pub enum OperatorType {
     /// Residual connection (identity)
     Residual,
     /// Custom operator
-    Custom { name: String },
+    Custom {
+        name: String,
+    },
 }
 
 /// 64-byte aligned weight tensor with stride support for efficient N-dimensional access
@@ -234,7 +240,7 @@ impl WeightTensor {
             return None;
         }
 
-        for (&idx, &dim) in indices.iter().zip(self.shape.iter()) {
+        for (_i, (&idx, &dim)) in indices.iter().zip(self.shape.iter()).enumerate() {
             if idx >= dim {
                 return None;
             }
@@ -262,7 +268,7 @@ impl WeightTensor {
             return false;
         }
 
-        for (&idx, &dim) in indices.iter().zip(self.shape.iter()) {
+        for (_i, (&idx, &dim)) in indices.iter().zip(self.shape.iter()).enumerate() {
             if idx >= dim {
                 return false;
             }
@@ -378,9 +384,7 @@ impl ModelSwitch {
     ///
     /// Returns an error if the file cannot be read or parsed
     #[cfg(feature = "safetensors")]
-    pub fn load_from_safetensors<P: AsRef<Path>>(
-        path: P,
-    ) -> GraphResult<Graph<OperatorType, WeightTensor>> {
+    pub fn load_from_safetensors<P: AsRef<Path>>(path: P) -> GraphResult<Graph<OperatorType, WeightTensor>> {
         use safetensors::SafeTensors;
         use std::fs::File;
         use std::io::Read;
@@ -391,9 +395,8 @@ impl ModelSwitch {
         file.read_to_end(&mut buffer)
             .map_err(|e| GraphError::IoError(format!("Failed to read file: {}", e)))?;
 
-        let safetensors = SafeTensors::deserialize(&buffer).map_err(|e| {
-            GraphError::InvalidFormat(format!("Failed to deserialize safetensors: {}", e))
-        })?;
+        let safetensors = SafeTensors::deserialize(&buffer)
+            .map_err(|e| GraphError::InvalidFormat(format!("Failed to deserialize safetensors: {}", e)))?;
 
         let mut graph = Graph::<OperatorType, WeightTensor>::directed();
 
@@ -411,29 +414,28 @@ impl ModelSwitch {
                     // Use try_cast_slice for unaligned data, with manual fallback
                     match bytemuck::try_cast_slice::<u8, f32>(slice) {
                         Ok(f32_data) => f32_data.iter().map(|&x| x as f64).collect(),
-                        Err(_) => slice
-                            .chunks_exact(4)
-                            .map(|chunk| {
-                                let bytes: [u8; 4] = [chunk[0], chunk[1], chunk[2], chunk[3]];
-                                f32::from_le_bytes(bytes) as f64
-                            })
-                            .collect(),
+                        Err(_) => {
+                            slice.chunks_exact(4)
+                                .map(|chunk| {
+                                    let bytes: [u8; 4] = [chunk[0], chunk[1], chunk[2], chunk[3]];
+                                    f32::from_le_bytes(bytes) as f64
+                                })
+                                .collect()
+                        }
                     }
                 }
                 safetensors::Dtype::F64 => {
                     let slice = tensor_view.data();
                     match bytemuck::try_cast_slice::<u8, f64>(slice) {
                         Ok(f64_data) => f64_data.to_vec(),
-                        Err(_) => slice
-                            .chunks_exact(8)
-                            .map(|chunk| {
-                                let bytes: [u8; 8] = [
-                                    chunk[0], chunk[1], chunk[2], chunk[3], chunk[4], chunk[5],
-                                    chunk[6], chunk[7],
-                                ];
-                                f64::from_le_bytes(bytes)
-                            })
-                            .collect(),
+                        Err(_) => {
+                            slice.chunks_exact(8)
+                                .map(|chunk| {
+                                    let bytes: [u8; 8] = [chunk[0], chunk[1], chunk[2], chunk[3], chunk[4], chunk[5], chunk[6], chunk[7]];
+                                    f64::from_le_bytes(bytes)
+                                })
+                                .collect()
+                        }
                     }
                 }
                 safetensors::Dtype::F16 => {
@@ -446,10 +448,9 @@ impl ModelSwitch {
                     f16_data.iter().map(|x| x.to_f32() as f64).collect()
                 }
                 _ => {
-                    return Err(GraphError::InvalidFormat(format!(
-                        "Unsupported dtype: {:?}",
-                        dtype
-                    )));
+                    return Err(GraphError::InvalidFormat(
+                        format!("Unsupported dtype: {:?}", dtype)
+                    ));
                 }
             };
 
@@ -489,33 +490,39 @@ impl ModelSwitch {
         graph: &Graph<OperatorType, WeightTensor>,
         path: P,
     ) -> GraphResult<()> {
-        use safetensors::tensor::{Dtype, TensorView};
         use std::collections::BTreeMap;
+        use safetensors::tensor::{TensorView, Dtype};
 
         // Collect all tensor data first (owned data)
         let mut tensor_data: BTreeMap<String, (Vec<u8>, Vec<usize>)> = BTreeMap::new();
-
+        
         for edge_ref in graph.edges() {
             let weight = edge_ref.data();
-
+            
             // Convert f64 data back to F32 for storage (most common dtype)
-            let data_f32: Vec<f32> = weight.data.iter().map(|&x| x as f32).collect();
-
-            let byte_data: Vec<u8> = data_f32
-                .iter()
+            let data_f32: Vec<f32> = weight.data.iter()
+                .map(|&x| x as f32)
+                .collect();
+            
+            let byte_data: Vec<u8> = data_f32.iter()
                 .flat_map(|&x| x.to_le_bytes().to_vec())
                 .collect();
-
-            tensor_data.insert(weight.name.clone(), (byte_data, weight.shape.to_vec()));
+            
+            tensor_data.insert(
+                weight.name.clone(),
+                (byte_data, weight.shape.to_vec()),
+            );
         }
 
         // Create TensorViews - these borrow from tensor_data
         let mut tensors: BTreeMap<String, TensorView> = BTreeMap::new();
         for (name, (bytes, shape)) in &tensor_data {
-            let tensor_view = TensorView::new(Dtype::F32, shape.clone(), bytes).map_err(|e| {
-                GraphError::InvalidFormat(format!("Failed to create tensor view: {}", e))
-            })?;
-
+            let tensor_view = TensorView::new(
+                Dtype::F32,
+                shape.clone(),
+                bytes,
+            ).map_err(|e| GraphError::InvalidFormat(format!("Failed to create tensor view: {}", e)))?;
+            
             tensors.insert(name.clone(), tensor_view);
         }
 
@@ -564,10 +571,7 @@ impl ModelSwitch {
         // Check connected components
         let components = connected_components(graph);
         if components.len() > 1 {
-            issues.push(format!(
-                "Graph has {} disconnected components",
-                components.len()
-            ));
+            issues.push(format!("Graph has {} disconnected components", components.len()));
         }
 
         // Check if DAG (for feedforward models)
@@ -617,19 +621,21 @@ impl ModelSwitch {
         let mut tensor_count = 0;
 
         // Build a map of original weights by name
-        let original_weights: HashMap<String, &WeightTensor> = original
-            .edges()
+        let original_weights: HashMap<String, &WeightTensor> = original.edges()
             .map(|e| (e.data().name.clone(), e.data()))
             .collect();
 
         // Compare weights edge by edge
         for edge_ref in modified.edges() {
             let modified_weight = edge_ref.data();
-
+            
             if let Some(&original_weight) = original_weights.get(&modified_weight.name) {
                 // Compare shapes first
                 if original_weight.shape != modified_weight.shape {
-                    per_tensor_diff.insert(modified_weight.name.clone(), f64::MAX);
+                    per_tensor_diff.insert(
+                        modified_weight.name.clone(),
+                        f64::MAX,
+                    );
                     max_l2_diff = f64::MAX;
                     tensor_count += 1;
                     continue;
@@ -638,7 +644,7 @@ impl ModelSwitch {
                 // Calculate L2 difference
                 let l2_diff = original_weight.l2_diff(modified_weight);
                 per_tensor_diff.insert(modified_weight.name.clone(), l2_diff);
-
+                
                 if l2_diff > max_l2_diff {
                     max_l2_diff = l2_diff;
                 }
@@ -646,13 +652,16 @@ impl ModelSwitch {
                 tensor_count += 1;
             } else {
                 // Weight not found in original
-                per_tensor_diff.insert(modified_weight.name.clone(), f64::MAX);
+                per_tensor_diff.insert(
+                    modified_weight.name.clone(),
+                    f64::MAX,
+                );
                 tensor_count += 1;
             }
         }
 
         // Check for missing weights in modified graph
-        for name in original_weights.keys() {
+        for (name, _) in &original_weights {
             if !per_tensor_diff.contains_key(name) {
                 per_tensor_diff.insert(name.clone(), f64::MAX);
                 tensor_count += 1;
@@ -674,10 +683,9 @@ impl ModelSwitch {
     }
 
     /// Infer operator type from tensor name
-    #[cfg(any(feature = "safetensors", test))]
     fn infer_operator_from_name(name: &str) -> OperatorType {
         let name_lower = name.to_lowercase();
-
+        
         if name_lower.contains("attention") || name_lower.contains("attn") {
             OperatorType::Attention {
                 num_heads: 32,
@@ -717,15 +725,27 @@ mod tests {
 
     #[test]
     fn test_weight_tensor_l2_norm() {
-        let tensor = WeightTensor::new("test".to_string(), vec![1.0, 2.0, 3.0, 4.0], vec![2, 2]);
+        let tensor = WeightTensor::new(
+            "test".to_string(),
+            vec![1.0, 2.0, 3.0, 4.0],
+            vec![2, 2],
+        );
         let norm = tensor.l2_norm();
         assert!((norm - 5.477).abs() < 0.001);
     }
 
     #[test]
     fn test_weight_tensor_l2_diff() {
-        let t1 = WeightTensor::new("test1".to_string(), vec![1.0, 2.0, 3.0, 4.0], vec![2, 2]);
-        let t2 = WeightTensor::new("test2".to_string(), vec![1.1, 2.1, 3.1, 4.1], vec![2, 2]);
+        let t1 = WeightTensor::new(
+            "test1".to_string(),
+            vec![1.0, 2.0, 3.0, 4.0],
+            vec![2, 2],
+        );
+        let t2 = WeightTensor::new(
+            "test2".to_string(),
+            vec![1.1, 2.1, 3.1, 4.1],
+            vec![2, 2],
+        );
         let diff = t1.l2_diff(&t2);
         assert!(diff < 0.5);
     }
@@ -737,12 +757,12 @@ mod tests {
             vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
             vec![2, 3],
         );
-
+        
         // Reshape from [2, 3] to [3, 2]
         tensor.reshape_mut(vec![3, 2]).unwrap();
         assert_eq!(tensor.shape(), &[3, 2]);
         assert_eq!(tensor.strides(), &[2, 1]);
-
+        
         // Try invalid reshape
         let result = tensor.reshape_mut(vec![2, 2]);
         assert!(result.is_err());
@@ -755,7 +775,7 @@ mod tests {
             vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
             vec![2, 3],
         );
-
+        
         // Test get with stride-based indexing
         assert_eq!(tensor.get(&[0, 0]), Some(1.0));
         assert_eq!(tensor.get(&[0, 1]), Some(2.0));
@@ -763,7 +783,7 @@ mod tests {
         assert_eq!(tensor.get(&[1, 0]), Some(4.0));
         assert_eq!(tensor.get(&[1, 1]), Some(5.0));
         assert_eq!(tensor.get(&[1, 2]), Some(6.0));
-
+        
         // Test out of bounds
         assert_eq!(tensor.get(&[2, 0]), None);
         assert_eq!(tensor.get(&[0, 3]), None);
@@ -771,18 +791,21 @@ mod tests {
 
     #[test]
     fn test_weight_tensor_set() {
-        let mut tensor =
-            WeightTensor::new("test".to_string(), vec![1.0, 2.0, 3.0, 4.0], vec![2, 2]);
-
+        let mut tensor = WeightTensor::new(
+            "test".to_string(),
+            vec![1.0, 2.0, 3.0, 4.0],
+            vec![2, 2],
+        );
+        
         // Set values using stride-based indexing
         assert!(tensor.set(&[0, 1], 10.0));
         assert!(tensor.set(&[1, 0], 20.0));
-
+        
         assert_eq!(tensor.get(&[0, 0]), Some(1.0));
         assert_eq!(tensor.get(&[0, 1]), Some(10.0));
         assert_eq!(tensor.get(&[1, 0]), Some(20.0));
         assert_eq!(tensor.get(&[1, 1]), Some(4.0));
-
+        
         // Test out of bounds set
         assert!(!tensor.set(&[2, 0], 100.0));
     }
@@ -794,7 +817,7 @@ mod tests {
             vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
             vec![2, 3],
         );
-
+        
         assert_eq!(tensor.ndim(), 2);
         assert_eq!(tensor.numel(), 6);
     }
@@ -803,13 +826,17 @@ mod tests {
     fn test_weight_tensor_struct_size() {
         // Test that WeightTensor has the expected size
         use std::mem::size_of;
-
+        
         // WeightTensor should be 64-byte aligned due to repr(align(64))
         assert!(size_of::<WeightTensor>() >= 64);
-
+        
         // Create a tensor and verify basic properties
-        let tensor = WeightTensor::new("test".to_string(), vec![1.0; 100], vec![10, 10]);
-
+        let tensor = WeightTensor::new(
+            "test".to_string(),
+            vec![1.0; 100],
+            vec![10, 10],
+        );
+        
         // Verify data length
         assert_eq!(tensor.numel(), 100);
     }
@@ -818,16 +845,16 @@ mod tests {
     fn test_compute_strides() {
         // 1D tensor
         assert_eq!(compute_strides(&[5]), vec![1]);
-
+        
         // 2D tensor (row-major)
         assert_eq!(compute_strides(&[3, 4]), vec![4, 1]);
-
+        
         // 3D tensor
         assert_eq!(compute_strides(&[2, 3, 4]), vec![12, 4, 1]);
-
+        
         // 4D tensor
         assert_eq!(compute_strides(&[2, 3, 4, 5]), vec![60, 20, 5, 1]);
-
+        
         // Empty tensor
         let empty: &[usize] = &[];
         assert_eq!(compute_strides(empty), Vec::<usize>::new());
@@ -928,68 +955,46 @@ mod tests {
             .add_edge(
                 norm_node,
                 norm_node,
-                WeightTensor::new("model.norm.weight".to_string(), vec![1.0; 256], vec![256]),
+                WeightTensor::new(
+                    "model.norm.weight".to_string(),
+                    vec![1.0; 256],
+                    vec![256],
+                ),
             )
             .unwrap();
 
         // Add edges between nodes to create a proper graph structure
-        graph
-            .add_edge(
-                embed_node,
-                attn_node,
-                WeightTensor::new(
-                    "model.embed_to_attn.weight".to_string(),
-                    vec![0.1; 128 * 256],
-                    vec![128, 256],
-                ),
-            )
-            .unwrap();
+        graph.add_edge(embed_node, attn_node, WeightTensor::new(
+            "model.embed_to_attn.weight".to_string(),
+            vec![0.1; 128 * 256],
+            vec![128, 256],
+        )).unwrap();
 
-        graph
-            .add_edge(
-                attn_node,
-                mlp_node,
-                WeightTensor::new(
-                    "model.attn_to_mlp.weight".to_string(),
-                    vec![0.2; 256 * 256],
-                    vec![256, 256],
-                ),
-            )
-            .unwrap();
+        graph.add_edge(attn_node, mlp_node, WeightTensor::new(
+            "model.attn_to_mlp.weight".to_string(),
+            vec![0.2; 256 * 256],
+            vec![256, 256],
+        )).unwrap();
 
-        graph
-            .add_edge(
-                mlp_node,
-                norm_node,
-                WeightTensor::new(
-                    "model.mlp_to_norm.weight".to_string(),
-                    vec![0.3; 512 * 256],
-                    vec![512, 256],
-                ),
-            )
-            .unwrap();
+        graph.add_edge(mlp_node, norm_node, WeightTensor::new(
+            "model.mlp_to_norm.weight".to_string(),
+            vec![0.3; 512 * 256],
+            vec![512, 256],
+        )).unwrap();
 
         // Create a temporary file path
         let temp_path = PathBuf::from("test_save_to_safetensors_temp.safetensors");
 
         // Save to safetensors
         let save_result = ModelSwitch::save_to_safetensors(&graph, &temp_path);
-        assert!(
-            save_result.is_ok(),
-            "Failed to save to safetensors: {:?}",
-            save_result
-        );
+        assert!(save_result.is_ok(), "Failed to save to safetensors: {:?}", save_result);
 
         // Verify file was created
         assert!(temp_path.exists(), "Safetensors file was not created");
 
         // Load back from safetensors
         let loaded_graph = ModelSwitch::load_from_safetensors(&temp_path);
-        assert!(
-            loaded_graph.is_ok(),
-            "Failed to load from safetensors: {:?}",
-            loaded_graph
-        );
+        assert!(loaded_graph.is_ok(), "Failed to load from safetensors: {:?}", loaded_graph);
         let loaded_graph = loaded_graph.unwrap();
 
         // Note: The current load_from_safetensors implementation creates one node per tensor
@@ -1006,11 +1011,9 @@ mod tests {
         // Verify weights using verify_weights - compare edge data only
         // Since node structure changes, we just verify the weight tensors are preserved
         let diff = ModelSwitch::verify_weights(&graph, &loaded_graph).unwrap();
-        println!(
-            "Save/Load round-trip weight diff: max={:.6e}, avg={:.6e}, count={}",
-            diff.max_l2_diff, diff.avg_l2_diff, diff.tensor_count
-        );
-
+        println!("Save/Load round-trip weight diff: max={:.6e}, avg={:.6e}, count={}", 
+                 diff.max_l2_diff, diff.avg_l2_diff, diff.tensor_count);
+        
         // Allow small floating point errors from F32 conversion
         assert!(
             diff.max_l2_diff < 1e-5,
@@ -1054,20 +1057,17 @@ mod tests {
 
         // Save and load back
         let temp_path = PathBuf::from("test_round_trip_temp.safetensors");
-
+        
         ModelSwitch::save_to_safetensors(&graph, &temp_path).unwrap();
         let loaded_graph = ModelSwitch::load_from_safetensors(&temp_path).unwrap();
 
         // Compare original and loaded weights
         let diff = ModelSwitch::verify_weights(&graph, &loaded_graph).unwrap();
-
+        
         // The conversion F64 -> F32 -> F64 introduces small errors
         // For values in range [0, 64), F32 precision is ~1e-7 to 1e-6
-        println!(
-            "Round-trip L2 diff: max={:.6e}, avg={:.6e}",
-            diff.max_l2_diff, diff.avg_l2_diff
-        );
-
+        println!("Round-trip L2 diff: max={:.6e}, avg={:.6e}", diff.max_l2_diff, diff.avg_l2_diff);
+        
         // Clean up
         let _ = fs::remove_file(&temp_path);
     }

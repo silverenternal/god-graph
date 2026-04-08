@@ -100,6 +100,12 @@ pub enum TensorError {
         /// 错误描述
         message: String,
     },
+
+    /// 矩阵操作错误
+    MatrixError {
+        /// 错误描述
+        message: String,
+    },
 }
 
 impl fmt::Display for TensorError {
@@ -164,6 +170,9 @@ impl fmt::Display for TensorError {
             }
             TensorError::AllocationError { message } => {
                 write!(f, "Allocation error: {}", message)
+            }
+            TensorError::MatrixError { message } => {
+                write!(f, "Matrix error: {}", message)
             }
         }
     }

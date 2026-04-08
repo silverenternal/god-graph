@@ -69,8 +69,8 @@ start model.png
 ### 方法 2：SVG 直接导出
 
 ```rust
-use god_gragh::export::svg::{to_svg, SvgOptions};
-use god_gragh::transformer::optimization::ModelSwitch;
+use god_graph::export::svg::{to_svg, SvgOptions};
+use god_graph::transformer::optimization::ModelSwitch;
 
 // 加载模型
 let graph = ModelSwitch::load_from_safetensors("model.safetensors")?;
@@ -79,7 +79,7 @@ let graph = ModelSwitch::load_from_safetensors("model.safetensors")?;
 let options = SvgOptions::new()
     .with_size(1200, 800)
     .with_node_radius(25.0)
-    .with_layout(god_gragh::export::svg::LayoutAlgorithm::Hierarchical);
+    .with_layout(god_graph::export::svg::LayoutAlgorithm::Hierarchical);
 
 let svg = to_svg(&graph, options);
 std::fs::write("model.svg", svg)?;
@@ -133,8 +133,8 @@ digraph Transformer {
 ### 示例 2：单层细节可视化
 
 ```rust
-use god_gragh::graph::traits::GraphQuery;
-use god_gragh::export::dot::{to_dot_with_options, DotOptions};
+use god_graph::graph::traits::GraphQuery;
+use god_graph::export::dot::{to_dot_with_options, DotOptions};
 
 // 提取单层子图
 let layer_graph = extract_layer(&graph, layer_idx=5);
@@ -156,7 +156,7 @@ std::fs::write("layer_5.dot", dot)?;
 
 ```rust
 // 导出注意力权重矩阵
-use god_gragh::tensor::DenseTensor;
+use god_graph::tensor::DenseTensor;
 
 for edge in graph.edges() {
     let weight = edge.data();
@@ -269,7 +269,7 @@ export_transformer_to_dot(&graph, "after_optimization.dot")?;
 ### 3. 生成报告
 
 ```rust
-use god_gragh::transformer::optimization::ModelSwitch;
+use god_graph::transformer::optimization::ModelSwitch;
 
 let graph = ModelSwitch::load_from_safetensors("model.safetensors")?;
 
@@ -293,7 +293,7 @@ export_transformer_to_dot(&graph, "model_with_report.dot")?;
 ### HTML 交互式导出
 
 ```rust
-use god_gragh::export::html::export_transformer_html;
+use god_graph::export::html::export_transformer_html;
 
 let graph = ModelSwitch::load_from_safetensors("model.safetensors")?;
 export_transformer_html(&graph, "model_visualization.html")?;

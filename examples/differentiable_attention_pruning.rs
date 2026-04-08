@@ -20,15 +20,16 @@
 //! ## 运行命令
 //!
 //! ```bash
-//! cargo run --example differentiable_attention_pruning --features tensor,safetensors
+//! cargo run --example differentiable_attention_pruning --features "tensor,tensor-pool,transformer,safetensors"
 //! ```
+//!
+//! Requires the `tensor`, `tensor-pool`, `transformer`, and `safetensors` features.
 
-#[cfg(all(feature = "tensor", feature = "safetensors"))]
+#[cfg(all(feature = "tensor", feature = "tensor-pool", feature = "transformer", feature = "safetensors"))]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    use god_gragh::graph::traits::{GraphBase, GraphOps, GraphQuery};
-    use god_gragh::tensor::differentiable::{DifferentiableGraph, GradientConfig};
-    use god_gragh::tensor::TensorBase;
-    use god_gragh::transformer::optimization::switch::ModelSwitch;
+    use god_graph::graph::traits::GraphBase;
+    use god_graph::tensor::differentiable::{DifferentiableGraph, GradientConfig};
+    use god_graph::transformer::optimization::switch::ModelSwitch;
 
     println!("=== 可微注意力剪枝示例（真实 TinyLlama 模型）===\n");
 
@@ -200,7 +201,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 /// 获取 TinyLlama 模型路径
-#[allow(dead_code)]
 fn get_tinyllama_model_path() -> Option<String> {
     let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap_or_else(|_| ".".to_string());
 
@@ -219,11 +219,11 @@ fn get_tinyllama_model_path() -> Option<String> {
 }
 
 /// 使用合成数据的简化演示（当真实模型不可用时）
-#[allow(dead_code)]
 fn run_synthetic_demo() {
-    use god_gragh::graph::traits::{GraphBase, GraphOps};
-    use god_gragh::graph::Graph;
-    use god_gragh::tensor::differentiable::{DifferentiableGraph, GradientConfig};
+    use god_graph::graph::Graph;
+    use god_graph::graph::GraphBase;
+    use god_graph::graph::GraphOps;
+    use god_graph::tensor::differentiable::{DifferentiableGraph, GradientConfig};
 
     println!("\n=== 合成数据演示模式 ===\n");
 
@@ -235,7 +235,7 @@ fn run_synthetic_demo() {
     let mut token_nodes = Vec::new();
 
     // 创建 token 节点
-    for _ in 0..n_tokens {
+    for _i in 0..n_tokens {
         let feature = vec![1.0; hidden_dim];
         let node_idx = graph.add_node(feature).unwrap();
         token_nodes.push(node_idx);
@@ -331,7 +331,7 @@ fn run_synthetic_demo() {
         }
 
         // 温度退火
-        diff_graph.set_temperature((0.95_f64).powi(step as i32));
+        diff_graph.set_temperature((0.95_f64).powi(step));
     }
 
     // 最终离散化
@@ -370,10 +370,9 @@ fn run_synthetic_demo() {
     );
 }
 
-#[cfg(not(all(feature = "tensor", feature = "safetensors")))]
+// Fallback main function when required features are not enabled
+#[cfg(not(all(feature = "tensor", feature = "tensor-pool", feature = "transformer", feature = "safetensors")))]
 fn main() {
-    println!("请启用 tensor 和 safetensors 特性运行此示例:");
-    println!(
-        "  cargo run --example differentiable_attention_pruning --features tensor,safetensors"
-    );
+    println!("This example requires the 'tensor', 'tensor-pool', 'transformer', and 'safetensors' features.");
+    println!("Run with: cargo run --example differentiable_attention_pruning --features tensor,tensor-pool,transformer,safetensors");
 }

@@ -4,16 +4,16 @@
 
 #[cfg(feature = "transformer")]
 mod transformer_tests {
-    use god_gragh::tensor::traits::TensorBase;
-    use god_gragh::tensor::DenseTensor;
-    use god_gragh::transformer::batch::BatchData;
-    use god_gragh::transformer::generation::{GenerationConfig, TextGenerator};
-    use god_gragh::transformer::kv_cache::KVCache;
-    use god_gragh::transformer::layers::{FeedForward, MultiHeadAttention, RMSNorm};
-    use god_gragh::transformer::loader::LlamaConfig;
-    use god_gragh::transformer::model::{LlamaDecoderLayer, LlamaModel};
-    use god_gragh::transformer::quantization::{QuantizationConfig, QuantizedTensor};
-    use god_gragh::transformer::sparse_attention::SparseMask;
+    use god_graph::tensor::traits::TensorBase;
+    use god_graph::tensor::DenseTensor;
+    use god_graph::transformer::batch::BatchData;
+    use god_graph::transformer::generation::{GenerationConfig, TextGenerator};
+    use god_graph::transformer::kv_cache::KVCache;
+    use god_graph::transformer::layers::{FeedForward, MultiHeadAttention, RMSNorm};
+    use god_graph::transformer::loader::LlamaConfig;
+    use god_graph::transformer::model::{LlamaDecoderLayer, LlamaModel};
+    use god_graph::transformer::quantization::{QuantizationConfig, QuantizedTensor};
+    use god_graph::transformer::sparse_attention::SparseMask;
 
     /// Test creating and running a small Llama model
     #[test]

@@ -2,14 +2,18 @@
 //!
 //! This test suite validates the error accumulation analysis tool
 //! by testing it with real graph-level tensor operations.
+//!
+//! Requires the `tensor` and `transformer` features.
 
-#[cfg(all(test, feature = "tensor"))]
+#![cfg(all(test, feature = "tensor", feature = "transformer"))]
+
+#[cfg(test)]
 mod tests {
-    use god_gragh::graph::traits::{GraphOps, GraphQuery};
-    use god_gragh::graph::Graph;
-    use god_gragh::transformer::optimization::error_analysis::ErrorAccumulator;
-    use god_gragh::transformer::optimization::switch::{OperatorType, WeightTensor};
-    use god_gragh::transformer::optimization::{LieGroupConfig, LieGroupOptimizer};
+    use god_graph::graph::traits::{GraphOps, GraphQuery};
+    use god_graph::graph::Graph;
+    use god_graph::transformer::optimization::error_analysis::ErrorAccumulator;
+    use god_graph::transformer::optimization::switch::{OperatorType, WeightTensor};
+    use god_graph::transformer::optimization::{LieGroupConfig, LieGroupOptimizer};
 
     /// Test error accumulation during orthogonalization
     #[test]

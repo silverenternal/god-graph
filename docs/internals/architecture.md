@@ -1,7 +1,7 @@
 # God-Graph 架构指南
 
-**版本**: 0.5.0-alpha
-**日期**: 2026-03-28
+**版本**: 0.6.0-alpha
+**日期**: 2026-04-01
 
 ---
 
@@ -33,6 +33,16 @@
 │                     │ - TensorRing    │                       │
 │                     │ - Constraints   │                       │
 │                     └─────────────────┘                       │
+│                                                                  │
+│  ┌──────────────────────────────────────────────────────────┐  │
+│  │              VGI (Virtual Graph Interface)                │  │
+│  │                                                            │  │
+│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐      │  │
+│  │  │ Single      │  │ Distributed │  │ GPU         │      │  │
+│  │  │ Machine     │  │ Cluster     │  │ Accelerator │      │  │
+│  │  │ Backend     │  │ Backend     │  │ Backend     │      │  │
+│  │  └─────────────┘  └─────────────┘  └─────────────┘      │  │
+│  └──────────────────────────────────────────────────────────┘  │
 │                                                                  │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -136,7 +146,7 @@
 
 **代码示例**:
 ```rust
-use god_gragh::transformer::optimization::*;
+use god_graph::transformer::optimization::*;
 
 // 加载
 let mut graph = ModelSwitch::load_from_safetensors("model.safetensors")?;
@@ -167,7 +177,7 @@ editor.solve_constraints()?;
 
 **代码示例**:
 ```rust
-use god_gragh::transformer::optimization::LieGroupOptimizer;
+use god_graph::transformer::optimization::LieGroupOptimizer;
 
 let config = LieGroupConfig::new().with_cayley_transform(true);
 let optimizer = LieGroupOptimizer::new(config);
@@ -193,7 +203,7 @@ optimizer.orthogonalize_weights(&mut graph)?;
 
 **代码示例**:
 ```rust
-use god_gragh::transformer::optimization::TensorRingCompressor;
+use god_graph::transformer::optimization::TensorRingCompressor;
 
 let compressor = TensorRingCompressor::default();
 let report = compressor.compress_graph(&graph)?;
@@ -425,19 +435,68 @@ impl MyDecomposition {
 
 ## 🔮 未来架构演进
 
-### v0.6.0-beta
-- 完善 Model Switch 导出功能
-- 添加稀疏注意力模式
+### v0.6.0-alpha (已发布)
+- ✅ VGI 架构完整实现
+- ✅ 分布式处理框架
+- ✅ 插件生态系统
+- ✅ 文档体系完善（快速开始、教程、API 参考）
+- ✅ 真实模型端到端验证（TinyLlama-1.1B）
 
-### v0.7.0-rc
-- 真实模型端到端验证
-- 性能基准套件
+### v0.7.0-rc (计划中)
+- 🔲 GPU 后端原型（CUDA 支持）
+- 🔲 动态稀疏注意力模式
+- 🔲 Model Switch 导出功能完善
+- 🔲 性能基准套件
+- 🔲 API 稳定化
 
-### v1.0.0-stable
-- API 稳定化
-- 生产环境验证
+### v1.0.0-stable (愿景)
+- 🔲 生产环境验证
+- 🔲 完整文档和示例
+- 🔲 crates.io 正式发布
+- 🔲 社区贡献生态
 
 ---
+
+## 📝 架构决策记录
+
+### 为什么使用桶式邻接表而非 CSR？
+
+**决策**: 采用桶式邻接表（Bucket Adjacency List）而非传统 CSR 格式
+
+**原因**:
+1. **O(1) 增量更新**: CSR 需要 O(V+E) 重建，桶式邻接表支持 O(1) 边插入
+2. **动态图场景**: LLM 拓扑优化需要频繁编辑边结构
+3. **Generation 索引**: 防止 ABA 问题，CSR 难以支持
+
+**权衡**:
+- 空间效率略低于 CSR（每节点一个 Vec 头）
+- 缓存局部性稍差
+
+### 为什么设计 VGI 架构？
+
+**决策**: 引入 Virtual Graph Interface 统一图后端接口
+
+**原因**:
+1. **后端可插拔**: 类似 Linux VFS，支持单机/分布式/GPU 后端
+2. **算法复用**: 一套算法代码，多个后端复用
+3. **第三方扩展**: 第三方可贡献新后端，无需修改核心代码
+
+**权衡**:
+- trait 对象开销约 5-10%
+- 增加架构复杂度
+
+### 为什么 DifferentiableGraph 不用 autograd？
+
+**决策**: DifferentiableGraph 使用手搓梯度计算，而非集成 autograd
+
+**原因**:
+1. **专注架构搜索**: 目标是优化图结构，不是训练权重
+2. **依赖精简**: 避免强制依赖 dfdx/Candle 等重型框架
+3. **灵活性**: 用户可自选 autograd 后端集成
+
+**权衡**:
+- 需要手动实现梯度计算
+- 不支持高阶导数
 
 **联系方式**: silverenternal <3147264070@qq.com>
 **项目地址**: https://github.com/silverenternal/god-graph

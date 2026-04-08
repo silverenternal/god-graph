@@ -8,10 +8,10 @@ use std::collections::HashSet;
 // ============================================
 // god-gragh 导入
 // ============================================
-use god_gragh::algorithms::shortest_path::dijkstra as god_dijkstra;
-use god_gragh::algorithms::traversal::{bfs as god_bfs, dfs as god_dfs};
-use god_gragh::graph::traits::{GraphOps as GodGraphOps, GraphQuery as GodGraphQuery};
-use god_gragh::graph::Graph as GodGraph;
+use god_graph::algorithms::shortest_path::dijkstra as god_dijkstra;
+use god_graph::algorithms::traversal::{bfs as god_bfs, dfs as god_dfs};
+use god_graph::graph::traits::{GraphOps as GodGraphOps, GraphQuery as GodGraphQuery};
+use god_graph::graph::Graph as GodGraph;
 
 // ============================================
 // petgraph 导入

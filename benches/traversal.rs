@@ -1,9 +1,9 @@
 //! 图遍历算法性能基准测试
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
-use god_gragh::algorithms::traversal::{bfs, dfs, tarjan_scc};
-use god_gragh::graph::traits::{GraphOps, GraphQuery};
-use god_gragh::graph::Graph;
+use god_graph::algorithms::traversal::{bfs, dfs, tarjan_scc};
+use god_graph::graph::traits::{GraphOps, GraphQuery};
+use god_graph::graph::Graph;
 
 fn create_linear_graph(size: usize) -> Graph<usize, f64> {
     let mut graph: Graph<usize, f64> = Graph::with_capacity(size, size);

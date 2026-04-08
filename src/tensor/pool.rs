@@ -371,18 +371,36 @@ impl GradientCheckpoint {
     }
 
     /// 获取保存的张量
-    pub fn get(&self, id: usize) -> Option<&DenseTensor> {
-        self.saved_tensors.get(&id)
+    ///
+    /// # Arguments
+    ///
+    /// * `id` - 张量 ID
+    ///
+    /// # Returns
+    ///
+    /// 如果张量存在，返回引用；否则返回错误
+    pub fn get(&self, id: usize) -> Result<&DenseTensor, TensorError> {
+        self.saved_tensors.get(&id).ok_or_else(|| TensorError::MatrixError {
+            message: format!("Tensor with id {} not found in pool", id),
+        })
     }
 
     /// 移除并返回张量
-    pub fn take(&mut self, id: usize) -> Option<DenseTensor> {
-        if let Some(tensor) = self.saved_tensors.remove(&id) {
+    ///
+    /// # Arguments
+    ///
+    /// * `id` - 张量 ID
+    ///
+    /// # Returns
+    ///
+    /// 如果张量存在，返回张量；否则返回错误
+    pub fn take(&mut self, id: usize) -> Result<DenseTensor, TensorError> {
+        self.saved_tensors.remove(&id).ok_or_else(|| TensorError::MatrixError {
+            message: format!("Tensor with id {} not found in pool", id),
+        }).map(|tensor| {
             self.memory_used -= tensor.nbytes();
-            Some(tensor)
-        } else {
-            None
-        }
+            tensor
+        })
     }
 
     /// 清除所有保存的张量

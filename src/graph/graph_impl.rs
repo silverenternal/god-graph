@@ -158,6 +158,9 @@ impl<'a> Iterator for AdjBucketIter<'a> {
 
                 let prefetch_pos = self.pos + 4;
                 if prefetch_pos < self.bucket.neighbors.len() {
+                    // SAFETY: `_mm_prefetch` is a CPU hint instruction that doesn't modify memory.
+                    // Pointers are derived from Vec which guarantees validity.
+                    // Bounds are checked before this block (prefetch_pos < len).
                     unsafe {
                         _mm_prefetch(
                             self.bucket.neighbors.as_ptr().add(prefetch_pos) as *const i8,

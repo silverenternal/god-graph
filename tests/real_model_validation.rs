@@ -13,18 +13,23 @@
 //! ```
 //!
 //! The model will be stored in the `models/` directory.
+//!
+//! Requires the `tensor`, `transformer`, and `safetensors` features.
 
-#[cfg(all(test, feature = "safetensors"))]
+#![cfg(all(test, feature = "tensor", feature = "transformer", feature = "safetensors"))]
+
+#[cfg(test)]
 mod tests {
-    use god_gragh::graph::traits::{GraphBase, GraphOps, GraphQuery};
-    use god_gragh::tensor::decomposition::qr::is_orthogonal;
-    use god_gragh::tensor::DenseTensor;
-    use god_gragh::tensor::TensorBase;
-    use god_gragh::transformer::optimization::lie_group::orthogonalize_weights_in_place;
-    use god_gragh::transformer::optimization::switch::{ModelSwitch, OperatorType, WeightTensor};
-    use god_gragh::transformer::optimization::{
-        CompressionConfig, LieGroupConfig, TensorRingCompressor,
-    };
+    use god_graph::graph::traits::{GraphBase, GraphQuery};
+    use god_graph::tensor::decomposition::qr::is_orthogonal;
+    #[allow(unused_imports)]
+    use god_graph::tensor::DenseTensor;
+    #[allow(unused_imports)]
+    use god_graph::tensor::TensorBase;
+    use god_graph::transformer::optimization::lie_group::LieGroupOptimizer;
+    #[allow(unused_imports)]
+    use god_graph::transformer::optimization::switch::{ModelSwitch, OperatorType, WeightTensor};
+    use god_graph::transformer::optimization::LieGroupConfig;
 
     /// Get the path to the TinyLlama model directory
     fn get_tinyllama_model_path() -> Option<String> {
@@ -130,8 +135,12 @@ mod tests {
             .with_block_size(64)
             .with_orthogonalize(true);
 
-        let errors = orthogonalize_weights_in_place(&config, &mut graph)
+        let optimizer = LieGroupOptimizer::new(config);
+        optimizer.orthogonalize_weights(&mut graph)
             .expect("Failed to orthogonalize weights");
+
+        // Compute orthogonalization statistics
+        let errors: Vec<f64> = optimizer.error_accumulator().layer_errors().values().flatten().cloned().collect();
 
         // Compute orthogonalization statistics
         let avg_error = errors.iter().sum::<f64>() / errors.len() as f64;
@@ -249,9 +258,11 @@ mod tests {
             .with_block_size(64)
             .with_orthogonalize(true);
 
-        let ortho_errors = orthogonalize_weights_in_place(&config, &mut graph)
+        let optimizer = LieGroupOptimizer::new(config);
+        optimizer.orthogonalize_weights(&mut graph)
             .expect("Failed to orthogonalize weights");
 
+        let ortho_errors: Vec<f64> = optimizer.error_accumulator().layer_errors().values().flatten().cloned().collect();
         let avg_ortho_error = ortho_errors.iter().sum::<f64>() / ortho_errors.len() as f64;
         eprintln!(
             "  Orthogonalization complete (avg error: {:.2e})",

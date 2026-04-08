@@ -10,15 +10,22 @@
 //!
 //! This showcases how god-graph's optimization tools work together to provide
 //! a white-box, engineering-driven approach to LLM optimization.
+//!
+//! Requires the `cad-llm` feature.
 
-use god_gragh::graph::traits::{GraphBase, GraphOps};
-use god_gragh::graph::Graph;
-use god_gragh::transformer::optimization::switch::{ModelSwitch, OperatorType, WeightTensor};
-use god_gragh::transformer::optimization::{
+#[cfg(feature = "cad-llm")]
+use god_graph::graph::traits::{GraphBase, GraphOps};
+#[cfg(feature = "cad-llm")]
+use god_graph::graph::Graph;
+#[cfg(feature = "cad-llm")]
+use god_graph::transformer::optimization::switch::{ModelSwitch, OperatorType, WeightTensor};
+#[cfg(feature = "cad-llm")]
+use god_graph::transformer::optimization::{
     CadStyleEditor, CompressionConfig, LieGroupConfig, LieGroupOptimizer, TensorRingCompressor,
     TopologyConstraint,
 };
 
+#[cfg(feature = "cad-llm")]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("╔═══════════════════════════════════════════════════════════╗");
     println!("║  CAD-LLM Complete Optimization Workflow                  ║");
@@ -256,6 +263,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+#[cfg(feature = "cad-llm")]
 /// Create a sample transformer-like computation graph for demonstration
 fn create_sample_transformer_graph() -> Graph<OperatorType, WeightTensor> {
     let mut graph = Graph::directed();
@@ -362,6 +370,7 @@ fn create_sample_transformer_graph() -> Graph<OperatorType, WeightTensor> {
     graph
 }
 
+#[cfg(feature = "cad-llm")]
 /// Generate pseudo-random weight data for demonstration
 fn generate_weight_data(rows: usize, cols: usize, seed: f64) -> Vec<f64> {
     (0..rows * cols)
@@ -369,7 +378,13 @@ fn generate_weight_data(rows: usize, cols: usize, seed: f64) -> Vec<f64> {
         .collect()
 }
 
-#[cfg(test)]
+#[cfg(not(feature = "cad-llm"))]
+fn main() {
+    println!("This example requires the 'cad-llm' feature.");
+    println!("Run with: cargo run --example cad_llm_optimization_workflow --features cad-llm");
+}
+
+#[cfg(all(test, feature = "cad-llm"))]
 mod tests {
     use super::*;
 

@@ -1,11 +1,11 @@
 //! 并行算法性能基准测试
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
-use god_gragh::algorithms::parallel::{
+use god_graph::algorithms::parallel::{
     par_connected_components, par_degree_centrality, par_pagerank,
 };
-use god_gragh::graph::traits::GraphOps;
-use god_gragh::graph::Graph;
+use god_graph::graph::traits::GraphOps;
+use god_graph::graph::Graph;
 
 fn create_large_graph(num_nodes: usize, avg_degree: usize) -> Graph<usize, f64> {
     let mut graph: Graph<usize, f64> = Graph::with_capacity(num_nodes, num_nodes * avg_degree);

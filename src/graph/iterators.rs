@@ -3,8 +3,8 @@
 //! 提供各种图遍历迭代器
 
 use crate::edge::EdgeIndex;
-pub use crate::graph::impl_::IncidentEdgesIter;
-pub use crate::graph::impl_::NeighborsIter;
+pub use crate::graph::graph_impl::IncidentEdgesIter;
+pub use crate::graph::graph_impl::NeighborsIter;
 use crate::node::NodeIndex;
 
 /// 节点迭代器

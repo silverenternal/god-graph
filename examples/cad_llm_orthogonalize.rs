@@ -5,12 +5,17 @@
 //! 2. Orthogonalize weight matrices using QR decomposition
 //! 3. Apply SO(k) block decomposition
 //! 4. Verify orthogonality constraints
+//!
+//! Requires the `tensor` feature.
 
-use god_gragh::tensor::{DenseTensor, TensorBase};
-use god_gragh::transformer::optimization::{
+#[cfg(feature = "tensor")]
+use god_graph::tensor::{DenseTensor, TensorBase};
+#[cfg(feature = "tensor")]
+use god_graph::transformer::optimization::{
     decompose_into_so_blocks, LieGroupConfig, LieGroupOptimizer,
 };
 
+#[cfg(feature = "tensor")]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("=== CAD-LLM Lie Group Orthogonalization Example ===\n");
 
@@ -73,7 +78,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Check block orthogonality
     let ortho_blocks = blocks
         .iter()
-        .filter(|b: &&god_gragh::transformer::optimization::SOkBlock| b.is_orthogonal(1e-5))
+        .filter(|b: &&god_graph::transformer::optimization::SOkBlock| b.is_orthogonal(1e-5))
         .count();
     println!("  Orthogonal blocks: {}/{}\n", ortho_blocks, blocks.len());
 

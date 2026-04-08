@@ -18,19 +18,30 @@
 //! 1. **Topology Validation**: Checks computation graph connectivity, cycles, isolated nodes
 //! 2. **Weight Verification**: Verifies weight tensor integrity after conversion
 //! 3. **Lie Group Analysis**: Analyzes orthogonal structure in weight matrices
-//! 4. **Tensor Ring Compression**: Tests compression ratios on different layers
-//! 5. **CAD Defect Detection**: Identifies topology defects in the computation graph
+//!
+//! Requires the `tensor` and `safetensors` features.
 
-use god_gragh::graph::traits::{GraphBase, GraphOps};
-use god_gragh::tensor::{DenseTensor, TensorBase};
-use god_gragh::transformer::optimization::switch::{ModelSwitch, OperatorType, WeightTensor};
-use god_gragh::transformer::optimization::{
+#[cfg(all(feature = "tensor", feature = "safetensors"))]
+use god_graph::graph::traits::{GraphBase, GraphOps};
+#[cfg(all(feature = "tensor", feature = "safetensors"))]
+use god_graph::graph::Graph;
+#[cfg(all(feature = "tensor", feature = "safetensors"))]
+use god_graph::tensor::{DenseTensor, TensorBase};
+#[cfg(all(feature = "tensor", feature = "safetensors"))]
+use god_graph::transformer::loader::ModelConfig;
+#[cfg(all(feature = "tensor", feature = "safetensors"))]
+use god_graph::transformer::optimization::switch::{ModelSwitch, OperatorType, WeightTensor};
+#[cfg(all(feature = "tensor", feature = "safetensors"))]
+use god_graph::transformer::optimization::{
     CadStyleEditor, CompressionConfig, LieGroupConfig, LieGroupOptimizer, TensorRingCompressor,
     TopologyConstraint,
 };
+#[cfg(all(feature = "tensor", feature = "safetensors"))]
 use std::env;
+#[cfg(all(feature = "tensor", feature = "safetensors"))]
 use std::path::Path;
 
+#[cfg(all(feature = "tensor", feature = "safetensors"))]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("=== CAD-LLM 1B Model Validation ===\n");
 
@@ -84,8 +95,8 @@ fn run_demo_validation() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 /// Create a synthetic computation graph mimicking 1B model structure
-fn create_1b_style_graph() -> god_gragh::graph::Graph<OperatorType, WeightTensor> {
-    use god_gragh::graph::Graph;
+fn create_1b_style_graph() -> god_graph::graph::Graph<OperatorType, WeightTensor> {
+    use god_graph::graph::Graph;
 
     let mut graph = Graph::<OperatorType, WeightTensor>::directed();
 
@@ -155,7 +166,7 @@ fn create_1b_style_graph() -> god_gragh::graph::Graph<OperatorType, WeightTensor
 
 /// Run the complete validation pipeline
 fn run_validation_pipeline(
-    mut graph: god_gragh::graph::Graph<OperatorType, WeightTensor>,
+    mut graph: god_graph::graph::Graph<OperatorType, WeightTensor>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     // 1. Topology validation
     println!("Step 1: Validating topology...");
@@ -320,4 +331,10 @@ mod tests {
         let identity = DenseTensor::from_vec(vec![1.0, 0.0, 0.0, 1.0], vec![2, 2]);
         assert!(check_orthogonality(&identity, 1e-5));
     }
+}
+
+#[cfg(not(all(feature = "tensor", feature = "safetensors")))]
+fn main() {
+    println!("This example requires the 'tensor' and 'safetensors' features.");
+    println!("Run with: cargo run --example cad_llm_validate_1b --features tensor,safetensors");
 }

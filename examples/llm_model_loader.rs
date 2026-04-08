@@ -11,11 +11,12 @@
 //! # Load from local directory
 //! cargo run --example llm_model_loader --features "transformer,safetensors" -- local /path/to/model
 //! ```
+//!
+//! Requires the `transformer` and `safetensors` features.
 
 #[cfg(all(feature = "transformer", feature = "safetensors"))]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    use god_gragh::transformer::loader::ModelConfig;
-    use god_gragh::transformer::loader::SafetensorsLoader;
+    use god_graph::transformer::loader::ModelConfig;
     use std::env;
 
     println!("=== God-Graph LLM Model Loader ===\n");
@@ -127,7 +128,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-#[allow(dead_code)]
 fn get_hf_repo(model_name: &str) -> Result<String, Box<dyn std::error::Error>> {
     match model_name.to_lowercase().as_str() {
         "llama-2-7b" => Ok("meta-llama/Llama-2-7b-hf".to_string()),
@@ -137,7 +137,6 @@ fn get_hf_repo(model_name: &str) -> Result<String, Box<dyn std::error::Error>> {
     }
 }
 
-#[allow(dead_code)]
 fn get_hf_cache_dir() -> std::path::PathBuf {
     if let Ok(cache_dir) = std::env::var("HF_HOME") {
         std::path::PathBuf::from(cache_dir).join("hub")
@@ -153,7 +152,6 @@ fn get_hf_cache_dir() -> std::path::PathBuf {
     }
 }
 
-#[allow(dead_code)]
 fn find_safetensors_files(
     dir: &std::path::Path,
 ) -> Result<Vec<std::path::PathBuf>, Box<dyn std::error::Error>> {
@@ -177,8 +175,7 @@ fn find_safetensors_files(
     Ok(files)
 }
 
-#[allow(dead_code)]
-fn estimate_parameters_llama(config: &god_gragh::transformer::loader::LlamaConfig) -> usize {
+fn estimate_parameters_llama(config: &god_graph::transformer::loader::LlamaConfig) -> usize {
     let embed_params = config.vocab_size * config.hidden_size;
     let attn_params = config.hidden_size * config.hidden_size * 4;
     let ffn_params = config.hidden_size * config.intermediate_size * 3;

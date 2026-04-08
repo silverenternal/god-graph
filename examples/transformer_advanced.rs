@@ -7,10 +7,10 @@
 
 #[cfg(feature = "transformer")]
 fn main() {
-    use god_gragh::tensor::traits::TensorBase;
-    use god_gragh::tensor::DenseTensor;
-    use god_gragh::transformer::quantization::{QuantizationConfig, QuantizedTensor};
-    use god_gragh::transformer::sparse_attention::SparseMask;
+    use god_graph::tensor::traits::TensorBase;
+    use god_graph::tensor::DenseTensor;
+    use god_graph::transformer::quantization::{QuantizationConfig, QuantizedTensor};
+    use god_graph::transformer::sparse_attention::SparseMask;
 
     println!("=== Advanced Transformer Features Example ===\n");
 

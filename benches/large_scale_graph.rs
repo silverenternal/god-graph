@@ -17,11 +17,11 @@
 //! ```
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
-use god_gragh::algorithms::centrality::pagerank;
-use god_gragh::algorithms::community::connected_components;
-use god_gragh::algorithms::traversal::bfs;
-use god_gragh::graph::traits::{GraphOps, GraphQuery};
-use god_gragh::graph::Graph;
+use god_graph::algorithms::centrality::pagerank;
+use god_graph::algorithms::community::connected_components;
+use god_graph::algorithms::traversal::bfs;
+use god_graph::graph::traits::{GraphOps, GraphQuery};
+use god_graph::graph::Graph;
 use rand::Rng;
 
 /// Generate random graph using Barabási-Albert model (preferential attachment)
@@ -237,7 +237,7 @@ fn bench_connected_components_large(c: &mut Criterion) {
 /// Strong scaling test: fixed problem size, increasing thread counts
 #[cfg(feature = "parallel")]
 fn bench_strong_scaling(c: &mut Criterion) {
-    use god_gragh::algorithms::parallel::par_pagerank;
+    use god_graph::algorithms::parallel::par_pagerank;
 
     let mut group = c.benchmark_group("strong_scaling_pagerank");
 
@@ -267,7 +267,7 @@ fn bench_strong_scaling(c: &mut Criterion) {
 /// Weak scaling test: problem size increases with thread count
 #[cfg(feature = "parallel")]
 fn bench_weak_scaling(c: &mut Criterion) {
-    use god_gragh::algorithms::parallel::par_pagerank;
+    use god_graph::algorithms::parallel::par_pagerank;
 
     let mut group = c.benchmark_group("weak_scaling_pagerank");
 

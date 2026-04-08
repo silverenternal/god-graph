@@ -26,8 +26,8 @@
 
 extern crate test;
 
-use god_gragh::tensor::{DenseTensor, TensorBase, TensorOps};
-use god_gragh::transformer::{
+use god_graph::tensor::{DenseTensor, TensorBase, TensorOps};
+use god_graph::transformer::{
     batch::{BatchData, BatchInference},
     kv_cache::KVCache,
     perf::{matmul_with_buffer, softmax_inplace_simd, TransformerMemoryPool},

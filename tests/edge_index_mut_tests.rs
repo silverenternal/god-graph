@@ -2,12 +2,16 @@
 //!
 //! This module tests the Edge IndexMut implementation,
 //! including basic modification, generation checking, and concurrent modification.
+//!
+//! Requires the `transformer` feature.
 
-#[cfg(all(test, feature = "tensor"))]
+#![cfg(all(test, feature = "transformer"))]
+
+#[cfg(test)]
 mod tests {
-    use god_gragh::graph::traits::{GraphOps, GraphQuery};
-    use god_gragh::graph::Graph;
-    use god_gragh::transformer::optimization::switch::{OperatorType, WeightTensor};
+    use god_graph::graph::traits::{GraphOps, GraphQuery};
+    use god_graph::graph::Graph;
+    use god_graph::transformer::optimization::switch::{OperatorType, WeightTensor};
 
     /// Test basic edge modification using IndexMut
     #[test]
@@ -130,14 +134,14 @@ mod tests {
 
         // Modify the weight data using IndexMut
         let weight_mut = &mut graph[edge];
-        for val in weight_mut.data.iter_mut() {
-            *val *= 2.0;
+        for i in 0..weight_mut.data.len() {
+            weight_mut.data[i] *= 2.0;
         }
 
         // Verify the modification
         let modified_weight = &graph[edge];
-        for (i, &orig) in original_data.iter().enumerate() {
-            assert!((modified_weight.data[i] - orig * 2.0).abs() < 1e-10);
+        for (i, &orig_val) in original_data.iter().enumerate() {
+            assert!((modified_weight.data[i] - orig_val * 2.0).abs() < 1e-10);
         }
     }
 

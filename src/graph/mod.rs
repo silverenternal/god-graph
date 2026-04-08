@@ -3,10 +3,10 @@
 //! 提供 Graph 数据结构和核心操作 trait
 
 pub mod builders;
-pub mod impl_;
+pub mod graph_impl;
 pub mod iterators;
 pub mod traits;
 
 pub use builders::GraphBuilder;
-pub use impl_::Graph;
+pub use graph_impl::Graph;
 pub use traits::{Direction, GraphBase, GraphOps, GraphQuery};

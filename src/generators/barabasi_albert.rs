@@ -58,8 +58,8 @@ where
         // 如果优先连接不够，随机连接
         #[cfg(feature = "rand")]
         {
-            use rand::{Rng, SeedableRng};
-            let mut rng = rand::rngs::StdRng::seed_from_u64(42);
+            use rand::Rng;
+            let mut rng = rand::thread_rng();
 
             let mut connected = m.min(new_node);
             while connected < m && connected < new_node {

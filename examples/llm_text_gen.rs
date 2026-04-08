@@ -14,12 +14,12 @@
 
 #[cfg(feature = "transformer")]
 fn main() {
-    use god_gragh::tensor::{DenseTensor, TensorBase};
-    use god_gragh::transformer::{
+    use god_graph::tensor::DenseTensor;
+    use god_graph::transformer::{
         kv_cache::KVCache,
         layers::{FeedForward, MultiHeadAttention, RMSNorm},
         model::{LlamaDecoderLayer, LlamaModel},
-        GenerationConfig, LlamaConfig, TextGenerator,
+        GenerationConfig, LlamaConfig,
     };
     use std::env;
 
@@ -116,7 +116,7 @@ fn main() {
     println!("   ✓ Model initialized");
 
     // Configure generation
-    let gen_config = GenerationConfig {
+    let _gen_config = GenerationConfig {
         max_length,
         temperature: 0.7,
         top_p: 0.9,

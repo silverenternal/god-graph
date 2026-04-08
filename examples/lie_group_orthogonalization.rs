@@ -47,15 +47,16 @@
 #[cfg(feature = "tensor")]
 mod lie_group_comparison {
     #[allow(unused_imports)]
-    use god_gragh::graph::traits::{GraphBase, GraphOps};
+    use god_graph::graph::traits::{GraphBase, GraphOps};
     #[allow(unused_imports)]
-    use god_gragh::graph::Graph;
-    use god_gragh::tensor::DenseTensor;
+    use god_graph::graph::Graph;
     #[allow(unused_imports)]
-    use god_gragh::tensor::TensorBase;
-    use god_gragh::transformer::optimization::lie_group::{LieGroupConfig, LieGroupOptimizer};
+    use god_graph::tensor::DenseTensor;
     #[allow(unused_imports)]
-    use god_gragh::transformer::optimization::switch::{OperatorType, WeightTensor};
+    use god_graph::tensor::TensorBase;
+    use god_graph::transformer::optimization::lie_group::{LieGroupConfig, LieGroupOptimizer};
+    #[allow(unused_imports)]
+    use god_graph::transformer::optimization::switch::{OperatorType, WeightTensor};
 
     /// Example 1: Basic orthogonalization with QR
     pub fn basic_qr_orthogonalization() {
@@ -404,9 +405,9 @@ mod lie_group_comparison {
     }
 
     fn orthogonalize_qr(data: &mut [f64], rows: usize, cols: usize) -> Vec<f64> {
-        use god_gragh::tensor::decomposition::qr::orthogonalize;
+        use god_graph::tensor::decomposition::qr::orthogonalize;
 
-        let tensor = god_gragh::tensor::DenseTensor::new(data.to_vec(), vec![rows, cols]);
+        let tensor = god_graph::tensor::DenseTensor::new(data.to_vec(), vec![rows, cols]);
         if let Ok(ortho) = orthogonalize(&tensor) {
             ortho.data().to_vec()
         } else {
@@ -533,7 +534,7 @@ mod tests {
     #[cfg(feature = "tensor")]
     #[test]
     fn test_lie_group_compiles() {
-        use god_gragh::transformer::optimization::lie_group::LieGroupConfig;
+        use god_graph::transformer::optimization::lie_group::LieGroupConfig;
 
         let _config = LieGroupConfig::new()
             .with_block_size(64)

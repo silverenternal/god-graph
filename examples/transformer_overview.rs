@@ -5,11 +5,11 @@
 
 #[cfg(feature = "transformer")]
 fn main() {
-    use god_gragh::tensor::DenseTensor;
-    use god_gragh::transformer::batch::BatchData;
-    use god_gragh::transformer::kv_cache::KVCache;
-    use god_gragh::transformer::quantization::{QuantizationConfig, QuantizedTensor};
-    use god_gragh::transformer::sparse_attention::SparseMask;
+    use god_graph::tensor::DenseTensor;
+    use god_graph::transformer::batch::BatchData;
+    use god_graph::transformer::kv_cache::KVCache;
+    use god_graph::transformer::quantization::{QuantizationConfig, QuantizedTensor};
+    use god_graph::transformer::sparse_attention::SparseMask;
 
     println!("=== God-Graph Transformer Features Overview ===\n");
 

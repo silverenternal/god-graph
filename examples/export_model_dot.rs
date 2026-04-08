@@ -17,13 +17,29 @@
 //! # Render to SVG
 //! dot -Tsvg model.dot -o model.svg
 //! ```
+//!
+//! Requires the `transformer` and `dot` features.
 
-use god_gragh::export::dot::{write_dot_to_file, DotOptions};
-use god_gragh::graph::traits::{GraphBase, GraphQuery};
-use god_gragh::graph::Graph;
-use god_gragh::transformer::optimization::switch::{ModelSwitch, OperatorType, WeightTensor};
+#[cfg(not(all(feature = "transformer", feature = "dot")))]
+fn main() {
+    eprintln!("This example requires the 'transformer' and 'dot' features.");
+    eprintln!("Usage: cargo run --example export_model_dot --features \"transformer dot\"");
+}
+
+#[cfg(all(feature = "transformer", feature = "dot"))]
+use god_graph::export::dot::{write_dot_to_file, DotOptions};
+#[cfg(all(feature = "transformer", feature = "dot"))]
+use god_graph::graph::traits::{GraphBase, GraphQuery};
+#[cfg(all(feature = "transformer", feature = "dot"))]
+use god_graph::graph::Graph;
+#[cfg(all(feature = "transformer", feature = "dot"))]
+use god_graph::transformer::loader::ModelConfig;
+#[cfg(all(feature = "transformer", feature = "dot"))]
+use god_graph::transformer::optimization::switch::{ModelSwitch, OperatorType, WeightTensor};
+#[cfg(all(feature = "transformer", feature = "dot"))]
 use std::env;
 
+#[cfg(all(feature = "transformer", feature = "dot"))]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = env::args().collect();
 
@@ -45,31 +61,32 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         export_transformer_to_dot(&graph, "model.dot")?;
         println!("✓ Exported demo transformer to model.dot");
     } else {
-        #[cfg(feature = "safetensors")]
-        {
-            let input_path = &args[1];
-            let output_path = if args.len() > 2 { &args[2] } else { "model.dot" };
-            println!("Loading model from: {}", input_path);
-            let graph = ModelSwitch::load_from_safetensors(input_path)?;
-            println!("✓ Loaded model with {} nodes, {} edges", graph.node_count(), graph.edge_count());
-            export_transformer_to_dot(&graph, output_path)?;
-            println!("✓ Exported to {}", output_path);
-        }
-        #[cfg(not(feature = "safetensors"))]
-        {
-            println!("safetensors feature not enabled; running demo instead.");
-            let graph = create_demo_transformer();
-            export_transformer_to_dot(&graph, "model.dot")?;
-            println!("✓ Exported demo transformer to model.dot");
-        }
+        let input_path = &args[1];
+        let output_path = if args.len() > 2 {
+            &args[2]
+        } else {
+            "model.dot"
+        };
+
+        println!("Loading model from: {}", input_path);
+        let graph = ModelSwitch::load_from_safetensors(input_path)?;
+        println!(
+            "✓ Loaded model with {} nodes, {} edges",
+            graph.node_count(),
+            graph.edge_count()
+        );
+
+        export_transformer_to_dot(&graph, output_path)?;
+        println!("✓ Exported to {}", output_path);
     }
 
     Ok(())
 }
 
 /// Create a demo transformer graph for visualization
+#[cfg(all(feature = "transformer", feature = "dot"))]
 fn create_demo_transformer() -> Graph<OperatorType, WeightTensor> {
-    use god_gragh::graph::builders::GraphBuilder;
+    use god_graph::graph::builders::GraphBuilder;
     use rand::prelude::*;
 
     let mut rng = rand::thread_rng();
@@ -174,11 +191,12 @@ fn create_demo_transformer() -> Graph<OperatorType, WeightTensor> {
 }
 
 /// Export transformer to DOT format with optimized layout
+#[cfg(all(feature = "transformer", feature = "dot"))]
 fn export_transformer_to_dot(
-    graph: &god_gragh::graph::Graph<OperatorType, WeightTensor>,
+    graph: &god_graph::graph::Graph<OperatorType, WeightTensor>,
     output_path: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    // Create custom options for transformer visualization
+    // Create custom option for transformer visualization
     let _options = DotOptions::new()
         .with_name("Transformer")
         .hide_edge_labels() // Hide edge labels for cleaner look
@@ -192,7 +210,7 @@ fn export_transformer_to_dot(
     dot.push_str("    splines=ortho;\n"); // Orthogonal edges
     dot.push_str("    node [shape=box, style=\"rounded,filled\"];\n");
     dot.push_str("    edge [color=gray, arrowsize=0.5];\n");
-    dot.push_str("\n");
+    dot.push('\n');
 
     // Collect nodes by type for subgraph clustering
     let mut embedding_nodes = Vec::new();
@@ -334,7 +352,7 @@ fn export_transformer_to_dot(
         dot.push_str(&format!("    n{} -> n{};\n", source, target));
     }
 
-    dot.push_str("}");
+    dot.push('}');
 
     // Write to file
     write_dot_to_file(&dot, output_path)?;

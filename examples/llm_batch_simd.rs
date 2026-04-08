@@ -17,8 +17,8 @@
 
 #[cfg(feature = "transformer")]
 fn main() {
-    use god_gragh::tensor::{DenseTensor, TensorBase, TensorOps};
-    use god_gragh::transformer::{
+    use god_graph::tensor::{DenseTensor, TensorOps};
+    use god_graph::transformer::{
         perf::{matmul_with_buffer, softmax_inplace_simd, TransformerMemoryPool},
         FeedForward, MultiHeadAttention, RMSNorm,
     };
