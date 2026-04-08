@@ -5,12 +5,17 @@
 //! 2. Orthogonalize weight matrices using QR decomposition
 //! 3. Apply SO(k) block decomposition
 //! 4. Verify orthogonality constraints
+//!
+//! Requires the `tensor` feature.
 
-use god_gragh::tensor::{DenseTensor, TensorBase};
-use god_gragh::transformer::optimization::{
+#[cfg(feature = "tensor")]
+use god_graph::tensor::{DenseTensor, TensorBase};
+#[cfg(feature = "tensor")]
+use god_graph::transformer::optimization::{
     decompose_into_so_blocks, LieGroupConfig, LieGroupOptimizer,
 };
 
+#[cfg(feature = "tensor")]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("=== CAD-LLM Lie Group Orthogonalization Example ===\n");
 
@@ -19,7 +24,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config = LieGroupConfig::new()
         .with_block_size(64)
         .with_orthogonalize(true)
-        .with_target_layers(vec!["q_proj".to_string(), "k_proj".to_string(), "v_proj".to_string()])
+        .with_target_layers(vec![
+            "q_proj".to_string(),
+            "k_proj".to_string(),
+            "v_proj".to_string(),
+        ])
         .with_iterations(10);
 
     println!("  Block size: {}", config.block_size);
@@ -35,9 +44,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 3. Create a sample weight matrix
     println!("Step 3: Creating sample weight matrix...");
     let weight = DenseTensor::from_vec(
-        (0..128 * 128)
-            .map(|i| ((i % 50) as f64) / 50.0)
-            .collect(),
+        (0..128 * 128).map(|i| ((i % 50) as f64) / 50.0).collect(),
         vec![128, 128],
     );
     println!("  Weight shape: {:?}", weight.shape());
@@ -49,7 +56,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 4. Apply orthogonalization
     println!("Step 4: Applying QR orthogonalization...");
     let orthogonalized = optimizer.cayley_transform(&weight)?;
-    
+
     let is_ortho_after = check_orthogonality(&orthogonalized, 1e-5);
     println!("  Is orthogonal (after): {}", is_ortho_after);
 
@@ -60,24 +67,28 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 5. Apply block decomposition
     println!("Step 5: Applying SO(k) block decomposition...");
     let blocks = decompose_into_so_blocks(&weight, config.block_size)?;
-    
+
     println!("  Number of blocks: {}", blocks.len());
-    println!("  Block size: {}x{}", blocks.first().map(|b| b.size).unwrap_or(0), 
-                                    blocks.first().map(|b| b.size).unwrap_or(0));
-    
+    println!(
+        "  Block size: {}x{}",
+        blocks.first().map(|b| b.size).unwrap_or(0),
+        blocks.first().map(|b| b.size).unwrap_or(0)
+    );
+
     // Check block orthogonality
-    let ortho_blocks = blocks.iter()
-        .filter(|b: &&god_gragh::transformer::optimization::SOkBlock| b.is_orthogonal(1e-5))
+    let ortho_blocks = blocks
+        .iter()
+        .filter(|b: &&god_graph::transformer::optimization::SOkBlock| b.is_orthogonal(1e-5))
         .count();
     println!("  Orthogonal blocks: {}/{}\n", ortho_blocks, blocks.len());
 
     // 6. Lie algebra regularization
     println!("Step 6: Applying Lie algebra regularization...");
     let regularized = optimizer.lie_algebra_regularize(&weight)?;
-    
+
     let is_skew = check_skew_symmetric(&regularized, 1e-5);
     println!("  Is skew-symmetric: {}", is_skew);
-    
+
     let is_ortho_regularized = check_orthogonality(&regularized, 1e-5);
     println!("  Is orthogonal (regularized): {}\n", is_ortho_regularized);
 
@@ -182,13 +193,10 @@ mod tests {
         let config = LieGroupConfig::new()
             .with_block_size(32)
             .with_orthogonalize(true);
-        
+
         let optimizer = LieGroupOptimizer::new(config);
-        
-        let weight = DenseTensor::from_vec(
-            vec![1.0, 2.0, 3.0, 4.0],
-            vec![2, 2],
-        );
+
+        let weight = DenseTensor::from_vec(vec![1.0, 2.0, 3.0, 4.0], vec![2, 2]);
 
         let result = optimizer.cayley_transform(&weight);
         assert!(result.is_ok());
@@ -196,10 +204,7 @@ mod tests {
 
     #[test]
     fn test_so_block_decomposition() {
-        let weight = DenseTensor::from_vec(
-            vec![1.0, 0.0, 0.0, 1.0],
-            vec![2, 2],
-        );
+        let weight = DenseTensor::from_vec(vec![1.0, 0.0, 0.0, 1.0], vec![2, 2]);
 
         let blocks = decompose_into_so_blocks(&weight, 2).unwrap();
         assert_eq!(blocks.len(), 1);
@@ -209,20 +214,14 @@ mod tests {
     #[test]
     fn test_orthogonality_check() {
         // Identity matrix is orthogonal
-        let identity = DenseTensor::from_vec(
-            vec![1.0, 0.0, 0.0, 1.0],
-            vec![2, 2],
-        );
+        let identity = DenseTensor::from_vec(vec![1.0, 0.0, 0.0, 1.0], vec![2, 2]);
         assert!(check_orthogonality(&identity, 1e-5));
 
         // Rotation matrix is orthogonal
         let theta = std::f64::consts::PI / 4.0;
         let cos_t = theta.cos();
         let sin_t = theta.sin();
-        let rotation = DenseTensor::from_vec(
-            vec![cos_t, -sin_t, sin_t, cos_t],
-            vec![2, 2],
-        );
+        let rotation = DenseTensor::from_vec(vec![cos_t, -sin_t, sin_t, cos_t], vec![2, 2]);
         assert!(check_orthogonality(&rotation, 1e-5));
     }
 }

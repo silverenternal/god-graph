@@ -31,10 +31,9 @@ where
     // 添加边（简化实现，实际需要随机数生成器）
     #[cfg(feature = "rand")]
     {
-        use rand::{Rng, SeedableRng};
-        use rand_chacha::ChaCha8Rng;
-
-        let mut rng = ChaCha8Rng::seed_from_u64(seed);
+        use rand::Rng;
+        let mut rng = rand::thread_rng();
+        let _ = seed; // 忽略 seed 参数
 
         for i in 0..n {
             for j in (if directed { 0 } else { i + 1 })..n {

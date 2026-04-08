@@ -4,11 +4,11 @@
 //! 目标：8 核 CPU 上达到 6-8x 加速比
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
-use god_gragh::algorithms::centrality::pagerank;
-use god_gragh::algorithms::parallel::{par_bfs, par_dfs, par_pagerank};
-use god_gragh::algorithms::traversal::{bfs, dfs};
-use god_gragh::graph::traits::{GraphOps, GraphQuery};
-use god_gragh::graph::Graph;
+use god_graph::algorithms::centrality::pagerank;
+use god_graph::algorithms::parallel::{par_bfs, par_dfs, par_pagerank};
+use god_graph::algorithms::traversal::{bfs, dfs};
+use god_graph::graph::traits::{GraphOps, GraphQuery};
+use god_graph::graph::Graph;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 /// 创建测试图

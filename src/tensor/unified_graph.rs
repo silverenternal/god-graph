@@ -269,26 +269,40 @@ impl UnifiedGraph {
     }
 
     /// 获取边数据（通过边索引）
-    pub fn get_edge_data(&self, edge_idx: usize) -> Option<&EdgeData> {
+    ///
+    /// # Arguments
+    ///
+    /// * `edge_idx` - 边索引
+    ///
+    /// # Returns
+    ///
+    /// 如果边存在，返回边数据引用；否则返回错误
+    pub fn get_edge_data(&self, edge_idx: usize) -> Result<&EdgeData, GraphError> {
         use crate::edge::EdgeIndex;
-        
+
         let idx = EdgeIndex::new(edge_idx, 0);
-        self.graph.get_edge(idx).ok()
+        self.graph.get_edge(idx)
     }
 
     /// 获取边数据（可变引用，使用 IndexMut trait）
-    pub fn get_edge_data_mut(&mut self, edge_idx: usize) -> Option<&mut EdgeData> {
+    ///
+    /// # Arguments
+    ///
+    /// * `edge_idx` - 边索引
+    ///
+    /// # Returns
+    ///
+    /// 如果边存在，返回边数据可变引用；否则返回错误
+    pub fn get_edge_data_mut(&mut self, edge_idx: usize) -> Result<&mut EdgeData, GraphError> {
         use crate::edge::EdgeIndex;
-        
+
         let idx = EdgeIndex::new(edge_idx, 0);
-        
+
         // 检查边是否存在
-        if self.graph.get_edge(idx).is_err() {
-            return None;
-        }
-        
+        self.graph.get_edge(idx)?;
+
         // 使用 IndexMut trait 获取可变引用
-        Some(&mut self.graph[idx])
+        Ok(&mut self.graph[idx])
     }
 
     /// 前向传播
@@ -352,27 +366,27 @@ impl UnifiedGraph {
     /// 计算结构梯度（基于边存在概率的梯度）
     pub fn compute_structure_gradients(&mut self, _loss: &DenseTensor) -> GraphResult<HashMap<(usize, usize), f64>> {
         let mut gradients = HashMap::new();
-        
+
         // 收集所有边索引
         let edge_indices: Vec<_> = self.graph.edges().map(|e| e.index).collect();
-        
+
         for edge_idx in edge_indices {
             let edge_idx_val = edge_idx.index();
             // 获取边数据的克隆（避免借用问题）
-            let edge_data_clone = self.get_edge_data(edge_idx_val).cloned();
-            
+            let edge_data_clone = self.get_edge_data(edge_idx_val).cloned().ok();
+
             if let Some(edge_data) = edge_data_clone {
                 // 简化：使用边权重的梯度范数作为结构梯度
                 if let Some(grad) = edge_data.weight_gradient {
                     // 计算梯度范数
                     let grad_norm: f64 = grad.data().iter().map(|&x| x.abs()).sum();
-                    
+
                     // 存储结构梯度（使用边索引作为 key）
                     gradients.insert((edge_idx_val, 0), grad_norm);
                 }
             }
         }
-        
+
         Ok(gradients)
     }
 
@@ -400,15 +414,15 @@ impl UnifiedGraph {
         
         for edge_idx in edge_indices {
             let edge_idx_val = edge_idx.index();
-            if let Some(edge_data) = self.get_edge_data_mut(edge_idx_val) {
+            if let Ok(edge_data) = self.get_edge_data_mut(edge_idx_val) {
                 // 更新结构 logits
                 if let Some(&struct_grad) = structure_grads.get(&(edge_idx_val, 0)) {
                     edge_data.update_logits(struct_grad, structure_lr);
                 }
-                
+
                 // 更新权重（简化：不实际更新，只存储梯度）
                 // 实际使用需要集成 autograd
-                
+
                 // 离散化
                 edge_data.discretize(temperature, discretization_threshold);
             }
@@ -451,7 +465,7 @@ impl UnifiedGraph {
         
         for edge_idx in edge_indices {
             let edge_idx_val = edge_idx.index();
-            if let Some(edge_data) = self.get_edge_data_mut(edge_idx_val) {
+            if let Ok(edge_data) = self.get_edge_data_mut(edge_idx_val) {
                 edge_data.discretize(temperature, threshold);
             }
         }

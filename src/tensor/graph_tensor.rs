@@ -7,10 +7,9 @@
 //! - Adjacency matrix extraction and reconstruction
 //! - Feature matrix extraction for GNN workflows
 
-use crate::graph::traits::{GraphBase, GraphOps, GraphQuery};
+use crate::graph::traits::{GraphBase, GraphQuery};
 use crate::graph::Graph;
 use crate::tensor::error::TensorError;
-use crate::tensor::traits::TensorBase;
 use crate::tensor::DenseTensor;
 
 #[cfg(feature = "tensor-sparse")]

@@ -18,22 +18,17 @@
 //! - ✅ Dynamic edge pruning (weak attention removal)
 //! - ✅ Custom connection experiments (long-range, sparse attention)
 //! - ✅ Topology defect detection
-//! - ✅ Educational/research purposes
 //!
-//! **GraphTransformer is NOT for**:
-//! - ❌ High-performance inference (use llama.cpp or vllm)
-//! - ❌ Large-scale training (use PyTorch or JAX)
-//!
-//! ## Running this example
-//!
-//! ```bash
-//! cargo run --example graph_transformer_execution --features tensor
-//! ```
+//! Requires the `transformer` feature.
 
-use god_gragh::tensor::DenseTensor;
-use god_gragh::tensor::traits::TensorBase;
-use god_gragh::transformer::graph_transformer::GraphTransformer;
+#[cfg(feature = "transformer")]
+use god_graph::tensor::traits::TensorBase;
+#[cfg(feature = "transformer")]
+use god_graph::tensor::DenseTensor;
+#[cfg(feature = "transformer")]
+use god_graph::transformer::graph_transformer::GraphTransformer;
 
+#[cfg(feature = "transformer")]
 fn main() {
     println!("=== GraphTransformer Execution Example ===\n");
 
@@ -77,11 +72,15 @@ fn main() {
     println!("  Forward pass completed!");
     println!("  Output shape: {:?}", output.shape());
     println!("  Output dtype: {:?}", output.dtype());
-    
+
     // Print first few values of output
     let output_data = output.data();
     println!("  Output (first 10 values):");
-    for (i, &val) in output_data.iter().take(10.min(output_data.len())).enumerate() {
+    for (i, &val) in output_data
+        .iter()
+        .take(10.min(output_data.len()))
+        .enumerate()
+    {
         println!("    [{}]: {:.6}", i, val);
     }
     println!();
@@ -95,7 +94,10 @@ fn main() {
     println!("6. Pruning weak attention edges (threshold=0.05)...");
     let threshold = 0.05;
     let pruned_count = transformer.prune_weak_edges(threshold);
-    println!("  Pruned {} edges with weight < {}", pruned_count, threshold);
+    println!(
+        "  Pruned {} edges with weight < {}",
+        pruned_count, threshold
+    );
     println!("  Remaining edges: {}", transformer.num_edges());
     println!();
 
@@ -103,11 +105,15 @@ fn main() {
     println!("7. Re-executing forward pass after pruning...");
     let output_pruned = transformer.forward(&input_ids);
     println!("  Output shape: {:?}", output_pruned.shape());
-    
+
     // Compare outputs
     let output_pruned_data = output_pruned.data();
     println!("  Output (first 10 values):");
-    for (i, &val) in output_pruned_data.iter().take(10.min(output_pruned_data.len())).enumerate() {
+    for (i, &val) in output_pruned_data
+        .iter()
+        .take(10.min(output_pruned_data.len()))
+        .enumerate()
+    {
         println!("    [{}]: {:.6}", i, val);
     }
     println!();
@@ -128,6 +134,7 @@ fn main() {
     println!("=== Example completed successfully! ===");
 }
 
+#[cfg(feature = "transformer")]
 /// Analyze attention patterns in the graph
 fn analyze_attention_patterns(transformer: &GraphTransformer) {
     // Note: In a real implementation, we would inspect edge weights
@@ -135,43 +142,50 @@ fn analyze_attention_patterns(transformer: &GraphTransformer) {
     println!("  Attention analysis:");
     println!("    - Total nodes: {}", transformer.num_nodes());
     println!("    - Total edges: {}", transformer.num_edges());
-    println!("    - Average edges per node: {:.2}", 
-        transformer.num_edges() as f64 / transformer.num_nodes() as f64);
+    println!(
+        "    - Average edges per node: {:.2}",
+        transformer.num_edges() as f64 / transformer.num_nodes() as f64
+    );
 }
 
+#[cfg(feature = "transformer")]
 /// Demonstrate edge tensor passing with Q/K/V projections
 fn demonstrate_edge_tensor_passing() {
-    use god_gragh::transformer::graph_transformer::edges::{GraphEdge, DataFlowOp, SkipType};
+    use god_graph::transformer::graph_transformer::edges::{DataFlowOp, GraphEdge, SkipType};
 
     println!("  Edge tensor passing semantics:");
-    
+
     // 1. Self-attention edge with Q projection
     let q_proj = DenseTensor::zeros(vec![1, 64]);
-    let sa_edge = GraphEdge::self_attention_with_message(
-        0, 1, 0.8, 2, 0, q_proj,
-    );
+    let sa_edge = GraphEdge::self_attention_with_message(0, 1, 0.8, 2, 0, q_proj);
     println!("    - SelfAttention edge:");
     println!("        Has message: {}", sa_edge.message().is_some());
-    println!("        Attention weight: {:?}", sa_edge.get_self_attention().map(|s| s.weight));
-    
+    println!(
+        "        Attention weight: {:?}",
+        sa_edge.get_self_attention().map(|s| s.weight)
+    );
+
     // 2. DataFlow edge with activation tensor
     let activation = DenseTensor::zeros(vec![1, 256]);
-    let df_edge = GraphEdge::data_flow_with_message(
-        1, 2, DataFlowOp::AttentionToOutput, 0, activation,
-    );
+    let df_edge =
+        GraphEdge::data_flow_with_message(1, 2, DataFlowOp::AttentionToOutput, 0, activation);
     println!("    - DataFlow edge:");
     println!("        Has message: {}", df_edge.message().is_some());
-    println!("        Operation: {:?}", df_edge.get_data_flow().map(|d| d.operation));
-    
+    println!(
+        "        Operation: {:?}",
+        df_edge.get_data_flow().map(|d| d.operation)
+    );
+
     // 3. Residual edge with passthrough tensor
     let residual = DenseTensor::zeros(vec![1, 256]);
-    let res_edge = GraphEdge::residual_with_tensor(
-        2, 3, 0, SkipType::PreNorm, residual,
-    );
+    let res_edge = GraphEdge::residual_with_tensor(2, 3, 0, SkipType::PreNorm, residual);
     println!("    - Residual edge:");
     println!("        Has message: {}", res_edge.message().is_some());
-    println!("        Skip type: {:?}", res_edge.get_residual().map(|r| r.skip_type));
-    
+    println!(
+        "        Skip type: {:?}",
+        res_edge.get_residual().map(|r| r.skip_type)
+    );
+
     println!();
     println!("  Tensor passing workflow:");
     println!("    1. Source node computes output tensor");
@@ -180,19 +194,19 @@ fn demonstrate_edge_tensor_passing() {
     println!("    4. Attention weights determine contribution of each message");
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "transformer"))]
 mod tests {
     use super::*;
-    use god_gragh::transformer::graph_transformer::edges::{GraphEdge, DataFlowOp};
+    use god_graph::transformer::graph_transformer::edges::{DataFlowOp, GraphEdge};
 
     #[test]
     fn test_graph_transformer_basic_execution() {
         let mut transformer = GraphTransformer::new(2, 4, 256);
         let input_ids = vec![1, 2, 3, 4];
-        
+
         transformer.build_graph(&input_ids);
         let output = transformer.forward(&input_ids);
-        
+
         assert_eq!(output.ndim(), 2);
         assert_eq!(output.shape()[0], 1);
         assert_eq!(output.shape()[1], 256);
@@ -202,19 +216,16 @@ mod tests {
     fn test_edge_tensor_passing() {
         // Test SelfAttention edge with message
         let q_proj = DenseTensor::zeros(vec![1, 64]);
-        let mut sa_edge = GraphEdge::self_attention_with_message(
-            0, 1, 0.8, 2, 0, q_proj,
-        );
-        
+        let mut sa_edge = GraphEdge::self_attention_with_message(0, 1, 0.8, 2, 0, q_proj);
+
         assert!(sa_edge.message().is_some());
         assert_eq!(sa_edge.message().unwrap().shape(), &[1, 64]);
-        
+
         // Test DataFlow edge with message
         let activation = DenseTensor::zeros(vec![1, 256]);
-        let df_edge = GraphEdge::data_flow_with_message(
-            1, 2, DataFlowOp::AttentionToOutput, 0, activation,
-        );
-        
+        let df_edge =
+            GraphEdge::data_flow_with_message(1, 2, DataFlowOp::AttentionToOutput, 0, activation);
+
         assert!(df_edge.message().is_some());
         assert_eq!(df_edge.message().unwrap().shape(), &[1, 256]);
     }
@@ -223,10 +234,16 @@ mod tests {
     fn test_graph_export() {
         let mut transformer = GraphTransformer::new(1, 2, 128);
         transformer.build_graph(&[1, 2, 3]);
-        
+
         let dot = transformer.to_dot();
-        
+
         assert!(dot.contains("digraph Transformer"));
         assert!(dot.contains("rankdir=TB"));
     }
+}
+
+#[cfg(not(feature = "transformer"))]
+fn main() {
+    println!("This example requires the 'transformer' feature.");
+    println!("Run with: cargo run --example graph_transformer_execution --features transformer");
 }

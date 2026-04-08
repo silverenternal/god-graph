@@ -2,15 +2,15 @@
 //!
 //! 测试 god-gragh 库的整体功能和正确性
 
-use god_gragh::algorithms::centrality::degree_centrality;
-use god_gragh::algorithms::community::connected_components;
-use god_gragh::algorithms::mst::{kruskal, prim};
-use god_gragh::algorithms::shortest_path::{astar, bellman_ford, dijkstra, floyd_warshall};
-use god_gragh::algorithms::traversal::{bfs, dfs, tarjan_scc, topological_sort};
-use god_gragh::generators::{complete_graph, grid_graph, tree_graph};
-use god_gragh::graph::builders::GraphBuilder;
-use god_gragh::graph::traits::{GraphBase, GraphOps, GraphQuery};
-use god_gragh::graph::Graph;
+use god_graph::algorithms::centrality::degree_centrality;
+use god_graph::algorithms::community::connected_components;
+use god_graph::algorithms::mst::{kruskal, prim};
+use god_graph::algorithms::shortest_path::{astar, bellman_ford, dijkstra, floyd_warshall};
+use god_graph::algorithms::traversal::{bfs, dfs, tarjan_scc, topological_sort};
+use god_graph::generators::{complete_graph, grid_graph, tree_graph};
+use god_graph::graph::builders::GraphBuilder;
+use god_graph::graph::traits::{GraphBase, GraphOps, GraphQuery};
+use god_graph::graph::Graph;
 
 /// 测试图的基本 CRUD 操作
 #[test]
@@ -224,7 +224,7 @@ fn test_bellman_ford_negative_cycle() {
     let source = nodes[0].index();
     let result = bellman_ford(&graph, source, |_, _, w| *w);
 
-    assert!(matches!(result, Err(god_gragh::GraphError::NegativeCycle)));
+    assert!(matches!(result, Err(god_graph::GraphError::NegativeCycle)));
 }
 
 /// 测试 Floyd-Warshall 全源最短路径
@@ -267,7 +267,7 @@ fn test_astar_pathfinding() {
     let goal = nodes[3].index();
 
     // 使用启发式函数：估计到目标的距离
-    let heuristic = |node: god_gragh::NodeIndex| -> f64 {
+    let heuristic = |node: god_graph::NodeIndex| -> f64 {
         let goal_idx = 3;
         (goal_idx as i64 - node.index() as i64).abs() as f64
     };
@@ -345,10 +345,11 @@ fn test_degree_centrality() {
 
     let centrality = degree_centrality(&graph);
 
-    // A 有 3 个出边，中心性最高
-    let nodes: Vec<_> = graph.nodes().collect();
-    let a = nodes[0].index();
-    assert!(centrality.contains_key(&a));
+    // A has 3 outgoing edges, highest centrality
+    // centrality is HashMap<NodeIndex, f64>
+    assert!(!centrality.is_empty());
+    let node_a = graph.nodes().nth(0).unwrap().index();
+    assert!(centrality.get(&node_a).map_or(false, |&c| c > 0.0)); // Node A has highest centrality
 }
 
 /// 测试连通分量

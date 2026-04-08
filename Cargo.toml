@@ -1,6 +1,6 @@
 [package]
-name = "god-gragh"
-version = "0.5.0"
+name = "god-graph"
+version = "0.6.0-alpha"
 edition = "2021"
 rust-version = "1.85"
 authors = ["silverenternal <3147264070@qq.com>"]
@@ -8,7 +8,7 @@ description = "A graph-based LLM white-box optimization toolbox: topology valida
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/silverenternal/god-graph"
 homepage = "https://github.com/silverenternal/god-graph"
-documentation = "https://docs.rs/god-gragh"
+documentation = "https://docs.rs/god-graph"
 readme = "README.md"
 keywords = ["graph", "llm", "optimization", "tensor", "topology"]
 categories = ["data-structures", "algorithms", "science", "compilers"]
@@ -17,112 +17,111 @@ exclude = [".github/", "benches/", "tests/", "examples/", "ROADMAP.json", ".qwen
 [features]
 default = ["std", "parallel"]
 
+# ============================================
+# 核心特性（Core Features）
+# ============================================
+
 # 标准库支持（始终启用）
 std = []
 
-# 并行算法支持（默认启用）
+# 并行算法支持（默认启用，Rayon 后端）
 parallel = ["dep:rayon", "dep:crossbeam-queue"]
 
-# 序列化支持 (serde is now always enabled, this feature is for backward compatibility)
-serde = []
+# SIMD 向量化支持（wide::f64x4）
+simd = ["dep:wide"]
 
-# Rayon 集成（并行迭代器）
-rayon-support = ["dep:rayon"]
+# 随机数生成（用于随机图生成、GNN 初始化）
+rand = ["dep:rand_distr"]
+
+# ============================================
+# Tensor 核心功能（精简为 3 个特性）
+# ============================================
+
+# Tensor 基础支持（ndarray 后端，包含 Dense/Sparse）
+tensor = ["dep:ndarray"]
+
+# Sparse Tensor 支持（COO/CSR 格式，需要 tensor）
+tensor-sparse = ["tensor"]
+
+# GNN 层支持（GCN/GAT/GraphSAGE，需要 tensor + rand）
+tensor-gnn = ["tensor", "rand"]
+
+# 自动微分支持（需要 tensor）
+tensor-autograd = ["tensor"]
+
+# 内存池优化（迭代算法性能提升 6-7x）
+tensor-pool = ["tensor", "dep:bitvec", "dep:bumpalo"]
+
+# ============================================
+# Transformer / LLM 支持
+# ============================================
+
+# Transformer 基础架构（需要 tensor）
+transformer = ["tensor"]
+
+# Safetensors 模型加载（HuggingFace 格式）
+safetensors = ["dep:safetensors", "transformer"]
+
+# Tokenizer 支持
+tokenizer = ["dep:tokenizers"]
+
+# 完整 LLM 支持（transformer + safetensors + tokenizer + tensor-pool）
+llm = ["transformer", "safetensors", "tokenizer", "tensor-pool"]
+
+# ============================================
+# 实验性/特殊用途特性
+# ============================================
+
+# 序列化支持（向后兼容）
+serde = []
 
 # DOT 格式导出（Graphviz 可视化）
 dot = []
 
-# 矩阵表示和线性代数集成
+# 矩阵表示和线性代数集成（nalgebra）
 matrix = ["dep:nalgebra"]
 
-# 随机图生成
-rand = []
-rand_chacha = ["dep:rand_chacha"]
-
-# 夜间 Rust 特性（实验性）
+# 夜间 Rust 特性（SIMD 预取等）
 unstable = []
 
-# SIMD 向量化支持（实验性）
-# 使用 wide crate 实现 SIMD，支持 stable Rust
-simd = ["dep:wide"]
-
-# Tensor 核心支持（启用 ndarray 后端）
-tensor = ["dep:ndarray"]
-
-# Sparse Tensor 格式（COO, CSR, BSR）
-tensor-sparse = ["tensor"]
-
-# GPU 加速（通过 dfdx，需要 CUDA）
+# GPU 加速（dfdx，需要 CUDA 环境）
 tensor-gpu = ["tensor", "dep:dfdx"]
 
-# Candle 后端（Hugging Face 的轻量级 tensor 库）
+# Candle 后端（HuggingFace 轻量级 tensor 库）
 tensor-candle = ["tensor", "dep:candle-core"]
 
-# 自动微分支持
-tensor-autograd = ["tensor", "dep:dfdx"]
+# BLAS 加速（OpenBLAS/MKL，大矩阵乘法）
+tensor-blas = ["tensor", "dep:blas-src", "dep:openblas-src"]
 
-# Tensor 序列化
-tensor-serde = ["tensor"]
-
-# GNN 层（GCN, GAT, GraphSAGE 等）
-tensor-gnn = ["tensor", "tensor-sparse", "dep:rand_distr"]
-
-# 内存池优化
-tensor-pool = ["tensor", "dep:bitvec", "dep:bumpalo"]
-
-# 批量图处理
-tensor-batch = ["tensor", "tensor-sparse"]
-
-# Transformer/LLM support
-transformer = ["tensor", "tensor-sparse"]
-
-# Safetensors model loading
-safetensors = ["dep:safetensors", "transformer"]
-
-# CAD-LLM Topology Optimization (experimental)
+# CAD-LLM 拓扑优化（实验性）
 cad-llm = ["tensor", "safetensors"]
-
-# Tokenizer support
-tokenizer = ["dep:tokenizers"]
-
-# Full LLM inference support
-llm = ["transformer", "safetensors", "tokenizer", "tensor-pool"]
 
 # ============================================
 # 元特性（Meta-Features）- 简化用户配置
 # ============================================
 
-# 启用所有 tensor 功能（ndarray + sparse + GNN + pool + batch）
-tensor-full = [
-    "tensor",
-    "tensor-sparse",
-    "tensor-gnn",
-    "tensor-pool",
-    "tensor-batch",
-]
+# 完整 Tensor 支持（适合 GNN 训练和开发）
+tensor-full = ["tensor", "tensor-gnn", "tensor-pool"]
 
-# GNN 推理专用（sparse + GNN 层，适合生产推理场景）
-tensor-inference = [
-    "tensor",
-    "tensor-sparse",
-    "tensor-gnn",
-]
+# GNN 推理专用（轻量级部署）
+tensor-inference = ["tensor", "tensor-gnn"]
 
-# 机器学习完整支持（GNN + autograd，适合训练场景）
-# 注意：需要集成 dfdx/candle 实现完整训练循环
-tensor-ml = [
-    "tensor",
-    "tensor-sparse",
-    "tensor-gnn",
-    "tensor-autograd",
-    "tensor-pool",
-]
+# 全局 jemalloc 分配器（多线程性能提升 20-50%）
+jemalloc = ["dep:tikv-jemallocator"]
+
+# 索引 HashMap（确定性迭代顺序）
+indexmap = ["dep:indexmap"]
+
+# 分布式系统支持
+distributed = ["dep:dashmap", "dep:crossbeam-queue"]
+
+# MCP Server 支持
+mcp = ["dep:parking_lot", "dep:rustc-hash"]
 
 [dependencies]
 # 可选依赖
 rayon = { version = "1.10", optional = true }
 nalgebra = { version = "0.33", optional = true }
-rand_chacha = { version = "0.3", optional = true }
 crossbeam-queue = { version = "0.3", optional = true }
 
 # SIMD 支持（stable Rust 使用 wide crate）
@@ -130,6 +129,10 @@ wide = { version = "0.7", optional = true }
 
 # Tensor 支持（Phase 2 核心 tensor 基础设施）
 ndarray = { version = "0.15", optional = true }
+
+# BLAS 后端加速（large matrix matmul）
+blas-src = { version = "0.9", optional = true }
+openblas-src = { version = "0.10", optional = true, features = ["cblas", "system"] }
 
 # GPU 加速后端
 dfdx = { version = "0.13", optional = true, features = ["cuda"] }
@@ -145,6 +148,21 @@ bumpalo = { version = "3.16", optional = true }
 
 # GNN 支持
 rand_distr = { version = "0.4", optional = true }
+
+# jemalloc 全局分配器（可选，提升多线程性能）
+tikv-jemallocator = { version = "0.5", optional = true }
+
+# 索引 HashMap（确定性迭代，可选）
+indexmap = { version = "2.0", optional = true }
+
+# 并发 HashMap（lock-free，用于分布式模块）
+dashmap = { version = "5.5", optional = true }
+
+# 快速 HashMap（Faster hashing for string keys）
+rustc-hash = { version = "1.1", optional = true }
+
+# 并发锁（用于 MCP 服务器）
+parking_lot = { version = "0.12", optional = true }
 
 # Transformer/LLM 支持
 safetensors = { version = "0.4", optional = true }
@@ -174,6 +192,9 @@ rand_xorshift = "0.3"
 
 # 用于性能对比
 petgraph = "0.6"
+
+# 临时文件支持（测试用）
+tempfile = "3.10"
 
 [[bench]]
 name = "traversal"
@@ -209,10 +230,15 @@ required-features = ["parallel"]
 [[bench]]
 name = "tensor_ops"
 harness = false
-required-features = ["tensor", "tensor-sparse", "tensor-gnn", "tensor-pool"]
+required-features = ["tensor", "tensor-gnn", "tensor-pool"]
 
 [[bench]]
 name = "tensor_pool"
+harness = false
+required-features = ["tensor", "tensor-pool"]
+
+[[bench]]
+name = "tensor_arena"
 harness = false
 required-features = ["tensor", "tensor-pool"]
 
@@ -226,6 +252,17 @@ name = "transformer"
 harness = false
 required-features = ["transformer", "simd"]
 
+# transformer_inference requires nightly Rust (uses #![feature(test)])
+# To run it: rustup run nightly cargo bench --features "transformer,simd,unstable" --bench transformer_inference
+[[bench]]
+name = "transformer_inference"
+harness = false
+required-features = ["transformer", "simd", "unstable"]
+
+[[bench]]
+name = "distributed"
+harness = false
+
 [profile.release]
 opt-level = 3
 lto = "thin"
@@ -238,5 +275,5 @@ codegen-units = 1
 
 [package.metadata.docs.rs]
 # 启用除 GPU 外的所有特性（GPU 需要 CUDA，docs.rs 不支持）
-features = ["std", "parallel", "dot", "matrix", "simd", "tensor", "tensor-sparse", "tensor-gnn", "tensor-pool", "tensor-batch"]
+features = ["std", "parallel", "dot", "matrix", "simd", "tensor", "tensor-gnn", "tensor-pool", "transformer", "safetensors"]
 rustdoc-args = ["--cfg", "docsrs"]

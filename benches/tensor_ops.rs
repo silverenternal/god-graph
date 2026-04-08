@@ -8,15 +8,15 @@
 //! - Graph-Tensor 转换
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
-use god_gragh::graph::traits::GraphOps;
-use god_gragh::graph::Graph;
-use god_gragh::tensor::dense::DenseTensor;
-use god_gragh::tensor::gnn::Aggregator;
-use god_gragh::tensor::gnn::{GCNConv, MeanAggregator, SumAggregator};
-use god_gragh::tensor::graph_tensor::{GraphAdjacencyMatrix, GraphFeatureExtractor};
-use god_gragh::tensor::pool::{PoolConfig, TensorPool};
-use god_gragh::tensor::sparse::{COOTensor, SparseTensor};
-use god_gragh::tensor::traits::TensorOps;
+use god_graph::graph::traits::GraphOps;
+use god_graph::graph::Graph;
+use god_graph::tensor::dense::DenseTensor;
+use god_graph::tensor::gnn::Aggregator;
+use god_graph::tensor::gnn::{GCNConv, MeanAggregator, SumAggregator};
+use god_graph::tensor::graph_tensor::{GraphAdjacencyMatrix, GraphFeatureExtractor};
+use god_graph::tensor::pool::{PoolConfig, TensorPool};
+use god_graph::tensor::sparse::{COOTensor, SparseTensor};
+use god_graph::tensor::traits::TensorOps;
 
 /// 稠密张量基础操作性能测试
 fn bench_dense_tensor_ops(c: &mut Criterion) {
@@ -39,7 +39,7 @@ fn bench_dense_tensor_ops(c: &mut Criterion) {
 
         // 转置（使用 matrix::transpose）
         group.bench_with_input(BenchmarkId::new("transpose", size), &tensor_a, |b, t| {
-            b.iter(|| black_box(god_gragh::tensor::ops::matrix::transpose(t)))
+            b.iter(|| black_box(god_graph::tensor::ops::matrix::transpose(t)))
         });
     }
     group.finish();

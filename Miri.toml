@@ -1,0 +1,42 @@
+# Miri Test Configuration
+# https://github.com/rust-lang/miri
+#
+# Miri is a formal verification tool for Rust that interprets your code
+# to find undefined behavior, memory leaks, and data races.
+#
+# Usage:
+#   cargo +nightly miri test --features "parallel,tensor"
+#
+# This runs all tests under Miri, checking for:
+# - Memory safety violations
+# - Data races in concurrent code
+# - Undefined behavior
+# - Memory leaks
+
+[env]
+# Increase Miri's stack size for deep recursion tests
+MIRI_STACK_SIZE = "16777216"
+
+# Enable backtrace for better debugging
+RUST_BACKTRACE = "1"
+
+# Test specific modules with known unsafe code
+[tests]
+# Cache alignment and padding tests
+"utils::cache::tests" = ["--features", "parallel"]
+
+# Memory pool tests (heavy allocator usage)
+"utils::memory_pool::tests" = ["--features", "tensor-pool"]
+
+# Parallel algorithm tests (check for data races)
+"parallel::algorithms::tests" = ["--features", "parallel"]
+
+# Tensor operation tests
+"tensor::dense::tests" = ["--features", "tensor,simd"]
+
+# Graph traversal tests
+"algorithms::traversal::tests" = []
+
+# Known issues to skip (if any)
+# [skip]
+# "some_test_name" = "reason: description"

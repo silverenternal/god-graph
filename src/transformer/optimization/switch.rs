@@ -37,12 +37,11 @@
 //! # fn main() {}
 //! ```
 
-use crate::errors::{GraphError, GraphResult};
-use crate::graph::traits::{GraphBase, GraphOps, GraphQuery};
+use crate::errors::GraphResult;
+use crate::graph::traits::{GraphBase, GraphQuery};
 use crate::graph::Graph;
 use smallvec::SmallVec;
 use std::collections::HashMap;
-use std::path::Path;
 
 /// Operator types for LLM computation graph nodes
 #[derive(Debug, Clone, PartialEq)]

@@ -11,10 +11,10 @@
 use proptest::prelude::*;
 use std::collections::{BTreeSet, HashSet};
 
-use god_gragh::algorithms::shortest_path::dijkstra;
-use god_gragh::algorithms::traversal::{bfs, dfs};
-use god_gragh::graph::traits::{GraphBase, GraphOps, GraphQuery};
-use god_gragh::graph::Graph;
+use god_graph::algorithms::shortest_path::dijkstra;
+use god_graph::algorithms::traversal::{bfs, dfs};
+use god_graph::graph::traits::{GraphBase, GraphOps, GraphQuery};
+use god_graph::graph::Graph;
 
 // ============================================
 // 图操作不变量测试
@@ -139,7 +139,7 @@ proptest! {
         num_iterations in 1usize..30
     ) {
         let mut graph = Graph::<i32, f64>::directed();
-        let mut last_index: Option<god_gragh::node::NodeIndex> = None;
+        let mut last_index: Option<god_graph::node::NodeIndex> = None;
         let mut last_generation = 0u32;
 
         for _ in 0..num_iterations {
@@ -483,5 +483,252 @@ proptest! {
         }
 
         prop_assert!(graph.edge_count() > 0);
+    }
+}
+
+// ============================================
+// Tensor 操作不变量测试
+// ============================================
+
+#[cfg(feature = "tensor")]
+mod tensor_properties {
+    use super::*;
+    use god_graph::tensor::DenseTensor;
+    use god_graph::tensor::traits::{TensorBase, TensorOps};
+
+    // 测试：矩阵乘法结合律
+    proptest! {
+        #[test]
+        fn prop_matrix_mult_assoc(
+            a_data in prop::collection::vec(-10.0..10.0, 9),
+            b_data in prop::collection::vec(-10.0..10.0, 9),
+            c_data in prop::collection::vec(-10.0..10.0, 9),
+        ) {
+            let a = DenseTensor::new(a_data, vec![3, 3]);
+            let b = DenseTensor::new(b_data, vec![3, 3]);
+            let c = DenseTensor::new(c_data, vec![3, 3]);
+
+            // (A × B) × C
+            let ab = a.matmul(&b);
+            let ab_c = ab.matmul(&c);
+
+            // A × (B × C)
+            let bc = b.matmul(&c);
+            let a_bc = a.matmul(&bc);
+
+            // 结果应该相等（允许浮点误差）
+            for (v1, v2) in ab_c.data().iter().zip(a_bc.data().iter()) {
+                let diff = (v1 - v2).abs();
+                prop_assert!(diff < 1e-6, "Matrix multiplication not associative: diff={}", diff);
+            }
+        }
+    }
+
+    // 测试：转置两次等于原矩阵
+    proptest! {
+        #[test]
+        fn prop_double_transpose_equals_original(
+            data in prop::collection::vec(-100.0..100.0, 16),
+        ) {
+            let tensor = DenseTensor::new(data, vec![4, 4]);
+            let transposed = tensor.transpose(None);
+            let double_transposed = transposed.transpose(None);
+
+            prop_assert_eq!(tensor.shape(), double_transposed.shape());
+            for (orig, result) in tensor.data().iter().zip(double_transposed.data().iter()) {
+                prop_assert!((orig - result).abs() < 1e-10, "Double transpose changed values");
+            }
+        }
+    }
+
+    // 测试：矩阵加法交换律
+    proptest! {
+        #[test]
+        fn prop_matrix_add_commutative(
+            a_data in prop::collection::vec(-1000.0..1000.0, 16),
+            b_data in prop::collection::vec(-1000.0..1000.0, 16),
+        ) {
+            let a = DenseTensor::new(a_data, vec![4, 4]);
+            let b = DenseTensor::new(b_data, vec![4, 4]);
+
+            let a_plus_b = a.add(&b);
+            let b_plus_a = b.add(&a);
+
+            for (v1, v2) in a_plus_b.data().iter().zip(b_plus_a.data().iter()) {
+                prop_assert!((v1 - v2).abs() < 1e-10, "Matrix addition not commutative");
+            }
+        }
+    }
+
+    // 测试：softmax 输出和为 1
+    proptest! {
+        #[test]
+        fn prop_softmax_sums_to_one(
+            data in prop::collection::vec(-100.0..100.0, 16),
+        ) {
+            let tensor = DenseTensor::new(data, vec![4, 4]);
+            let softmax_result = god_graph::tensor::ops::activations::softmax(&tensor, 1);
+
+            // 每行的和应该为 1
+            for row in 0..4 {
+                let row_sum: f64 = (0..4)
+                    .map(|col| softmax_result.data()[row * 4 + col])
+                    .sum();
+                prop_assert!(
+                    (row_sum - 1.0).abs() < 1e-5,
+                    "Softmax row {} sum is {}, expected 1.0",
+                    row,
+                    row_sum
+                );
+            }
+        }
+    }
+
+    // 测试：ReLU 输出非负
+    proptest! {
+        #[test]
+        fn prop_relu_output_non_negative(
+            data in prop::collection::vec(-1000.0..1000.0, 64),
+        ) {
+            let tensor = DenseTensor::new(data, vec![8, 8]);
+            let relu_result = god_graph::tensor::ops::activations::relu(&tensor);
+
+            for &val in relu_result.data() {
+                prop_assert!(val >= 0.0, "ReLU output should be non-negative");
+            }
+        }
+    }
+
+    // 测试：张量重塑保持元素不变
+    proptest! {
+        #[test]
+        fn prop_reshape_preserves_elements(
+            data in prop::collection::vec(-100.0..100.0, 16),
+        ) {
+            let tensor = DenseTensor::new(data.clone(), vec![4, 4]);
+            let reshaped = tensor.reshape(&[2, 8]);
+
+            prop_assert_eq!(reshaped.numel(), 16);
+            prop_assert_eq!(reshaped.shape(), &[2, 8]);
+
+            // 元素应该相同（顺序可能改变）
+            let mut original_sorted = data.clone();
+            let mut reshaped_data: Vec<_> = reshaped.data().to_vec();
+            original_sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
+            reshaped_data.sort_by(|a, b| a.partial_cmp(b).unwrap());
+
+            for (orig, reshaped_val) in original_sorted.iter().zip(reshaped_data.iter()) {
+                prop_assert!(
+                    (orig - reshaped_val).abs() < 1e-10,
+                    "Reshape changed element values"
+                );
+            }
+        }
+    }
+}
+
+// ============================================
+// 图 + Tensor 联合不变量测试
+// ============================================
+
+#[cfg(all(feature = "tensor", feature = "tensor-gnn"))]
+mod graph_tensor_properties {
+    use super::*;
+    use god_graph::tensor::DenseTensor;
+    use god_graph::tensor::gnn::{GCNConv, MessagePassingLayer};
+    use god_graph::tensor::traits::{TensorBase, TensorOps};
+
+    // 测试：GCN 前向传播输出形状正确
+    proptest! {
+        #[test]
+        fn prop_gcn_forward_output_shape(
+            num_nodes in 3usize..20,
+            in_features in 4usize..16,
+            out_features in 4usize..16,
+        ) {
+            let gcn = GCNConv::new(in_features, out_features);
+
+            // 创建随机特征
+            let features = DenseTensor::new(
+                prop::collection::vec(-1.0..1.0, num_nodes * in_features),
+                vec![num_nodes, in_features],
+            );
+
+            // 创建简单的邻接矩阵（使用 AdjacencyMatrix）
+            let adjacency = god_graph::tensor::types::AdjacencyMatrix::from_edges(
+                &[(0, 1, 1.0), (1, 2, 1.0)],
+                num_nodes,
+            );
+
+            let output = gcn.forward(&features, &adjacency);
+
+            prop_assert_eq!(output.shape(), &[num_nodes, out_features]);
+        }
+    }
+}
+
+// ============================================
+// 李群正交化不变量测试
+// ============================================
+
+#[cfg(feature = "tensor")]
+mod lie_group_properties {
+    use super::*;
+    use god_graph::tensor::DenseTensor;
+    use god_graph::tensor::decomposition::qr::orthogonalize;
+    use god_graph::tensor::traits::TensorOps;
+
+    // 测试：正交化后 W^T * W = I
+    proptest! {
+        #[test]
+        fn prop_orthogonalization_produces_orthogonal_matrix(
+            data in prop::collection::vec(-10.0..10.0, 16),
+        ) {
+            let tensor = DenseTensor::new(data, vec![4, 4]);
+            let ortho = orthogonalize(&tensor).expect("Orthogonalization failed");
+
+            // 计算 W^T * W
+            let transposed = ortho.transpose(None);
+            let wt_w = transposed.matmul(&ortho);
+
+            // 检查是否接近单位矩阵
+            for i in 0..4 {
+                for j in 0..4 {
+                    let val = wt_w.data()[i * 4 + j];
+                    let expected = if i == j { 1.0 } else { 0.0 };
+                    let error = (val - expected).abs();
+                    prop_assert!(
+                        error < 1e-6,
+                        "W^T * W[{}][{}] = {}, expected {}",
+                        i, j, val, expected
+                    );
+                }
+            }
+        }
+    }
+
+    // 测试：正交矩阵的行列式绝对值为 1
+    proptest! {
+        #[test]
+        fn prop_orthogonal_matrix_determinant_abs_is_one(
+            data in prop::collection::vec(-5.0..5.0, 9),
+        ) {
+            let tensor = DenseTensor::new(data, vec![3, 3]);
+            let ortho = orthogonalize(&tensor).expect("Orthogonalization failed");
+
+            // 计算行列式（3x3 矩阵）
+            let d = ortho.data();
+            let det = d[0] * (d[4] * d[8] - d[5] * d[7])
+                    - d[1] * (d[3] * d[8] - d[5] * d[6])
+                    + d[2] * (d[3] * d[7] - d[4] * d[6]);
+
+            // 正交矩阵的行列式绝对值应该为 1
+            let det_abs = det.abs();
+            prop_assert!(
+                (det_abs - 1.0).abs() < 1e-5,
+                "Orthogonal matrix determinant |{}| should be 1",
+                det_abs
+            );
+        }
     }
 }

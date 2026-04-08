@@ -28,7 +28,25 @@
       "Bash(git clone *)",
       "Bash(cargo run *)",
       "Bash(bash *)",
-      "Bash(mv *)"
+      "Bash(mv *)",
+      "Bash(tee *)",
+      "Bash(find *)",
+      "Bash(cargo fmt *)",
+      "Bash(cargo *)",
+      "Bash(with)",
+      "Bash(as *)",
+      "Bash(content *)",
+      "Bash(old_code *)",
+      "Bash(new_code *)",
+      "Bash(old_code, *)",
+      "Bash(print)",
+      "Bash(else:)",
+      "Bash(old_code2 *)",
+      "Bash(new_code2 *)",
+      "Bash(old_code2, *)",
+      "Bash(f.write)",
+      "Bash(python_script)",
+      "Bash(cp *)"
     ]
   },
   "$version": 3

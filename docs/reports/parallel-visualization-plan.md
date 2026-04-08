@@ -448,7 +448,7 @@ for issue in &report.issues {
 
 **李群正交化**（数值稳定性）：
 ```rust
-use god_gragh::transformer::optimization::LieGroupOptimizer;
+use god_graph::transformer::optimization::LieGroupOptimizer;
 
 let optimizer = LieGroupOptimizer::new(LieGroupConfig::new());
 
@@ -466,7 +466,7 @@ println!("正交化误差：{:.2e}", error);  // 2.04e-14（机器精度）
 
 **张量环压缩**（模型轻量化）：
 ```rust
-use god_gragh::transformer::optimization::TensorRingCompressor;
+use god_graph::transformer::optimization::TensorRingCompressor;
 
 let compressor = TensorRingCompressor::new(CompressionConfig::new());
 
@@ -492,7 +492,7 @@ println!("参数量：{}M -> {}M", report.original_params, report.compressed_par
 **God-Graph 方案**：DifferentiableGraph（核心创新）
 
 ```rust
-use god_gragh::tensor::differentiable::{
+use god_graph::tensor::differentiable::{
     DifferentiableGraph, GradientConfig, ThresholdEditPolicy
 };
 

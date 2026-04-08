@@ -1,17 +1,17 @@
 //! 中心性算法性能基准测试
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
-use god_gragh::algorithms::centrality::{
+use god_graph::algorithms::centrality::{
     betweenness_centrality, closeness_centrality, degree_centrality, pagerank,
 };
 #[cfg(all(feature = "parallel", feature = "simd"))]
-use god_gragh::algorithms::parallel::par_pagerank_simd;
+use god_graph::algorithms::parallel::par_pagerank_simd;
 #[cfg(feature = "parallel")]
-use god_gragh::algorithms::parallel::{
+use god_graph::algorithms::parallel::{
     par_degree_centrality as par_degree_centrality_fn, par_pagerank,
 };
-use god_gragh::graph::traits::{GraphOps, GraphQuery};
-use god_gragh::graph::Graph;
+use god_graph::graph::traits::{GraphOps, GraphQuery};
+use god_graph::graph::Graph;
 
 /// 创建随机图
 fn create_random_graph(num_nodes: usize, edge_probability: f64, seed: u64) -> Graph<usize, f64> {

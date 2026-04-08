@@ -277,24 +277,24 @@ impl<'a> CadStyleEditor<'a> {
                         let _ = self.graph.add_edge(from_idx, to_idx, weight);
                     }
                 }
-                EditOperation::RemoveEdge { from, to } => {
+                EditOperation::RemoveEdge { from: _, to: _ } => {
                     // Find and remove edge
                     // Note: This requires implementing edge removal in the graph
                     // For now, we just record the operation
                 }
-                EditOperation::AddNode { node_id, operator_type } => {
+                EditOperation::AddNode { node_id: _, operator_type: _ } => {
                     // Node already added during fix_isolated_node/fix_disconnected_component
                     // Just record the operation
                 }
-                EditOperation::RemoveNode { node_id, operator_type } => {
+                EditOperation::RemoveNode { node_id: _, operator_type: _ } => {
                     // Note: Graph doesn't have a remove_node method yet
                     // Just record the operation for now
                 }
-                EditOperation::ModifyNode { node_id, old_type, new_type } => {
+                EditOperation::ModifyNode { node_id: _, old_type: _, new_type: _ } => {
                     // Note: This requires implementing node modification
                     // Just record the operation for now
                 }
-                EditOperation::ReplaceModule { path, old_module, new_module } => {
+                EditOperation::ReplaceModule { path: _, old_module: _, new_module: _ } => {
                     // Module replacement is handled in replace_module
                     // Just record the operation
                 }
@@ -415,7 +415,7 @@ impl<'a> CadStyleEditor<'a> {
                 new_node_mapping.get(to),
             ) {
                 // Create a default weight tensor
-                let weight = WeightTensor::new(
+                let _weight = WeightTensor::new(
                     weight_name.clone(),
                     vec![1.0],
                     vec![1],
@@ -577,11 +577,11 @@ impl<'a> CadStyleEditor<'a> {
             for (src, dst, _prob) in edges {
                 // Finite difference approximation
                 let eps = 1e-5;
-                
-                // Get current probability
-                let current_prob = diff_graph.get_edge_probability(src, dst)
+
+                // Get current probability (for future use)
+                let _current_prob = diff_graph.get_edge_probability(src, dst)
                     .unwrap_or(0.5);
-                
+
                 // Compute gradient numerically
                 let grad = (loss_fn(&diff_graph) - loss) / eps;
                 gradients.insert((src, dst), grad);
@@ -709,10 +709,10 @@ impl<'a> CadStyleEditor<'a> {
             // Already connected
             return Ok(());
         }
-        
+
         // Find which component contains the component_start node
         let start_node_idx = NodeIndex::new(component_start, 0);
-        let component_containing_start = components.iter()
+        let _component_containing_start = components.iter()
             .position(|comp| comp.contains(&start_node_idx))
             .unwrap_or(0);
         

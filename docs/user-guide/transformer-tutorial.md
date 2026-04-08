@@ -56,10 +56,10 @@ god-gragh = { version = "0.4.3-beta", features = [
 Create `src/main.rs`:
 
 ```rust
-use god_gragh::transformer::{
+use god_graph::transformer::{
     LlamaModel, LlamaConfig, TextGenerator, GenerationConfig,
 };
-use god_gragh::tensor::DenseTensor;
+use god_graph::tensor::DenseTensor;
 
 fn main() {
     println!("Hello, Transformer!");
@@ -139,10 +139,10 @@ Input → Embeddings → [Decoder Layer × N] → Output
 Let's examine each component:
 
 ```rust
-use god_gragh::transformer::layers::{
+use god_graph::transformer::layers::{
     MultiHeadAttention, RMSNorm, RoPE, FeedForward,
 };
-use god_gragh::tensor::DenseTensor;
+use god_graph::tensor::DenseTensor;
 
 // 1. Multi-Head Attention
 let hidden_dim = 512;
@@ -175,7 +175,7 @@ let ffn = FeedForward::swiglu(gate_proj, up_proj, down_proj);
 ### Understanding Data Flow
 
 ```rust
-use god_gragh::tensor::{DenseTensor, TensorOps};
+use god_graph::tensor::{DenseTensor, TensorOps};
 
 // Input: [batch_size=2, seq_len=10, hidden_dim=512]
 let x = DenseTensor::randn(vec![2, 10, 512], 0.0, 0.02);
@@ -236,8 +236,8 @@ println!("Recovered: {}", recovered);
 ### Simple Generation Loop
 
 ```rust
-use god_gragh::transformer::{LlamaModel, LlamaConfig, GenerationConfig};
-use god_gragh::tensor::DenseTensor;
+use god_graph::transformer::{LlamaModel, LlamaConfig, GenerationConfig};
+use god_graph::tensor::DenseTensor;
 
 fn generate_simple(
     model: &LlamaModel,
@@ -271,7 +271,7 @@ fn generate_simple(
 ### Using GenerationConfig
 
 ```rust
-use god_gragh::transformer::{TextGenerator, GenerationConfig};
+use god_graph::transformer::{TextGenerator, GenerationConfig};
 
 // Greedy decoding (deterministic)
 let greedy_config = GenerationConfig {
@@ -338,7 +338,7 @@ huggingface-cli download mistralai/Mistral-7B-v0.1 --local-dir ./models/mistral-
 ### Loading Safetensors Weights
 
 ```rust
-use god_gragh::transformer::{
+use god_graph::transformer::{
     LlamaModel, LlamaConfig, TextGenerator,
     loader::SafetensorsLoader,
 };
@@ -421,7 +421,7 @@ Understanding weight names helps with debugging:
 Avoid recomputing keys and values for previous tokens:
 
 ```rust
-use god_gragh::transformer::kv_cache::KVCache;
+use god_graph::transformer::kv_cache::KVCache;
 
 // Create cache
 let num_layers = 32;
@@ -467,7 +467,7 @@ fn generate_with_cache(
 Process multiple sequences simultaneously:
 
 ```rust
-use god_gragh::transformer::batch::{BatchData, BatchInference};
+use god_graph::transformer::batch::{BatchData, BatchInference};
 
 // Create batch inference engine
 let model = LlamaModel::new(&config);
@@ -495,7 +495,7 @@ println!("Batch output shape: {:?}", logits.shape());
 Reduce memory usage with lower precision:
 
 ```rust
-use god_gragh::transformer::quantization::{QuantizedTensor, QuantizationConfig};
+use god_graph::transformer::quantization::{QuantizedTensor, QuantizationConfig};
 
 // INT8 quantization (4x compression)
 let weight = DenseTensor::randn(vec![4096, 4096], 0.0, 0.02);
@@ -530,7 +530,7 @@ target-cpu = "native"
 ```
 
 ```rust
-use god_gragh::transformer::perf::{softmax_inplace_simd, matmul_with_buffer};
+use god_graph::transformer::perf::{softmax_inplace_simd, matmul_with_buffer};
 
 // SIMD-optimized operations
 let mut data = vec![1.0f64; 1024 * 1024];
@@ -547,7 +547,7 @@ softmax_inplace_simd(&mut data, &shape, 1);
 Reuse buffers to reduce allocation overhead:
 
 ```rust
-use god_gragh::transformer::perf::TransformerMemoryPool;
+use god_graph::transformer::perf::TransformerMemoryPool;
 
 // Create pool (allocate once)
 let mut pool = TransformerMemoryPool::new(4, 512, 4096, 32);
@@ -573,7 +573,7 @@ for _ in 0..100 {
 For long sequences, use sparse attention patterns:
 
 ```rust
-use god_gragh::transformer::sparse_attention::{SparseMask, SparseAttention};
+use god_graph::transformer::sparse_attention::{SparseMask, SparseAttention};
 
 // Sliding window attention (local context)
 let seq_len = 4096;
@@ -600,10 +600,10 @@ let output = sparse_attn.forward(&query, &key, &value);
 Apply Transformer to graph-structured data:
 
 ```rust
-use god_gragh::transformer::graph_transformer::{
+use god_graph::transformer::graph_transformer::{
     GraphTransformer, GraphNode, GraphEdge, GraphExecutor,
 };
-use god_gragh::graph::Graph;
+use god_graph::graph::Graph;
 
 // Create graph
 let mut graph = Graph::<Vec<f64>, f64>::directed();
@@ -646,7 +646,7 @@ let output = executor.forward();
 Efficiently handle multiple generation requests:
 
 ```rust
-use god_gragh::transformer::batch::{RequestScheduler, InferenceRequest, GenerationConfig};
+use god_graph::transformer::batch::{RequestScheduler, InferenceRequest, GenerationConfig};
 
 // Create scheduler
 let mut scheduler = RequestScheduler::new(8); // max 8 concurrent requests
@@ -711,7 +711,7 @@ Example HTTP server with Actix:
 
 ```rust
 use actix_web::{web, App, HttpServer, post, HttpResponse};
-use god_gragh::transformer::{LlamaModel, TextGenerator, GenerationConfig};
+use god_graph::transformer::{LlamaModel, TextGenerator, GenerationConfig};
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize)]

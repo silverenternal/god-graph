@@ -83,7 +83,7 @@ LLM 权重矩阵的正交性影响：
 
 ```rust
 // so(n) 李代数 → SO(n) 李群
-use god_gragh::tensor::decomposition::{lie_exponential, lie_logarithm};
+use god_graph::tensor::decomposition::{lie_exponential, lie_logarithm};
 
 // 创建 so(2) 生成元（旋转）
 let algebra = DenseTensor::from_vec(
@@ -124,7 +124,7 @@ W(i₁, i₂, ..., iₙ) = Tr[G₁(i₁) × G₂(i₂) × ... × Gₙ(iₙ)]
 **GodGraph 的实现**：
 
 ```rust
-use god_gragh::transformer::optimization::{
+use god_graph::transformer::optimization::{
     TensorRingCompressor, CompressionConfig
 };
 
@@ -171,7 +171,7 @@ LLM 计算图的拓扑结构决定：
 **GodGraph 的实现**：
 
 ```rust
-use god_gragh::transformer::optimization::{
+use god_graph::transformer::optimization::{
     CadStyleEditor, TopologyConstraint, TopologyDefect
 };
 
@@ -272,7 +272,7 @@ editor.solve_constraints()?;
 **ModelSwitch** 提供 HuggingFace Safetensors 和 GodGraph 之间的双向无损转换：
 
 ```rust
-use god_gragh::transformer::optimization::ModelSwitch;
+use god_graph::transformer::optimization::ModelSwitch;
 
 // 1. 加载：Safetensors → GodGraph
 let graph = ModelSwitch::load_from_safetensors("model.safetensors")?;
@@ -334,7 +334,7 @@ Step 4: Verifying weights...
 ### 场景 1: 模型拓扑检查
 
 ```rust
-use god_gragh::transformer::optimization::ModelSwitch;
+use god_graph::transformer::optimization::ModelSwitch;
 
 // 加载模型
 let graph = ModelSwitch::load_from_safetensors("model.safetensors")?;
@@ -363,7 +363,7 @@ if !report.is_valid {
 ### 场景 2: 李群正交化优化
 
 ```rust
-use god_gragh::transformer::optimization::{
+use god_graph::transformer::optimization::{
     LieGroupOptimizer, LieGroupConfig
 };
 
@@ -388,7 +388,7 @@ for edge in graph.edges() {
 ### 场景 3: 张量环压缩
 
 ```rust
-use god_gragh::transformer::optimization::{
+use god_graph::transformer::optimization::{
     TensorRingCompressor, CompressionConfig
 };
 
@@ -416,7 +416,7 @@ for layer in &report.layers {
 ### 场景 4: 动态注意力剪枝
 
 ```rust
-use god_gragh::transformer::graph_transformer::GraphTransformer;
+use god_graph::transformer::graph_transformer::GraphTransformer;
 
 let mut transformer = GraphTransformer::new(
     12,  // num_layers

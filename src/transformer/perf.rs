@@ -78,6 +78,12 @@ impl TransformerMemoryPool {
     }
 
     /// Get or allocate attention score buffer
+    ///
+    /// # Panics
+    ///
+    /// This method should never panic as it allocates the buffer if needed.
+    /// Panic would only occur if memory allocation fails.
+    #[must_use]
     pub fn get_attn_score_buffer(&mut self) -> &mut Vec<f64> {
         if self.attn_score_buffer.is_none() {
             let size = self.batch_size * self.num_heads * self.seq_len * self.seq_len;
@@ -87,6 +93,12 @@ impl TransformerMemoryPool {
     }
 
     /// Get or allocate attention weight buffer
+    ///
+    /// # Panics
+    ///
+    /// This method should never panic as it allocates the buffer if needed.
+    /// Panic would only occur if memory allocation fails.
+    #[must_use]
     pub fn get_attn_weight_buffer(&mut self) -> &mut Vec<f64> {
         if self.attn_weight_buffer.is_none() {
             let size = self.batch_size * self.num_heads * self.seq_len * self.seq_len;
@@ -96,6 +108,12 @@ impl TransformerMemoryPool {
     }
 
     /// Get or allocate QKV projection buffer
+    ///
+    /// # Panics
+    ///
+    /// This method should never panic as it allocates the buffer if needed.
+    /// Panic would only occur if memory allocation fails.
+    #[must_use]
     pub fn get_qkv_buffer(&mut self) -> &mut Vec<f64> {
         if self.qkv_buffer.is_none() {
             let size = self.batch_size * self.seq_len * self.hidden_dim;
@@ -105,6 +123,12 @@ impl TransformerMemoryPool {
     }
 
     /// Get or allocate output buffer
+    ///
+    /// # Panics
+    ///
+    /// This method should never panic as it allocates the buffer if needed.
+    /// Panic would only occur if memory allocation fails.
+    #[must_use]
     pub fn get_output_buffer(&mut self) -> &mut Vec<f64> {
         if self.output_buffer.is_none() {
             let size = self.batch_size * self.seq_len * self.hidden_dim;

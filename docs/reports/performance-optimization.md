@@ -518,7 +518,7 @@ cargo bench --features "transformer,simd" --bench transformer -- attention
 
 ### 使用量化推理
 ```rust
-use god_gragh::transformer::{
+use god_graph::transformer::{
     quantization::{QuantizedTensor, QuantizationConfig, QuantizedMatMul},
 };
 
@@ -542,7 +542,7 @@ let output = QuantizedMatMul::gemm_int8(&q_input, &q_weights);
 
 ### 使用内存池
 ```rust
-use god_gragh::transformer::perf::TransformerMemoryPool;
+use god_graph::transformer::perf::TransformerMemoryPool;
 
 let mut pool = TransformerMemoryPool::new(
     4,    // batch_size
@@ -564,7 +564,7 @@ for _ in 0..num_iterations {
 
 ### 使用 SIMD 优化函数
 ```rust
-use god_gragh::transformer::perf::{
+use god_graph::transformer::perf::{
     softmax_inplace_simd,
     matmul_with_buffer,
 };

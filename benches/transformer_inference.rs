@@ -26,13 +26,13 @@
 
 extern crate test;
 
-use god_gragh::tensor::{DenseTensor, TensorBase, TensorOps};
-use god_gragh::transformer::{
-    MultiHeadAttention, RMSNorm, RoPE, FeedForward, LlamaModel, LlamaConfig,
-    quantization::{QuantizedTensor, QuantizationConfig, QuantizedMatMul},
-    perf::{TransformerMemoryPool, softmax_inplace_simd, matmul_with_buffer},
+use god_graph::tensor::{DenseTensor, TensorBase, TensorOps};
+use god_graph::transformer::{
     batch::{BatchData, BatchInference},
     kv_cache::KVCache,
+    perf::{matmul_with_buffer, softmax_inplace_simd, TransformerMemoryPool},
+    quantization::{QuantizationConfig, QuantizedMatMul, QuantizedTensor},
+    FeedForward, LlamaConfig, LlamaModel, MultiHeadAttention, RMSNorm, RoPE,
 };
 use test::Bencher;
 
@@ -348,7 +348,11 @@ fn bench_batch_data_creation(b: &mut Bencher) {
 
     b.iter(|| {
         let input_ids: Vec<Vec<usize>> = (0..batch_size)
-            .map(|i| (0..seq_len).map(|j| ((i * seq_len + j) % 100) as usize).collect())
+            .map(|i| {
+                (0..seq_len)
+                    .map(|j| ((i * seq_len + j) % 100) as usize)
+                    .collect()
+            })
             .collect();
         let _batch = BatchData::new(input_ids);
     });

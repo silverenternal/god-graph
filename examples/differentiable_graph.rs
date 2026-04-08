@@ -8,7 +8,7 @@
 
 #[cfg(feature = "tensor")]
 mod differentiable_graph_example {
-    use god_gragh::tensor::differentiable::{
+    use god_graph::tensor::differentiable::{
         DifferentiableGraph, GradientConfig, GraphTransformer, GumbelSoftmaxSampler,
         ThresholdEditPolicy,
     };
@@ -273,13 +273,13 @@ mod differentiable_graph_example {
 
             println!("\nRound {} 的编辑操作:", round + 1);
             for edit in &edits {
-                if let god_gragh::tensor::differentiable::EditOperation::EdgeEdit(src, dst, op) =
+                if let god_graph::tensor::differentiable::EditOperation::EdgeEdit(src, dst, op) =
                     &edit.operation
                 {
                     let op_str = match op {
-                        god_gragh::tensor::differentiable::EdgeEditOp::Add => "添加",
-                        god_gragh::tensor::differentiable::EdgeEditOp::Remove => "删除",
-                        god_gragh::tensor::differentiable::EdgeEditOp::Modify => "修改",
+                        god_graph::tensor::differentiable::EdgeEditOp::Add => "添加",
+                        god_graph::tensor::differentiable::EdgeEditOp::Remove => "删除",
+                        god_graph::tensor::differentiable::EdgeEditOp::Modify => "修改",
                     };
                     println!(
                         "  {}→{}: {} (P: {:.3}→{:.3}, ∇: {:.4})",
@@ -377,18 +377,18 @@ mod differentiable_graph_example {
     }
 
     /// 构建一个迷你 Transformer 图结构用于示例
-    /// 
+    ///
     /// 这是一个简化版的 Transformer，包含：
     /// - 4 个节点（输入、Attention、FFN、输出）
     /// - 边表示数据流和残差连接
     #[cfg(feature = "transformer")]
-    pub fn build_mini_transformer() -> god_gragh::graph::Graph<
-        god_gragh::transformer::optimization::switch::OperatorType,
-        god_gragh::transformer::optimization::switch::WeightTensor,
+    pub fn build_mini_transformer() -> god_graph::graph::Graph<
+        god_graph::transformer::optimization::switch::OperatorType,
+        god_graph::transformer::optimization::switch::WeightTensor,
     > {
-        use god_gragh::graph::traits::GraphOps;
-        use god_gragh::graph::Graph;
-        use god_gragh::transformer::optimization::switch::{OperatorType, WeightTensor};
+        use god_graph::graph::traits::GraphOps;
+        use god_graph::graph::Graph;
+        use god_graph::transformer::optimization::switch::{OperatorType, WeightTensor};
 
         let mut graph: Graph<OperatorType, WeightTensor> = Graph::directed();
 
@@ -440,9 +440,9 @@ mod differentiable_graph_example {
     }
 
     #[cfg(not(feature = "transformer"))]
-    pub fn build_mini_transformer() -> god_gragh::graph::Graph<usize, f64> {
-        use god_gragh::graph::traits::GraphOps;
-        use god_gragh::graph::Graph;
+    pub fn build_mini_transformer() -> god_graph::graph::Graph<usize, f64> {
+        use god_graph::graph::traits::GraphOps;
+        use god_graph::graph::Graph;
 
         let mut graph: Graph<usize, f64> = Graph::directed();
 
@@ -488,7 +488,7 @@ mod tests {
     #[test]
     fn test_examples_compile() {
         // 确保示例代码可以编译
-        use god_gragh::tensor::differentiable::{
+        use god_graph::tensor::differentiable::{
             DifferentiableGraph, GradientConfig, GumbelSoftmaxSampler,
         };
 

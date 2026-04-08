@@ -1,7 +1,7 @@
 //! God-Graph 示例程序
 
-use god_gragh::graph::traits::GraphQuery;
-use god_gragh::prelude::*;
+use god_graph::graph::traits::GraphQuery;
+use god_graph::prelude::*;
 
 fn main() {
     println!("🚀 God-Graph 高性能图库\n");

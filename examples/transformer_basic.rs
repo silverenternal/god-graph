@@ -5,22 +5,22 @@
 
 #[cfg(feature = "transformer")]
 fn main() {
-    use god_gragh::tensor::DenseTensor;
-    use god_gragh::tensor::traits::TensorBase;
-    use god_gragh::transformer::layers::{FeedForward, MultiHeadAttention, RMSNorm};
-    use god_gragh::transformer::loader::LlamaConfig;
-    use god_gragh::transformer::model::{LlamaDecoderLayer, LlamaModel};
-    use god_gragh::transformer::generation::{GenerationConfig, TextGenerator};
+    use god_graph::tensor::traits::TensorBase;
+    use god_graph::tensor::DenseTensor;
+    use god_graph::transformer::generation::{GenerationConfig, TextGenerator};
+    use god_graph::transformer::layers::{FeedForward, MultiHeadAttention, RMSNorm};
+    use god_graph::transformer::loader::LlamaConfig;
+    use god_graph::transformer::model::{LlamaDecoderLayer, LlamaModel};
 
     println!("=== Transformer Model Example ===\n");
 
     // Create a small model configuration for demonstration
     let mut config = LlamaConfig::llama_7b();
-    config.vocab_size = 1000;        // Small vocab for demo
-    config.hidden_size = 128;        // Small hidden dim for demo
-    config.intermediate_size = 256;  // Small FFN dim for demo
-    config.num_hidden_layers = 2;    // Only 2 layers for demo
-    config.num_attention_heads = 4;  // 4 attention heads
+    config.vocab_size = 1000; // Small vocab for demo
+    config.hidden_size = 128; // Small hidden dim for demo
+    config.intermediate_size = 256; // Small FFN dim for demo
+    config.num_hidden_layers = 2; // Only 2 layers for demo
+    config.num_attention_heads = 4; // 4 attention heads
 
     println!("Model Configuration:");
     println!("  Vocab size: {}", config.vocab_size);
@@ -60,12 +60,8 @@ fn main() {
         let post_attention_layernorm = RMSNorm::default(hidden_dim);
 
         // Create decoder layer
-        let layer = LlamaDecoderLayer::new(
-            self_attn,
-            mlp,
-            input_layernorm,
-            post_attention_layernorm,
-        );
+        let layer =
+            LlamaDecoderLayer::new(self_attn, mlp, input_layernorm, post_attention_layernorm);
 
         layers.push(layer);
         println!("Created decoder layer {}", layer_idx);
@@ -89,11 +85,7 @@ fn main() {
 
     // Example 2: Forward pass with batched input
     println!("=== Example 2: Batched Forward Pass ===");
-    let batch_input = vec![
-        vec![1, 2, 3, 4],
-        vec![5, 6, 7, 8],
-        vec![9, 10, 11, 12],
-    ];
+    let batch_input = vec![vec![1, 2, 3, 4], vec![5, 6, 7, 8], vec![9, 10, 11, 12]];
     let batch_logits = model.forward(&batch_input, None);
     println!("Batch input shape: [3, 4]");
     println!("Batch output logits shape: {:?}", batch_logits.shape());

@@ -51,7 +51,7 @@ god-gragh = { version = "0.4.3-beta", features = [
 ### Basic Text Generation
 
 ```rust
-use god_gragh::transformer::{
+use god_graph::transformer::{
     LlamaModel, LlamaConfig, TextGenerator, GenerationConfig,
 };
 
@@ -94,7 +94,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Loading Pre-trained Weights
 
 ```rust
-use god_gragh::transformer::{
+use god_graph::transformer::{
     LlamaModel, LlamaConfig, TextGenerator, GenerationConfig,
     loader::SafetensorsLoader,
 };
@@ -183,7 +183,7 @@ Input IDs → Embeddings → [DecoderLayer × N] → Norm → LM Head → Logits
 KV Cache stores key and value projections to avoid recomputing them for previous tokens:
 
 ```rust
-use god_gragh::transformer::kv_cache::KVCache;
+use god_graph::transformer::kv_cache::KVCache;
 
 // Create KV cache
 let num_layers = 32;
@@ -209,8 +209,8 @@ For LLaMA-7B with 2048 seq len: ~128 MB
 ### Batch Inference with Continuous Caching
 
 ```rust
-use god_gragh::transformer::batch::{BatchData, BatchInference, RequestScheduler};
-use god_gragh::transformer::model::LlamaModel;
+use god_graph::transformer::batch::{BatchData, BatchInference, RequestScheduler};
+use god_graph::transformer::model::LlamaModel;
 
 // Create model
 let model = LlamaModel::new(&config);
@@ -249,8 +249,8 @@ while scheduler.num_active() > 0 {
 ### Quantization for Memory Efficiency
 
 ```rust
-use god_gragh::transformer::quantization::{QuantizedTensor, QuantizationConfig};
-use god_gragh::tensor::DenseTensor;
+use god_graph::transformer::quantization::{QuantizedTensor, QuantizationConfig};
+use god_graph::tensor::DenseTensor;
 
 // Create tensor
 let weight = DenseTensor::randn(vec![4096, 4096], 0.0, 0.02);
@@ -274,7 +274,7 @@ let result = QuantizedMatMul::gemm_int8(&quantized, &input);
 ### Sparse Attention Patterns
 
 ```rust
-use god_gragh::transformer::sparse_attention::{SparseMask, SparseAttention};
+use god_graph::transformer::sparse_attention::{SparseMask, SparseAttention};
 
 // Sliding window attention (local attention)
 let seq_len = 1024;
@@ -307,8 +307,8 @@ god-gragh = { version = "0.4.3-beta", features = ["transformer", "simd"] }
 ```
 
 ```rust
-use god_gragh::transformer::perf::{softmax_inplace_simd, matmul_with_buffer};
-use god_gragh::tensor::DenseTensor;
+use god_graph::transformer::perf::{softmax_inplace_simd, matmul_with_buffer};
+use god_graph::tensor::DenseTensor;
 
 // SIMD-optimized softmax
 let mut data = vec![1.0f64; 512 * 512];
@@ -325,7 +325,7 @@ let result = matmul_with_buffer(&a, &b, &mut buffer);
 ### Memory Pool for Reduced Allocation
 
 ```rust
-use god_gragh::transformer::perf::TransformerMemoryPool;
+use god_graph::transformer::perf::TransformerMemoryPool;
 
 // Create pool
 let mut pool = TransformerMemoryPool::new(

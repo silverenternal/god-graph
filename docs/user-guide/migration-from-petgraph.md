@@ -40,9 +40,9 @@ use petgraph::algo::dijkstra;
 use petgraph::visit::IntoNodeReferences;
 
 // God-Graph imports
-use god_gragh::graph::Graph;
-use god_gragh::graph::traits::{GraphOps, GraphQuery};
-use god_gragh::algorithms::shortest_path::dijkstra;
+use god_graph::graph::Graph;
+use god_graph::graph::traits::{GraphOps, GraphQuery};
+use god_graph::algorithms::shortest_path::dijkstra;
 ```
 
 ### 3. Graph Creation
@@ -54,7 +54,7 @@ use petgraph::Directed;
 let mut graph = Graph::<String, f64, Directed>::new();
 
 // God-Graph
-use god_gragh::graph::Graph;
+use god_graph::graph::Graph;
 let mut graph = Graph::<String, f64>::directed();
 
 // Undirected graph
@@ -103,7 +103,7 @@ use petgraph::visit::IntoEdgeReferences;
 let distances = dijkstra(&graph, start, None, |edge| *edge.weight());
 
 // God-Graph
-use god_gragh::algorithms::shortest_path::dijkstra;
+use god_graph::algorithms::shortest_path::dijkstra;
 
 // Directly use edge data as weight (more concise)
 let distances = dijkstra(&graph, start, None);
@@ -120,7 +120,7 @@ use petgraph::algo::astar;
 let astar_result = astar(&graph, start, |n| n == end, |e| *e.weight(), |_| 0.0);
 
 // God-Graph
-use god_gragh::algorithms::shortest_path::astar;
+use god_graph::algorithms::shortest_path::astar;
 let (path, distance) = astar(&graph, start, end, |_| 0.0).unwrap();
 ```
 
@@ -132,7 +132,7 @@ use petgraph::algo::bellman_ford;
 let distances = bellman_ford(&graph, start).unwrap();
 
 // God-Graph
-use god_gragh::algorithms::shortest_path::bellman_ford;
+use god_graph::algorithms::shortest_path::bellman_ford;
 let distances = bellman_ford(&graph, start);
 ```
 
@@ -144,7 +144,7 @@ use petgraph::algo::floyd_warshall;
 let distances = floyd_warshall(&graph, |e| *e.weight()).unwrap();
 
 // God-Graph
-use god_gragh::algorithms::shortest_path::floyd_warshall;
+use god_graph::algorithms::shortest_path::floyd_warshall;
 let distances = floyd_warshall(&graph);
 ```
 
@@ -159,7 +159,7 @@ while let Some(Ok(node)) = dfs.next(&graph) {
 }
 
 // God-Graph (more concise callback API)
-use god_gragh::algorithms::traversal::{dfs, bfs};
+use god_graph::algorithms::traversal::{dfs, bfs};
 
 dfs(&graph, start, |node| {
     // Process node
@@ -180,7 +180,7 @@ use petgraph::algo::kruskal;
 let mst: Vec<_> = kruskal(graph, |weight| weight).collect();
 
 // God-Graph
-use god_gragh::algorithms::mst::{kruskal, prim};
+use god_graph::algorithms::mst::{kruskal, prim};
 
 // Kruskal
 let mst = kruskal(&graph);
@@ -195,7 +195,7 @@ let mst = prim(&graph, start_node);
 // petgraph - Need manual implementation or use extension libraries
 
 // God-Graph - Built-in complete support
-use god_gragh::algorithms::centrality::{
+use god_graph::algorithms::centrality::{
     degree_centrality,
     betweenness_centrality,
     closeness_centrality,
@@ -214,7 +214,7 @@ let ranks = pagerank(&graph, 0.85, 20);
 // petgraph - Need manual implementation
 
 // God-Graph - Built-in support
-use god_gragh::algorithms::community::{
+use god_graph::algorithms::community::{
     connected_components,
     label_propagation,
     louvain
@@ -231,7 +231,7 @@ let communities = louvain(&graph);
 // Enable parallel feature
 // Cargo.toml: god-gragh = { version = "0.4.0-beta", features = ["parallel"] }
 
-use god_gragh::algorithms::parallel;
+use god_graph::algorithms::parallel;
 
 // Parallel BFS
 let layers = parallel::bfs_parallel(&graph, start);
@@ -249,7 +249,7 @@ let components = parallel::connected_components_parallel(&graph);
 // petgraph - Need manual implementation or use extension libraries
 
 // God-Graph - Built-in complete support
-use god_gragh::generators::{
+use god_graph::generators::{
     erdos_renyi_graph,
     barabasi_albert_graph,
     watts_strogatz_graph,
@@ -274,7 +274,7 @@ let graph = watts_strogatz_graph::<String>(100, 4, 0.1);
 // petgraph - Need additional dependencies or manual implementation
 
 // God-Graph - Built-in support
-use god_gragh::export::{to_dot, to_adjacency_list, to_edge_list};
+use god_graph::export::{to_dot, to_adjacency_list, to_edge_list};
 
 // DOT/Graphviz format
 let dot = to_dot(&graph);
@@ -316,9 +316,9 @@ fn main() {
 **God-Graph Version**:
 
 ```rust
-use god_gragh::graph::Graph;
-use god_gragh::graph::traits::{GraphOps, GraphQuery};
-use god_gragh::algorithms::shortest_path::dijkstra;
+use god_graph::graph::Graph;
+use god_graph::graph::traits::{GraphOps, GraphQuery};
+use god_graph::algorithms::shortest_path::dijkstra;
 
 fn main() {
     let mut graph = Graph::<&str, f64>::directed();
@@ -352,8 +352,8 @@ fn find_communities(graph: &Graph<&str, f64>) -> Vec<Vec<NodeIndex>> {
 **God-Graph Version**:
 
 ```rust
-use god_gragh::graph::Graph;
-use god_gragh::algorithms::community::label_propagation;
+use god_graph::graph::Graph;
+use god_graph::algorithms::community::label_propagation;
 
 fn main() {
     let mut graph = Graph::<&str, f64>::directed();

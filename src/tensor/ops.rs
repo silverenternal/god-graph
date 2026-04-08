@@ -3,6 +3,7 @@
 //! 提供额外的 tensor 操作，包括激活函数、归一化等
 
 use crate::tensor::dense::DenseTensor;
+use crate::tensor::error::TensorError;
 use crate::tensor::traits::{TensorBase, TensorOps};
 
 /// 激活函数实现
@@ -247,9 +248,12 @@ pub mod matrix {
     }
 
     /// 矩阵求逆（使用高斯 - 约旦消元法，仅适用于小矩阵）
-    pub fn inverse(tensor: &DenseTensor) -> Result<DenseTensor, &'static str> {
+    pub fn inverse(tensor: &DenseTensor) -> Result<DenseTensor, TensorError> {
         if tensor.ndim() != 2 || tensor.shape()[0] != tensor.shape()[1] {
-            return Err("Matrix must be square");
+            return Err(TensorError::DimensionMismatch {
+                expected: 2,
+                got: tensor.ndim(),
+            });
         }
 
         let n = tensor.shape()[0];
@@ -284,7 +288,9 @@ pub mod matrix {
 
             let pivot = augmented[col * (n * 2) + col];
             if pivot.abs() < 1e-10 {
-                return Err("Matrix is singular");
+                return Err(TensorError::MatrixError {
+                    message: "Matrix is singular".to_string(),
+                });
             }
 
             // 归一化当前行
@@ -314,10 +320,13 @@ pub mod matrix {
         Ok(DenseTensor::new(inv_data, vec![n, n]))
     }
 
-    /// 矩阵行列式（使用 LU 分解）
-    pub fn determinant(tensor: &DenseTensor) -> Result<f64, &'static str> {
+    /// 矩阵行列式（使用余子式展开递归计算）
+    pub fn determinant(tensor: &DenseTensor) -> Result<f64, TensorError> {
         if tensor.ndim() != 2 || tensor.shape()[0] != tensor.shape()[1] {
-            return Err("Matrix must be square");
+            return Err(TensorError::DimensionMismatch {
+                expected: 2,
+                got: tensor.ndim(),
+            });
         }
 
         let n = tensor.shape()[0];

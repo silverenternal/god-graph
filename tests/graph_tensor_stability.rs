@@ -2,17 +2,22 @@
 //!
 //! This module tests the numerical stability of graph-level tensor operations,
 //! including orthogonalization error accumulation and forward pass stability.
+//!
+//! Requires the `tensor` and `transformer` features.
+
+#![cfg(all(test, feature = "tensor", feature = "transformer"))]
 
 #[cfg(test)]
 mod tests {
-    use god_gragh::graph::Graph;
-    use god_gragh::graph::traits::{GraphOps, GraphQuery};
-    use god_gragh::tensor::DenseTensor;
-    use god_gragh::tensor::TensorBase;
-    use god_gragh::tensor::decomposition::qr::{orthogonalize_in_place, is_orthogonal};
-    use god_gragh::transformer::optimization::{LieGroupConfig, LieGroupOptimizer};
-    use god_gragh::transformer::optimization::lie_group::orthogonalize_weights_in_place;
-    use god_gragh::transformer::optimization::switch::{OperatorType, WeightTensor};
+    use god_graph::graph::Graph;
+    use god_graph::graph::GraphOps;
+    use god_graph::graph::traits::GraphQuery;
+    use god_graph::tensor::decomposition::qr::{is_orthogonal, orthogonalize_in_place};
+    use god_graph::tensor::DenseTensor;
+    use god_graph::tensor::TensorBase;
+    use god_graph::transformer::optimization::lie_group::LieGroupOptimizer;
+    use god_graph::transformer::optimization::switch::{OperatorType, WeightTensor};
+    use god_graph::transformer::optimization::LieGroupConfig;
 
     /// Build a mini Transformer graph with random weights for testing
     fn build_mini_transformer_graph_with_weights() -> Graph<OperatorType, WeightTensor> {
@@ -150,7 +155,8 @@ mod tests {
             .with_orthogonalize(true);
 
         // Use in-place version (zero-copy)
-        let errors = orthogonalize_weights_in_place(&config, &mut graph).unwrap();
+        let optimizer = LieGroupOptimizer::new(config);
+        let _ = optimizer.orthogonalize_weights(&mut graph).unwrap();
 
         // 4. Verify orthogonality of each weight
         let mut max_orthogonality_error: f64 = 0.0;
@@ -159,8 +165,7 @@ mod tests {
 
         for edge_ref in graph.edges() {
             let weight = edge_ref.data();
-            let tensor =
-                DenseTensor::from_vec(weight.data.to_vec(), weight.shape.to_vec());
+            let tensor = DenseTensor::from_vec(weight.data.to_vec(), weight.shape.to_vec());
 
             // Check orthogonality (for square or tall matrices)
             if weight.shape[0] >= weight.shape[1] {
@@ -197,7 +202,10 @@ mod tests {
         );
 
         eprintln!("✓ Graph-level orthogonalization test passed");
-        eprintln!("  - Max orthogonality error: {:.2e}", max_orthogonality_error);
+        eprintln!(
+            "  - Max orthogonality error: {:.2e}",
+            max_orthogonality_error
+        );
         eprintln!("  - Output error: {:.2e}", output_error);
         eprintln!(
             "  - Average edge error: {:.2e}",
@@ -245,20 +253,26 @@ mod tests {
 
         // Test 2: Graph-level (same size matrix)
         let mut graph = Graph::<OperatorType, WeightTensor>::directed();
-        let a = graph.add_node(OperatorType::Linear {
-            in_features: 64,
-            out_features: 64,
-        }).unwrap();
-        let b = graph.add_node(OperatorType::Linear {
-            in_features: 64,
-            out_features: 64,
-        }).unwrap();
+        let a = graph
+            .add_node(OperatorType::Linear {
+                in_features: 64,
+                out_features: 64,
+            })
+            .unwrap();
+        let b = graph
+            .add_node(OperatorType::Linear {
+                in_features: 64,
+                out_features: 64,
+            })
+            .unwrap();
         let graph_data: Vec<f64> = (0..64 * 64).map(|_| rng.gen::<f64>() * 0.1).collect();
         let weight = WeightTensor::new("test".to_string(), graph_data, vec![64, 64]);
         let _edge = graph.add_edge(a, b, weight).unwrap();
 
         let config = LieGroupConfig::new().with_orthogonalize(true);
-        let errors = orthogonalize_weights_in_place(&config, &mut graph).unwrap();
+        let optimizer = LieGroupOptimizer::new(config);
+        let _ = optimizer.orthogonalize_weights(&mut graph).unwrap();
+        let errors: Vec<f64> = optimizer.error_accumulator().layer_errors().values().flatten().cloned().collect();
 
         let graph_error = errors[0];
 
@@ -295,7 +309,8 @@ mod tests {
         let mut graph = build_mini_transformer_graph_with_weights();
 
         let config = LieGroupConfig::new().with_orthogonalize(true);
-        let _errors = orthogonalize_weights_in_place(&config, &mut graph).unwrap();
+        let optimizer = LieGroupOptimizer::new(config);
+        let _ = optimizer.orthogonalize_weights(&mut graph).unwrap();
 
         // Check for NaN or Inf in all weights
         for edge_ref in graph.edges() {

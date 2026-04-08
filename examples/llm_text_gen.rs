@@ -14,12 +14,12 @@
 
 #[cfg(feature = "transformer")]
 fn main() {
-    use god_gragh::tensor::{DenseTensor, TensorBase};
-    use god_gragh::transformer::{
-        LlamaConfig, GenerationConfig, TextGenerator,
-        model::{LlamaModel, LlamaDecoderLayer},
-        layers::{MultiHeadAttention, FeedForward, RMSNorm},
+    use god_graph::tensor::DenseTensor;
+    use god_graph::transformer::{
         kv_cache::KVCache,
+        layers::{FeedForward, MultiHeadAttention, RMSNorm},
+        model::{LlamaDecoderLayer, LlamaModel},
+        GenerationConfig, LlamaConfig,
     };
     use std::env;
 
@@ -98,9 +98,7 @@ fn main() {
     let input_layernorm = RMSNorm::default(hidden_dim);
     let post_attention_layernorm = RMSNorm::default(hidden_dim);
 
-    let layer = LlamaDecoderLayer::new(
-        self_attn, mlp, input_layernorm, post_attention_layernorm
-    );
+    let layer = LlamaDecoderLayer::new(self_attn, mlp, input_layernorm, post_attention_layernorm);
 
     let layers = vec![layer; config.num_hidden_layers];
     let norm = RMSNorm::default(hidden_dim);
@@ -111,11 +109,14 @@ fn main() {
     println!("   Model config:");
     println!("     - Hidden size: {}", model.config.hidden_size);
     println!("     - Layers: {}", model.config.num_hidden_layers);
-    println!("     - Attention heads: {}", model.config.num_attention_heads);
+    println!(
+        "     - Attention heads: {}",
+        model.config.num_attention_heads
+    );
     println!("   ✓ Model initialized");
 
     // Configure generation
-    let gen_config = GenerationConfig {
+    let _gen_config = GenerationConfig {
         max_length,
         temperature: 0.7,
         top_p: 0.9,
@@ -152,9 +153,14 @@ fn main() {
     );
     println!("   Cache capacity: {} tokens", kv_cache.max_seq_len());
     println!("   Current usage: {} tokens", kv_cache.current_len());
-    
+
     // Estimate memory
-    let memory_mb = (model.config.num_hidden_layers * model.config.max_position_embeddings * model.config.hidden_size * 2 * 8) / (1024 * 1024);
+    let memory_mb = (model.config.num_hidden_layers
+        * model.config.max_position_embeddings
+        * model.config.hidden_size
+        * 2
+        * 8)
+        / (1024 * 1024);
     println!("   Estimated memory usage: ~{} MB", memory_mb);
 
     println!("\n✅ Demo complete!");

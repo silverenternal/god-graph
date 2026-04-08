@@ -50,9 +50,8 @@ where
     // 随机重连
     #[cfg(feature = "rand")]
     {
-        use rand::{Rng, SeedableRng};
-        use rand_chacha::ChaCha8Rng;
-        let mut rng = ChaCha8Rng::seed_from_u64(42);
+        use rand::Rng;
+        let mut rng = rand::thread_rng();
 
         for i in 0..n {
             for _j in 1..=half_k {

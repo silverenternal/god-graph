@@ -2,14 +2,18 @@
 //!
 //! This test suite validates the error accumulation analysis tool
 //! by testing it with real graph-level tensor operations.
+//!
+//! Requires the `tensor` and `transformer` features.
+
+#![cfg(all(test, feature = "tensor", feature = "transformer"))]
 
 #[cfg(test)]
 mod tests {
-    use god_gragh::graph::Graph;
-    use god_gragh::graph::traits::{GraphOps, GraphQuery};
-    use god_gragh::transformer::optimization::switch::{OperatorType, WeightTensor};
-    use god_gragh::transformer::optimization::{LieGroupConfig, LieGroupOptimizer};
-    use god_gragh::transformer::optimization::error_analysis::ErrorAccumulator;
+    use god_graph::graph::traits::{GraphOps, GraphQuery};
+    use god_graph::graph::Graph;
+    use god_graph::transformer::optimization::error_analysis::ErrorAccumulator;
+    use god_graph::transformer::optimization::switch::{OperatorType, WeightTensor};
+    use god_graph::transformer::optimization::{LieGroupConfig, LieGroupOptimizer};
 
     /// Test error accumulation during orthogonalization
     #[test]
@@ -28,8 +32,14 @@ mod tests {
 
         // Check that errors were recorded
         let error_accumulator = optimizer.error_accumulator();
-        assert!(error_accumulator.num_layers() > 0, "No errors were recorded");
-        assert!(error_accumulator.total_recordings() > 0, "No error recordings");
+        assert!(
+            error_accumulator.num_layers() > 0,
+            "No errors were recorded"
+        );
+        assert!(
+            error_accumulator.total_recordings() > 0,
+            "No error recordings"
+        );
 
         // Verify error statistics are reasonable (should be very small for orthogonalization)
         let stats = error_accumulator.compute_statistics();
@@ -38,7 +48,10 @@ mod tests {
 
         println!("✓ Error accumulation test passed");
         println!("  - Layers tracked: {}", error_accumulator.num_layers());
-        println!("  - Total recordings: {}", error_accumulator.total_recordings());
+        println!(
+            "  - Total recordings: {}",
+            error_accumulator.total_recordings()
+        );
         println!("  - Mean error: {:.2e}", stats.mean);
         println!("  - Max error: {:.2e}", stats.max);
     }
@@ -48,8 +61,7 @@ mod tests {
     fn test_error_report_generation() {
         let mut graph = build_test_graph();
 
-        let config = LieGroupConfig::new()
-            .with_orthogonalize(true);
+        let config = LieGroupConfig::new().with_orthogonalize(true);
         let optimizer = LieGroupOptimizer::new(config);
 
         optimizer.orthogonalize_weights(&mut graph).unwrap();
@@ -194,7 +206,9 @@ mod tests {
         // Orthogonalize each weight individually and track errors
         let mut manual_errors = Vec::new();
         for edge_idx in edge_indices {
-            let error = optimizer.orthogonalize_single_weight(&mut graph, edge_idx).unwrap();
+            let error = optimizer
+                .orthogonalize_single_weight(&mut graph, edge_idx)
+                .unwrap();
             manual_errors.push(error);
         }
 
@@ -205,7 +219,10 @@ mod tests {
 
         println!("✓ In-place orthogonalization test passed");
         println!("  - Weights orthogonalized: {}", manual_errors.len());
-        println!("  - Max error: {:.2e}", manual_errors.iter().cloned().fold(0.0_f64, f64::max));
+        println!(
+            "  - Max error: {:.2e}",
+            manual_errors.iter().cloned().fold(0.0_f64, f64::max)
+        );
     }
 
     /// Build a test graph with multiple weight tensors
@@ -230,7 +247,13 @@ mod tests {
                     out_features: 64,
                 })
                 .unwrap();
-            graph.add_edge(prev_node, q_proj, create_weight_tensor(64, 64, &format!("layer_{}/q_proj", layer))).unwrap();
+            graph
+                .add_edge(
+                    prev_node,
+                    q_proj,
+                    create_weight_tensor(64, 64, &format!("layer_{}/q_proj", layer)),
+                )
+                .unwrap();
 
             // K projection
             let k_proj = graph
@@ -239,7 +262,13 @@ mod tests {
                     out_features: 64,
                 })
                 .unwrap();
-            graph.add_edge(q_proj, k_proj, create_weight_tensor(64, 64, &format!("layer_{}/k_proj", layer))).unwrap();
+            graph
+                .add_edge(
+                    q_proj,
+                    k_proj,
+                    create_weight_tensor(64, 64, &format!("layer_{}/k_proj", layer)),
+                )
+                .unwrap();
 
             // V projection
             let v_proj = graph
@@ -248,7 +277,13 @@ mod tests {
                     out_features: 64,
                 })
                 .unwrap();
-            graph.add_edge(k_proj, v_proj, create_weight_tensor(64, 64, &format!("layer_{}/v_proj", layer))).unwrap();
+            graph
+                .add_edge(
+                    k_proj,
+                    v_proj,
+                    create_weight_tensor(64, 64, &format!("layer_{}/v_proj", layer)),
+                )
+                .unwrap();
 
             // Output projection
             let out_proj = graph
@@ -257,7 +292,13 @@ mod tests {
                     out_features: 64,
                 })
                 .unwrap();
-            graph.add_edge(v_proj, out_proj, create_weight_tensor(64, 64, &format!("layer_{}/out_proj", layer))).unwrap();
+            graph
+                .add_edge(
+                    v_proj,
+                    out_proj,
+                    create_weight_tensor(64, 64, &format!("layer_{}/out_proj", layer)),
+                )
+                .unwrap();
 
             prev_node = out_proj;
         }
@@ -269,7 +310,9 @@ mod tests {
                 out_features: 100,
             })
             .unwrap();
-        graph.add_edge(prev_node, lm_head, create_weight_tensor(100, 64, "lm_head")).unwrap();
+        graph
+            .add_edge(prev_node, lm_head, create_weight_tensor(100, 64, "lm_head"))
+            .unwrap();
 
         graph
     }
@@ -279,9 +322,7 @@ mod tests {
         use rand::Rng;
         let mut rng = rand::thread_rng();
 
-        let data: Vec<f64> = (0..rows * cols)
-            .map(|_| rng.gen_range(-1.0..1.0))
-            .collect();
+        let data: Vec<f64> = (0..rows * cols).map(|_| rng.gen_range(-1.0..1.0)).collect();
 
         WeightTensor::new(name.to_string(), data, vec![rows, cols])
     }

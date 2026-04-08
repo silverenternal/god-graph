@@ -73,7 +73,7 @@ God-Graph 项目在 2026 年 3 月 29 日取得了重大进展，完成了多个
 #### 代码示例
 
 ```rust
-use god_gragh::transformer::optimization::ModelSwitch;
+use god_graph::transformer::optimization::ModelSwitch;
 
 // 导出：GodGraph → Safetensors
 ModelSwitch::save_to_safetensors(&graph, "optimized.safetensors")?;

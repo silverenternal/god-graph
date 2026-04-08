@@ -17,16 +17,32 @@
 //! # Render to SVG
 //! dot -Tsvg model.dot -o model.svg
 //! ```
+//!
+//! Requires the `transformer` and `dot` features.
 
-use god_gragh::export::dot::{write_dot_to_file, DotOptions};
-use god_gragh::graph::Graph;
-use god_gragh::graph::traits::{GraphBase, GraphQuery};
-use god_gragh::transformer::optimization::switch::{ModelSwitch, OperatorType, WeightTensor};
+#[cfg(not(all(feature = "transformer", feature = "dot")))]
+fn main() {
+    eprintln!("This example requires the 'transformer' and 'dot' features.");
+    eprintln!("Usage: cargo run --example export_model_dot --features \"transformer dot\"");
+}
+
+#[cfg(all(feature = "transformer", feature = "dot"))]
+use god_graph::export::dot::{write_dot_to_file, DotOptions};
+#[cfg(all(feature = "transformer", feature = "dot"))]
+use god_graph::graph::traits::{GraphBase, GraphQuery};
+#[cfg(all(feature = "transformer", feature = "dot"))]
+use god_graph::graph::Graph;
+#[cfg(all(feature = "transformer", feature = "dot"))]
+use god_graph::transformer::loader::ModelConfig;
+#[cfg(all(feature = "transformer", feature = "dot"))]
+use god_graph::transformer::optimization::switch::{ModelSwitch, OperatorType, WeightTensor};
+#[cfg(all(feature = "transformer", feature = "dot"))]
 use std::env;
 
+#[cfg(all(feature = "transformer", feature = "dot"))]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = env::args().collect();
-    
+
     if args.len() < 2 {
         println!("Usage: cargo run --example export_model_dot --features transformer -- [model.safetensors] [output.dot]");
         println!();
@@ -39,7 +55,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("  dot -Tsvg model.dot -o model.svg");
         println!();
         println!("Running with default test model...");
-        
+
         // Create a demo transformer graph for demonstration
         let graph = create_demo_transformer();
         export_transformer_to_dot(&graph, "model.dot")?;
@@ -51,32 +67,37 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         } else {
             "model.dot"
         };
-        
+
         println!("Loading model from: {}", input_path);
         let graph = ModelSwitch::load_from_safetensors(input_path)?;
-        println!("✓ Loaded model with {} nodes, {} edges", 
-                 graph.node_count(), graph.edge_count());
-        
+        println!(
+            "✓ Loaded model with {} nodes, {} edges",
+            graph.node_count(),
+            graph.edge_count()
+        );
+
         export_transformer_to_dot(&graph, output_path)?;
         println!("✓ Exported to {}", output_path);
     }
-    
+
     Ok(())
 }
 
 /// Create a demo transformer graph for visualization
+#[cfg(all(feature = "transformer", feature = "dot"))]
 fn create_demo_transformer() -> Graph<OperatorType, WeightTensor> {
-    use god_gragh::graph::builders::GraphBuilder;
+    use god_graph::graph::builders::GraphBuilder;
     use rand::prelude::*;
 
     let mut rng = rand::thread_rng();
-    
+
     let mut builder = GraphBuilder::directed();
 
     // Embedding layer (node 0)
-    builder = builder.with_node(
-        OperatorType::Embedding { vocab_size: 32000, embed_dim: 512 }
-    );
+    builder = builder.with_node(OperatorType::Embedding {
+        vocab_size: 32000,
+        embed_dim: 512,
+    });
 
     // Transformer layers: each layer has 4 nodes (Attn, Norm1, MLP, Norm2)
     // Layer 0: nodes 1,2,3,4
@@ -87,83 +108,117 @@ fn create_demo_transformer() -> Graph<OperatorType, WeightTensor> {
         let base_idx = 1 + layer_idx * 4;
 
         // Attention (nodes 1, 5, 9)
-        let attn_data: Vec<f64> = (0..512*512).map(|_| rng.gen()).collect();
-        builder = builder.with_node(
-            OperatorType::Attention { num_heads: 8, hidden_dim: 512 }
+        let attn_data: Vec<f64> = (0..512 * 512).map(|_| rng.gen()).collect();
+        builder = builder.with_node(OperatorType::Attention {
+            num_heads: 8,
+            hidden_dim: 512,
+        });
+        builder = builder.with_edge(
+            prev_layer_idx,
+            base_idx,
+            WeightTensor::new("attn".to_string(), attn_data, vec![512, 512]),
         );
-        builder = builder.with_edge(prev_layer_idx, base_idx, WeightTensor::new("attn".to_string(), attn_data, vec![512, 512]));
 
         // Norm after attention (nodes 2, 6, 10)
         let norm1_data: Vec<f64> = (0..512).map(|_| 1.0).collect();
-        builder = builder.with_node(
-            OperatorType::Norm { norm_type: "RMSNorm".to_string(), eps: 1e-6 }
+        builder = builder.with_node(OperatorType::Norm {
+            norm_type: "RMSNorm".to_string(),
+            eps: 1e-6,
+        });
+        builder = builder.with_edge(
+            base_idx,
+            base_idx + 1,
+            WeightTensor::new("norm1".to_string(), norm1_data, vec![512]),
         );
-        builder = builder.with_edge(base_idx, base_idx + 1, WeightTensor::new("norm1".to_string(), norm1_data, vec![512]));
 
         // Residual connection (skip connection)
         let res1_data: Vec<f64> = (0..512).map(|_| 1.0).collect();
-        builder = builder.with_edge(prev_layer_idx, base_idx + 1, WeightTensor::new("residual1".to_string(), res1_data, vec![512]));
+        builder = builder.with_edge(
+            prev_layer_idx,
+            base_idx + 1,
+            WeightTensor::new("residual1".to_string(), res1_data, vec![512]),
+        );
 
         // MLP (nodes 3, 7, 11)
-        let mlp1_data: Vec<f64> = (0..512*2048).map(|_| rng.gen()).collect();
-        builder = builder.with_node(
-            OperatorType::MLP { hidden_dim: 512, activation: "SiLU".to_string() }
+        let mlp1_data: Vec<f64> = (0..512 * 2048).map(|_| rng.gen()).collect();
+        builder = builder.with_node(OperatorType::MLP {
+            hidden_dim: 512,
+            activation: "SiLU".to_string(),
+        });
+        builder = builder.with_edge(
+            base_idx + 1,
+            base_idx + 2,
+            WeightTensor::new("mlp1".to_string(), mlp1_data, vec![512, 2048]),
         );
-        builder = builder.with_edge(base_idx + 1, base_idx + 2, WeightTensor::new("mlp1".to_string(), mlp1_data, vec![512, 2048]));
 
         // Norm after MLP (nodes 4, 8, 12)
         let norm2_data: Vec<f64> = (0..512).map(|_| 1.0).collect();
-        builder = builder.with_node(
-            OperatorType::Norm { norm_type: "RMSNorm".to_string(), eps: 1e-6 }
+        builder = builder.with_node(OperatorType::Norm {
+            norm_type: "RMSNorm".to_string(),
+            eps: 1e-6,
+        });
+        builder = builder.with_edge(
+            base_idx + 2,
+            base_idx + 3,
+            WeightTensor::new("norm2".to_string(), norm2_data, vec![512]),
         );
-        builder = builder.with_edge(base_idx + 2, base_idx + 3, WeightTensor::new("norm2".to_string(), norm2_data, vec![512]));
 
         // Residual connection
         let res2_data: Vec<f64> = (0..512).map(|_| 1.0).collect();
-        builder = builder.with_edge(base_idx + 1, base_idx + 3, WeightTensor::new("residual2".to_string(), res2_data, vec![512]));
+        builder = builder.with_edge(
+            base_idx + 1,
+            base_idx + 3,
+            WeightTensor::new("residual2".to_string(), res2_data, vec![512]),
+        );
 
         prev_layer_idx = base_idx + 3;
     }
 
     // Final output projection: node 13
     // prev_layer_idx = 12 after 3 layers
-    let output_data: Vec<f64> = (0..512*32000).map(|_| rng.gen()).collect();
-    builder = builder.with_node(
-        OperatorType::Linear { in_features: 512, out_features: 32000 }
+    let output_data: Vec<f64> = (0..512 * 32000).map(|_| rng.gen()).collect();
+    builder = builder.with_node(OperatorType::Linear {
+        in_features: 512,
+        out_features: 32000,
+    });
+    builder = builder.with_edge(
+        prev_layer_idx,
+        prev_layer_idx + 1,
+        WeightTensor::new("output".to_string(), output_data, vec![512, 32000]),
     );
-    builder = builder.with_edge(prev_layer_idx, prev_layer_idx + 1, WeightTensor::new("output".to_string(), output_data, vec![512, 32000]));
 
     builder.build().unwrap()
 }
 
 /// Export transformer to DOT format with optimized layout
+#[cfg(all(feature = "transformer", feature = "dot"))]
 fn export_transformer_to_dot(
-    graph: &god_gragh::graph::Graph<OperatorType, WeightTensor>,
+    graph: &god_graph::graph::Graph<OperatorType, WeightTensor>,
     output_path: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    // Create custom options for transformer visualization
-    let options = DotOptions::new()
+    // Create custom option for transformer visualization
+    let _options = DotOptions::new()
         .with_name("Transformer")
-        .hide_edge_labels()  // Hide edge labels for cleaner look
-        .undirected();  // Remove arrowheads for cleaner look
-    
+        .hide_edge_labels() // Hide edge labels for cleaner look
+        .undirected(); // Remove arrowheads for cleaner look
+
     // Generate DOT content
     let mut dot = String::from("digraph Transformer {\n");
-    
+
     // Graph attributes
-    dot.push_str("    rankdir=TB;\n");  // Top to bottom
-    dot.push_str("    splines=ortho;\n");  // Orthogonal edges
+    dot.push_str("    rankdir=TB;\n"); // Top to bottom
+    dot.push_str("    splines=ortho;\n"); // Orthogonal edges
     dot.push_str("    node [shape=box, style=\"rounded,filled\"];\n");
     dot.push_str("    edge [color=gray, arrowsize=0.5];\n");
-    dot.push_str("\n");
-    
+    dot.push('\n');
+
     // Collect nodes by type for subgraph clustering
     let mut embedding_nodes = Vec::new();
     let mut attention_nodes = Vec::new();
     let mut mlp_nodes = Vec::new();
     let mut norm_nodes = Vec::new();
     let mut linear_nodes = Vec::new();
-    
+
     // Also store node data for later use
     let mut embedding_data = Vec::new();
     let mut attention_data = Vec::new();
@@ -174,15 +229,24 @@ fn export_transformer_to_dot(
     for node in graph.nodes() {
         let idx: usize = node.index.index();
         match node.data {
-            OperatorType::Embedding { vocab_size, embed_dim } => {
+            OperatorType::Embedding {
+                vocab_size,
+                embed_dim,
+            } => {
                 embedding_nodes.push(idx);
                 embedding_data.push((vocab_size, embed_dim));
             }
-            OperatorType::Attention { num_heads, hidden_dim } => {
+            OperatorType::Attention {
+                num_heads,
+                hidden_dim,
+            } => {
                 attention_nodes.push(idx);
                 attention_data.push((num_heads, hidden_dim));
             }
-            OperatorType::MLP { hidden_dim, activation } => {
+            OperatorType::MLP {
+                hidden_dim,
+                activation,
+            } => {
                 mlp_nodes.push(idx);
                 mlp_data.push((hidden_dim, activation.clone()));
             }
@@ -190,7 +254,10 @@ fn export_transformer_to_dot(
                 norm_nodes.push(idx);
                 norm_data.push((norm_type.clone(), eps));
             }
-            OperatorType::Linear { in_features, out_features } => {
+            OperatorType::Linear {
+                in_features,
+                out_features,
+            } => {
                 linear_nodes.push(idx);
                 linear_data.push((in_features, out_features));
             }
@@ -284,11 +351,11 @@ fn export_transformer_to_dot(
         let target: usize = edge.target.index();
         dot.push_str(&format!("    n{} -> n{};\n", source, target));
     }
-    
-    dot.push_str("}");
-    
+
+    dot.push('}');
+
     // Write to file
     write_dot_to_file(&dot, output_path)?;
-    
+
     Ok(())
 }
