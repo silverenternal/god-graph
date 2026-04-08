@@ -74,35 +74,50 @@ use std::collections::HashMap;
 pub enum EditOperation {
     /// Add a node
     AddNode {
+        /// Node identifier
         node_id: usize,
+        /// Operator type for the node
         operator_type: OperatorType,
     },
     /// Remove a node
     RemoveNode {
+        /// Node identifier
         node_id: usize,
+        /// Operator type of the removed node
         operator_type: OperatorType,
     },
     /// Add an edge
     AddEdge {
+        /// Source node index
         from: usize,
+        /// Target node index
         to: usize,
+        /// Weight tensor name
         weight_name: String,
     },
     /// Remove an edge
     RemoveEdge {
+        /// Source node index
         from: usize,
+        /// Target node index
         to: usize,
     },
     /// Modify a node
     ModifyNode {
+        /// Node identifier
         node_id: usize,
+        /// Old operator type
         old_type: OperatorType,
+        /// New operator type
         new_type: OperatorType,
     },
     /// Replace a module
     ReplaceModule {
+        /// Module path identifier
         path: String,
+        /// Old module node indices
         old_module: Vec<usize>,
+        /// New module node indices
         new_module: Vec<usize>,
     },
 }
@@ -553,7 +568,7 @@ impl<'a> CadStyleEditor<'a> {
             diff_graph.add_learnable_edge(src, dst, 0.9);
         }
 
-        let mut initial_loss = loss_fn(&diff_graph);
+        let initial_loss = loss_fn(&diff_graph);
         let mut final_loss = initial_loss;
         let mut losses = vec![initial_loss];
         let initial_edge_count = diff_graph.num_edges();

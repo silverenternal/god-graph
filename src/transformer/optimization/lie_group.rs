@@ -202,13 +202,13 @@ impl LieGroupOptimizer {
         // Second pass: orthogonalize in-place using IndexMut (zero-copy)
         for edge_idx in edge_indices {
             let error = self.orthogonalize_single_weight(graph, edge_idx)?;
-
+            
             // Record error in accumulator with weight name
             let weight = &graph[edge_idx];
             self.error_accumulator
                 .borrow_mut()
                 .record_error(&weight.name, error);
-
+            
             total_error += error;
             orthogonalized_count += 1;
         }
@@ -217,7 +217,7 @@ impl LieGroupOptimizer {
         if orthogonalized_count > 0 {
             self.statistics.borrow_mut().insert(
                 "orthogonalization_error".to_string(),
-                total_error / orthogonalized_count as f64,
+                total_error / orthogonalized_count as f64
             );
         }
 
@@ -245,19 +245,13 @@ impl LieGroupOptimizer {
 
         // Skip non-2D tensors (e.g., 1D layer norms)
         if shape.len() != 2 {
-            eprintln!(
-                "Skipping orthogonalization for {}: shape={:?} (not 2D)",
-                weight.name, shape
-            );
+            eprintln!("Skipping orthogonalization for {}: shape={:?} (not 2D)", weight.name, shape);
             return Ok(0.0);
         }
 
         // Skip matrices where m < n (can't orthogonalize)
         if shape[0] < shape[1] {
-            eprintln!(
-                "Skipping orthogonalization for {}: shape={:?} (m < n)",
-                weight.name, shape
-            );
+            eprintln!("Skipping orthogonalization for {}: shape={:?} (m < n)", weight.name, shape);
             return Ok(0.0);
         }
 
@@ -319,17 +313,9 @@ impl LieGroupOptimizer {
         let mut total_blocks = 0;
 
         // Collect edge data first
-        let edge_data: Vec<_> = graph
-            .edges()
-            .map(|e| {
-                (
-                    e.index(),
-                    e.data().name.clone(),
-                    e.data().data.to_vec(),
-                    e.data().shape.to_vec(),
-                )
-            })
-            .collect();
+        let edge_data: Vec<_> = graph.edges().map(|e| {
+            (e.index(), e.data().name.clone(), e.data().data.to_vec(), e.data().shape.to_vec())
+        }).collect();
 
         for (_edge_idx, layer_name, weight_data, weight_shape) in edge_data {
             // Check layer name pattern matching
@@ -354,9 +340,10 @@ impl LieGroupOptimizer {
         }
 
         // Store statistics
-        self.statistics
-            .borrow_mut()
-            .insert("total_blocks".to_string(), total_blocks as f64);
+        self.statistics.borrow_mut().insert(
+            "total_blocks".to_string(),
+            total_blocks as f64
+        );
 
         Ok(DecomposedWeights {
             blocks: decomposed_blocks,
@@ -592,7 +579,8 @@ pub fn decompose_into_so_blocks(
             let mut block_data = vec![0.0; block_m * block_n];
             for bi in 0..block_m {
                 for bj in 0..block_n {
-                    block_data[bi * block_n + bj] = tensor.data()[(i + bi) * n + (j + bj)];
+                    block_data[bi * block_n + bj] =
+                        tensor.data()[(i + bi) * n + (j + bj)];
                 }
             }
 
@@ -609,8 +597,10 @@ pub fn decompose_into_so_blocks(
             }
 
             // Orthogonalize the block
-            let block_tensor =
-                DenseTensor::from_vec(block_data, vec![block_m.max(block_n), block_m.max(block_n)]);
+            let block_tensor = DenseTensor::from_vec(
+                block_data,
+                vec![block_m.max(block_n), block_m.max(block_n)],
+            );
             let ortho = orthogonalize(&block_tensor)?;
 
             blocks.push(SOkBlock::new(ortho.data().to_vec(), ortho.shape()[0])?);
@@ -618,6 +608,135 @@ pub fn decompose_into_so_blocks(
     }
 
     Ok(blocks)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_lie_group_config() {
+        let config = LieGroupConfig::new()
+            .with_block_size(128)
+            .with_orthogonalize(true)
+            .with_target_layers(vec!["q_proj".to_string(), "k_proj".to_string()]);
+
+        assert_eq!(config.block_size, 128);
+        assert!(config.orthogonalize);
+        assert!(config.matches_layer("model.layers.0.attn.q_proj"));
+        assert!(config.matches_layer("model.layers.0.attn.k_proj"));
+        assert!(!config.matches_layer("model.layers.0.mlp"));
+    }
+
+    #[test]
+    fn test_sok_block() {
+        // Create a 2x2 rotation matrix (in SO(2))
+        let theta = std::f64::consts::PI / 4.0;
+        let cos_t = theta.cos();
+        let sin_t = theta.sin();
+        
+        let block = SOkBlock::new(
+            vec![cos_t, -sin_t, sin_t, cos_t],
+            2,
+        ).unwrap();
+
+        assert!(block.is_orthogonal(1e-5));
+    }
+
+    #[test]
+    fn test_decompose_into_so_blocks() {
+        let tensor = DenseTensor::from_vec(
+            vec![1.0, 0.0, 0.0, 1.0],
+            vec![2, 2],
+        );
+
+        let blocks = decompose_into_so_blocks(&tensor, 2).unwrap();
+        assert_eq!(blocks.len(), 1);
+        assert!(blocks[0].is_orthogonal(1e-5));
+    }
+
+    #[test]
+    fn test_lie_optimizer() {
+        let config = LieGroupConfig::new()
+            .with_block_size(64)
+            .with_orthogonalize(true);
+
+        let optimizer = LieGroupOptimizer::new(config);
+
+        let tensor = DenseTensor::from_vec(
+            vec![1.0, 2.0, 3.0, 4.0],
+            vec![2, 2],
+        );
+
+        let result = optimizer.cayley_transform(&tensor);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_orthogonalize_single_weight() {
+        use crate::graph::Graph;
+        use crate::graph::traits::GraphOps;
+
+        let config = LieGroupConfig::new()
+            .with_block_size(2)
+            .with_orthogonalize(true);
+
+        let optimizer = LieGroupOptimizer::new(config);
+        let mut graph = Graph::<OperatorType, WeightTensor>::directed();
+
+        let from = graph.add_node(OperatorType::Linear { in_features: 2, out_features: 2 }).unwrap();
+        let to = graph.add_node(OperatorType::Linear { in_features: 2, out_features: 2 }).unwrap();
+        
+        let weight = WeightTensor::new(
+            "test".to_string(),
+            vec![1.0, 0.0, 0.0, 1.0],
+            vec![2, 2],
+        );
+        let edge = graph.add_edge(from, to, weight).unwrap();
+
+        let error = optimizer.orthogonalize_single_weight(&mut graph, edge);
+        assert!(error.is_ok());
+    }
+
+    #[test]
+    fn test_error_accumulator() {
+        let config = LieGroupConfig::new().with_orthogonalize(true);
+        let optimizer = LieGroupOptimizer::new(config);
+
+        // Record some errors
+        {
+            let mut acc = optimizer.error_accumulator_mut();
+            acc.record_error("layer1", 0.01);
+            acc.record_error("layer2", 0.02);
+        }
+
+        // Check error accumulator has recorded errors
+        let acc = optimizer.error_accumulator();
+        assert_eq!(acc.num_layers(), 2);
+        assert!(acc.get_layer_errors("layer1").is_some());
+        assert!(acc.get_layer_errors("layer2").is_some());
+    }
+
+    #[test]
+    fn test_check_orthogonality() {
+        // Identity matrix should be perfectly orthogonal
+        let identity = DenseTensor::from_vec(
+            vec![1.0, 0.0, 0.0, 1.0],
+            vec![2, 2],
+        );
+
+        let error = LieGroupOptimizer::check_orthogonality(&identity);
+        assert!(error < 1e-10);
+
+        // Non-orthogonal matrix should have higher error
+        let non_ortho = DenseTensor::from_vec(
+            vec![1.0, 1.0, 1.0, 1.0],
+            vec![2, 2],
+        );
+
+        let error = LieGroupOptimizer::check_orthogonality(&non_ortho);
+        assert!(error > 0.1);
+    }
 }
 
 /// Orthogonalize all weights in a graph in-place (zero-copy)
@@ -649,58 +768,4 @@ pub fn orthogonalize_weights_in_place(
     }
 
     Ok(errors)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_lie_group_config() {
-        let config = LieGroupConfig::new()
-            .with_block_size(128)
-            .with_orthogonalize(true)
-            .with_target_layers(vec!["q_proj".to_string(), "k_proj".to_string()]);
-
-        assert_eq!(config.block_size, 128);
-        assert!(config.orthogonalize);
-        assert!(config.matches_layer("model.layers.0.attn.q_proj"));
-        assert!(config.matches_layer("model.layers.0.attn.k_proj"));
-        assert!(!config.matches_layer("model.layers.0.mlp"));
-    }
-
-    #[test]
-    fn test_sok_block() {
-        // Create a 2x2 rotation matrix (in SO(2))
-        let theta = std::f64::consts::PI / 4.0;
-        let cos_t = theta.cos();
-        let sin_t = theta.sin();
-
-        let block = SOkBlock::new(vec![cos_t, -sin_t, sin_t, cos_t], 2).unwrap();
-
-        assert!(block.is_orthogonal(1e-5));
-    }
-
-    #[test]
-    fn test_decompose_into_so_blocks() {
-        let tensor = DenseTensor::from_vec(vec![1.0, 0.0, 0.0, 1.0], vec![2, 2]);
-
-        let blocks = decompose_into_so_blocks(&tensor, 2).unwrap();
-        assert_eq!(blocks.len(), 1);
-        assert!(blocks[0].is_orthogonal(1e-5));
-    }
-
-    #[test]
-    fn test_lie_optimizer() {
-        let config = LieGroupConfig::new()
-            .with_block_size(64)
-            .with_orthogonalize(true);
-
-        let optimizer = LieGroupOptimizer::new(config);
-
-        let tensor = DenseTensor::from_vec(vec![1.0, 2.0, 3.0, 4.0], vec![2, 2]);
-
-        let result = optimizer.cayley_transform(&tensor);
-        assert!(result.is_ok());
-    }
 }
