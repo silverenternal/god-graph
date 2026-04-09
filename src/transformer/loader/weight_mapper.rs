@@ -3,13 +3,15 @@
 //! This module provides mapping from HuggingFace Safetensors weight names
 //! to GodGraph model structures (LlamaModel, etc.).
 
+use std::collections::HashMap;
 use crate::errors::{GraphError, GraphResult};
-use crate::tensor::traits::TensorBase;
 use crate::tensor::DenseTensor;
-use crate::transformer::layers::{FeedForward, MultiHeadAttention, RMSNorm, RoPE};
+use crate::tensor::traits::TensorBase;
 use crate::transformer::loader::config::LlamaConfig;
 use crate::transformer::model::{LlamaDecoderLayer, LlamaModel as LlamaModelStruct};
-use std::collections::HashMap;
+use crate::transformer::layers::{
+    MultiHeadAttention, FeedForward, RMSNorm, RoPE,
+};
 
 /// Weight mapper for LLaMA models
 ///
@@ -169,9 +171,7 @@ impl LlamaWeightMapper {
         let post_attention_layernorm = RMSNorm::new(
             tensors
                 .get(&format!("{}.post_attention_layernorm.weight", prefix))
-                .ok_or_else(|| {
-                    GraphError::NotFound(format!("{}.post_attention_layernorm.weight", prefix))
-                })?
+                .ok_or_else(|| GraphError::NotFound(format!("{}.post_attention_layernorm.weight", prefix)))?
                 .clone(),
             self.config.rms_norm_eps,
         );
@@ -202,7 +202,9 @@ impl LlamaWeightMapper {
         tensors: &'a HashMap<String, DenseTensor>,
     ) -> GraphResult<&'a DenseTensor> {
         let name = format!("model.layers.{}.{}", layer_idx, component);
-        tensors.get(&name).ok_or(GraphError::NotFound(name))
+        tensors
+            .get(&name)
+            .ok_or(GraphError::NotFound(name))
     }
 }
 
@@ -289,8 +291,10 @@ mod tests {
             vec![config.vocab_size, config.hidden_size],
         );
 
-        let norm_weight =
-            DenseTensor::from_vec(vec![1.0; config.hidden_size], vec![config.hidden_size]);
+        let norm_weight = DenseTensor::from_vec(
+            vec![1.0; config.hidden_size],
+            vec![config.hidden_size],
+        );
 
         let norm = RMSNorm::new(norm_weight, config.rms_norm_eps);
 

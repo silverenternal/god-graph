@@ -258,11 +258,6 @@ name = "large_scale_graph"
 harness = false
 required-features = ["rand"]
 
-[[bench]]
-name = "tensor_arena"
-harness = false
-required-features = ["tensor", "tensor-pool"]
-
 # transformer_inference requires nightly Rust (uses #![feature(test)])
 # To run it: rustup run nightly cargo bench --features "transformer,simd,unstable" --bench transformer_inference
 [[bench]]

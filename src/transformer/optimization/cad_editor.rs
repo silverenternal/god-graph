@@ -899,7 +899,8 @@ mod tests {
         let mut editor = CadStyleEditor::new(&mut graph);
         let subgraph = editor.extract_module("attention").unwrap();
 
-        assert!(subgraph.node_count() >= 0);
+        // Verify subgraph was extracted successfully
+        assert_eq!(subgraph.node_count(), 0); // Module extraction creates empty subgraph in test
         assert!(editor.module_cache().contains_key("attention"));
     }
 

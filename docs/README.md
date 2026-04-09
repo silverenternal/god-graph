@@ -1,6 +1,6 @@
 # God-Graph 文档导航
 
-**版本**: v0.6.0-alpha
+**版本**: v0.7.0-alpha
 **更新日期**: 2026-04-08
 **测试状态**: 512/512 测试通过 ✅
 **Clippy 状态**: 0 警告 ✅
@@ -19,7 +19,6 @@
 | [DifferentiableGraph 教程](user-guide/differentiable-graph.md) | 可微图结构完整教程 |
 | [从 Petgraph 迁移](user-guide/migration-from-petgraph.md) | API 对照和迁移指南 |
 | [Transformer 支持](user-guide/transformer-guide.md) | LLM 模型加载和优化 |
-| [内存池优化](user-guide/memory-pool.md) | 减少分配开销 98%+ |
 
 ---
 
@@ -29,8 +28,9 @@ Virtual Graph Interface - 统一图后端接口。
 
 | 文档 | 说明 |
 |------|------|
-| [VGI 指南](VGI_GUIDE.md) | Virtual Graph Interface 使用指南 |
-| [VGI 实施计划](VGI_IMPLEMENTATION_PLAN.md) | VGI 架构详细设计和实现 |
+| [VGI 架构总结](VGI_ARCHITECTURE_SUMMARY.md) | **VGI 架构完整总结** ⭐ 推荐从这里开始 |
+| [VGI 指南](VGI_GUIDE.md) | Virtual Graph Interface 详细使用指南 |
+| [VGI 实施计划](VGI_IMPLEMENTATION_PLAN.md) | VGI 架构详细设计 |
 | [插件开发指南](PLUGIN_DEVELOPMENT_GUIDE.md) | 第三方算法插件开发 |
 | [分布式处理指南](DISTRIBUTED_GUIDE.md) | 分布式图处理 |
 | [容错指南](FAULT_TOLERANCE_GUIDE.md) | 分布式系统容错 |
@@ -73,13 +73,12 @@ Virtual Graph Interface - 统一图后端接口。
 
 | 报告 | 说明 |
 |------|------|
-| [TinyLlama 验证报告](reports/validation.md) | 真实模型端到端验证 |
-| [性能基准测试](reports/performance.md) | 并行算法加速比数据 |
 | [实现状态](reports/implementation-status.md) | 功能完成度和路线图 |
+| [性能基准测试](reports/performance.md) | 并行算法加速比数据 |
 | [分布式性能报告](reports/distributed-benchmarks.md) | 分布式处理性能数据 |
+| [TinyLlama 验证报告](reports/validation.md) | 真实模型端到端验证 |
 | [性能优化总结](../OPTIMIZATION_SUMMARY.md) | 全面性能优化技术清单 |
-| [性能优化详情](../PERFORMANCE_OPTIMIZATIONS.md) | HashMap→Vec 等优化详情 |
-| [优化实施报告](../OPTIMIZATION_REPORT_2026_04_08.md) | 2026-04-08 优化报告 |
+| [优化实施报告](../OPTIMIZATION_REPORT_2026_04_08.md) | 2026-04-08 优化详情 |
 
 ---
 
@@ -102,33 +101,37 @@ Virtual Graph Interface - 统一图后端接口。
 
 ```
 docs/
-├── README.md                     # 本文档（导航页）
+├── README.md                           # 本文档（导航页）
 │
-├── user-guide/                   # 用户指南
-│   ├── getting-started.md       # 快速开始（待创建）
-│   ├── differentiable-graph.md  # DifferentiableGraph 教程
-│   ├── migration-from-petgraph.md # 从 Petgraph 迁移
-│   ├── transformer-guide.md     # Transformer 支持
-│   └── visualization.md         # 可视化指南
+├── user-guide/                         # 用户指南
+│   ├── getting-started.md             # 快速开始
+│   ├── differentiable-graph.md        # DifferentiableGraph 教程
+│   ├── migration-from-petgraph.md     # 从 Petgraph 迁移
+│   ├── transformer-guide.md           # Transformer 支持
+│   └── visualization.md               # 可视化指南
 │
-├── VGI_GUIDE.md                 # VGI 架构使用指南
-├── VGI_IMPLEMENTATION_PLAN.md   # VGI 实施计划
-├── PLUGIN_DEVELOPMENT_GUIDE.md  # 插件开发指南
-├── DISTRIBUTED_GUIDE.md         # 分布式处理指南
-├── FAULT_TOLERANCE_GUIDE.md     # 容错指南
+├── VGI_ARCHITECTURE_SUMMARY.md         # VGI 架构总结（新）
+├── VGI_GUIDE.md                        # VGI 使用指南
+├── VGI_IMPLEMENTATION_PLAN.md          # VGI 实施计划
+├── PLUGIN_DEVELOPMENT_GUIDE.md         # 插件开发指南
+├── DISTRIBUTED_GUIDE.md                # 分布式处理指南
+├── FAULT_TOLERANCE_GUIDE.md            # 容错指南
+├── MIGRATION_GUIDE_v0.6.md             # v0.5→v0.6 迁移指南
+├── MIGRATION_GUIDE_v0.7_VGI_LAYERED_API.md  # v0.6→v0.7 迁移指南
 │
-├── api-reference/               # API 参考（占位，指向 docs.rs）
-│   └── README.md
+├── api-reference/                      # API 参考
+│   └── README.md                       # 指向 docs.rs
 │
-├── internals/                   # 内部实现文档
-│   ├── architecture.md          # 架构设计
-│   └── cad-design.md            # CAD-LLM 设计哲学
+├── internals/                          # 内部实现文档
+│   ├── architecture.md                 # 架构设计
+│   └── cad-design.md                   # CAD-LLM 设计哲学
 │
-└── reports/                     # 报告
-    ├── validation.md            # TinyLlama 验证
-    ├── performance.md           # 性能基准测试
-    ├── distributed-benchmarks.md # 分布式性能
-    └── implementation-status.md # 实现状态
+└── reports/                            # 报告
+    ├── implementation-status.md        # 实现状态
+    ├── performance.md                  # 性能基准
+    ├── distributed-benchmarks.md       # 分布式性能
+    ├── validation.md                   # TinyLlama 验证
+    └── ... (其他历史报告)
 ```
 
 ---
@@ -144,6 +147,20 @@ docs/
 
 ## 📝 文档更新日志
 
+### v0.7.0-alpha (2026-04-08) - 文档整理
+
+**删除冗余文档**:
+- ✅ 删除临时任务文档 (TASK*.md) - 内容已合并到 CHANGELOG
+- ✅ 删除重复性能优化文档 (PERFORMANCE_OPTIMIZATIONS.md)
+- ✅ 删除 docs/reports 下重复性能报告 (6 个文件)
+- ✅ 合并 VGI 阶段性报告 → VGI_ARCHITECTURE_SUMMARY.md
+
+**新增文档**:
+- ✅ VGI_ARCHITECTURE_SUMMARY.md - VGI 架构完整总结
+
+**更新文档**:
+- ✅ docs/README.md - 更新导航结构
+
 ### v0.6.0-alpha (2026-04-01)
 
 - ✅ 创建全面的快速开始指南 (getting-started.md)
@@ -152,13 +169,6 @@ docs/
 - ✅ 更新 VGI 架构文档链接
 - ✅ 添加分布式处理文档导航
 - ✅ 更新快速开始示例代码
-
-### v0.5.0-alpha (2026-03-29)
-
-- ✅ 添加 DifferentiableGraph 教程
-- ✅ 添加 VGI 实施计划文档
-- ✅ 添加插件开发指南
-- ✅ 添加分布式处理指南
 
 ---
 

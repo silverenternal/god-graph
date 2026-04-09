@@ -219,6 +219,7 @@ fn get_tinyllama_model_path() -> Option<String> {
 }
 
 /// 使用合成数据的简化演示（当真实模型不可用时）
+#[cfg(all(feature = "tensor", feature = "tensor-pool", feature = "transformer", feature = "safetensors"))]
 fn run_synthetic_demo() {
     use god_graph::graph::Graph;
     use god_graph::graph::GraphBase;

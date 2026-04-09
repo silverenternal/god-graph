@@ -649,15 +649,16 @@ mod graph_tensor_properties {
             let gcn = GCNConv::new(in_features, out_features);
 
             // 创建随机特征
+            let features_data: Vec<f64> = (0..num_nodes * in_features).map(|i| ((i % 100) as f64) / 100.0).collect();
             let features = DenseTensor::new(
-                prop::collection::vec(-1.0..1.0, num_nodes * in_features),
+                features_data,
                 vec![num_nodes, in_features],
             );
 
-            // 创建简单的邻接矩阵（使用 AdjacencyMatrix）
-            let adjacency = god_graph::tensor::types::AdjacencyMatrix::from_edges(
+            // 创建简单的邻接矩阵
+            let adjacency = god_graph::tensor::SparseTensor::from_edges(
                 &[(0, 1, 1.0), (1, 2, 1.0)],
-                num_nodes,
+                [num_nodes, num_nodes],
             );
 
             let output = gcn.forward(&features, &adjacency);

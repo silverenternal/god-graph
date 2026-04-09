@@ -1,7 +1,7 @@
 //! Multi-Head Attention implementation
 
-use crate::tensor::traits::{TensorBase, TensorOps};
 use crate::tensor::DenseTensor;
+use crate::tensor::traits::{TensorOps, TensorBase};
 
 /// Multi-Head Attention layer
 ///
@@ -67,13 +67,7 @@ impl MultiHeadAttention {
     }
 
     /// Create multi-head attention with standard configuration (num_kv_heads = num_heads)
-    pub fn standard(
-        w_q: DenseTensor,
-        w_k: DenseTensor,
-        w_v: DenseTensor,
-        w_o: DenseTensor,
-        num_heads: usize,
-    ) -> Self {
+    pub fn standard(w_q: DenseTensor, w_k: DenseTensor, w_v: DenseTensor, w_o: DenseTensor, num_heads: usize) -> Self {
         Self::new(w_q, w_k, w_v, w_o, num_heads, num_heads)
     }
 
@@ -258,16 +252,16 @@ impl MultiHeadAttention {
             for batch_idx in 0..batch {
                 for i in 0..m {
                     let a_row_offset = (batch_idx * m + i) * k;
-
+                    
                     for j in (0..n).step_by(4) {
                         if j + 4 <= n {
                             // SIMD: process 4 columns at once
                             let mut sum_simd = f64x4::new([0.0; 4]);
-
+                            
                             for p in 0..k {
                                 let a_val = a.data()[a_row_offset + p];
                                 let a_simd = f64x4::new([a_val; 4]);
-
+                                
                                 let b_vals = [
                                     b.data()[(batch_idx * k + p) * n + j],
                                     b.data()[(batch_idx * k + p) * n + j + 1],
@@ -275,10 +269,10 @@ impl MultiHeadAttention {
                                     b.data()[(batch_idx * k + p) * n + j + 3],
                                 ];
                                 let b_simd = f64x4::new(b_vals);
-
+                                
                                 sum_simd += a_simd * b_simd;
                             }
-
+                            
                             let sums = sum_simd.to_array();
                             result[(batch_idx * m + i) * n + j] = sums[0];
                             result[(batch_idx * m + i) * n + j + 1] = sums[1];

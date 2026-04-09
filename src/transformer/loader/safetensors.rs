@@ -6,12 +6,12 @@
 //! - Header: JSON string containing tensor metadata (name, dtype, shape, offsets)
 //! - Data: Binary tensor data arranged according to header offsets
 
-use crate::errors::{GraphError, GraphResult};
-use crate::tensor::DenseTensor;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{Read, Seek};
 use std::path::Path;
+use crate::tensor::DenseTensor;
+use crate::errors::{GraphError, GraphResult};
 
 /// Supported data types in Safetensors
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -39,17 +39,20 @@ impl Dtype {
             Dtype::I64 => 8,
         }
     }
+}
+
+impl std::str::FromStr for Dtype {
+    type Err = ();
 
     /// Parse dtype from string
-    #[allow(clippy::should_implement_trait)]
-    pub fn from_str(s: &str) -> Option<Self> {
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "F32" | "f32" | "FLOAT32" => Some(Dtype::F32),
-            "F16" | "f16" | "FLOAT16" => Some(Dtype::F16),
-            "BF16" | "bf16" | "BFLOAT16" => Some(Dtype::BF16),
-            "I32" | "i32" | "INT32" => Some(Dtype::I32),
-            "I64" | "i64" | "INT64" => Some(Dtype::I64),
-            _ => None,
+            "F32" | "f32" | "FLOAT32" => Ok(Dtype::F32),
+            "F16" | "f16" | "FLOAT16" => Ok(Dtype::F16),
+            "BF16" | "bf16" | "BFLOAT16" => Ok(Dtype::BF16),
+            "I32" | "i32" | "INT32" => Ok(Dtype::I32),
+            "I64" | "i64" | "INT64" => Ok(Dtype::I64),
+            _ => Err(()),
         }
     }
 }
@@ -87,7 +90,8 @@ impl SafetensorsLoader {
     /// A loader that can be used to access individual tensors
     pub fn load<P: AsRef<Path>>(path: P) -> GraphResult<Self> {
         let path = path.as_ref();
-        let mut file = File::open(path).map_err(|e| GraphError::IoError(e.to_string()))?;
+        let mut file = File::open(path)
+            .map_err(|e| GraphError::IoError(e.to_string()))?;
 
         // Read first 8 bytes to get header length
         let mut header_len_bytes = [0u8; 8];
@@ -100,7 +104,7 @@ impl SafetensorsLoader {
         let mut header_bytes = vec![0u8; header_len];
         file.read_exact(&mut header_bytes)
             .map_err(|e| GraphError::IoError(e.to_string()))?;
-
+        
         let header_str = String::from_utf8(header_bytes)
             .map_err(|e| GraphError::InvalidFormat(e.to_string()))?;
 
@@ -118,57 +122,32 @@ impl SafetensorsLoader {
                 }
 
                 if let Some(tensor_info) = value.as_object() {
-                    let dtype_str = tensor_info
-                        .get("dtype")
+                    let dtype_str = tensor_info.get("dtype")
                         .and_then(|v| v.as_str())
-                        .ok_or_else(|| {
-                            GraphError::InvalidFormat(format!("Missing dtype for tensor {}", name))
-                        })?;
+                        .ok_or_else(|| GraphError::InvalidFormat(format!("Missing dtype for tensor {}", name)))?;
 
-                    let dtype = Dtype::from_str(dtype_str).ok_or_else(|| {
-                        GraphError::InvalidFormat(format!("Unknown dtype: {}", dtype_str))
-                    })?;
+                    let dtype: Dtype = dtype_str.parse()
+                        .map_err(|_| GraphError::InvalidFormat(format!("Unknown dtype: {}", dtype_str)))?;
 
-                    let shape = tensor_info
-                        .get("shape")
+                    let shape = tensor_info.get("shape")
                         .and_then(|v| v.as_array())
-                        .ok_or_else(|| {
-                            GraphError::InvalidFormat(format!("Missing shape for tensor {}", name))
-                        })?;
+                        .ok_or_else(|| GraphError::InvalidFormat(format!("Missing shape for tensor {}", name)))?;
 
-                    let shape: Vec<usize> = shape
-                        .iter()
-                        .map(|v| {
-                            v.as_u64().map(|x| x as usize).ok_or_else(|| {
-                                GraphError::InvalidFormat("Invalid shape value".to_string())
-                            })
-                        })
+                    let shape: Vec<usize> = shape.iter()
+                        .map(|v| v.as_u64().map(|x| x as usize).ok_or_else(|| GraphError::InvalidFormat("Invalid shape value".to_string())))
                         .collect::<Result<_, _>>()?;
 
-                    let data_offsets = tensor_info
-                        .get("data_offsets")
+                    let data_offsets = tensor_info.get("data_offsets")
                         .and_then(|v| v.as_array())
-                        .ok_or_else(|| {
-                        GraphError::InvalidFormat(format!(
-                            "Missing data_offsets for tensor {}",
-                            name
-                        ))
-                    })?;
+                        .ok_or_else(|| GraphError::InvalidFormat(format!("Missing data_offsets for tensor {}", name)))?;
 
                     if data_offsets.len() != 2 {
-                        return Err(GraphError::InvalidFormat(format!(
-                            "Invalid data_offsets for tensor {}",
-                            name
-                        )));
+                        return Err(GraphError::InvalidFormat(format!("Invalid data_offsets for tensor {}", name)));
                     }
 
                     let offsets = [
-                        data_offsets[0].as_u64().ok_or_else(|| {
-                            GraphError::InvalidFormat("Invalid offset".to_string())
-                        })? as usize,
-                        data_offsets[1].as_u64().ok_or_else(|| {
-                            GraphError::InvalidFormat("Invalid offset".to_string())
-                        })? as usize,
+                        data_offsets[0].as_u64().ok_or_else(|| GraphError::InvalidFormat("Invalid offset".to_string()))? as usize,
+                        data_offsets[1].as_u64().ok_or_else(|| GraphError::InvalidFormat("Invalid offset".to_string()))? as usize,
                     ];
 
                     let info = TensorInfo {
@@ -181,7 +160,7 @@ impl SafetensorsLoader {
                 }
             }
         }
-
+        
         Ok(Self {
             tensors,
             path: path.to_string_lossy().to_string(),
@@ -207,16 +186,12 @@ impl SafetensorsLoader {
     /// # Returns
     /// DenseTensor with the loaded data
     pub fn get_tensor(&mut self, name: &str) -> GraphResult<DenseTensor> {
-        let info = self
-            .tensors
-            .get(name)
+        let info = self.tensors.get(name)
             .ok_or_else(|| GraphError::NotFound(name.to_string()))?
             .clone();
 
         // Seek to tensor data
-        let file = self
-            .file
-            .as_mut()
+        let file = self.file.as_mut()
             .ok_or_else(|| GraphError::IoError("File not open".to_string()))?;
 
         // Offset includes 8 bytes for header length
@@ -240,8 +215,7 @@ impl SafetensorsLoader {
                     Ok(f32_data) => f32_data.iter().map(|&x| x as f64).collect(),
                     Err(_) => {
                         // Fallback: manual conversion for unaligned data
-                        buffer
-                            .chunks_exact(4)
+                        buffer.chunks_exact(4)
                             .map(|chunk| {
                                 let bytes: [u8; 4] = [chunk[0], chunk[1], chunk[2], chunk[3]];
                                 f32::from_le_bytes(bytes) as f64
@@ -250,69 +224,72 @@ impl SafetensorsLoader {
                     }
                 }
             }
-            Dtype::F16 => match bytemuck::try_cast_slice::<u8, u16>(&buffer) {
-                Ok(f16_data) => f16_data
-                    .iter()
-                    .map(|&x| half::f16::from_bits(x).to_f64())
-                    .collect(),
-                Err(_) => buffer
-                    .chunks_exact(2)
-                    .map(|chunk| {
-                        let bytes: [u8; 2] = [chunk[0], chunk[1]];
-                        half::f16::from_bits(u16::from_le_bytes(bytes)).to_f64()
-                    })
-                    .collect(),
-            },
-            Dtype::BF16 => match bytemuck::try_cast_slice::<u8, u16>(&buffer) {
-                Ok(bf16_data) => bf16_data
-                    .iter()
-                    .map(|&x| half::bf16::from_bits(x).to_f64())
-                    .collect(),
-                Err(_) => buffer
-                    .chunks_exact(2)
-                    .map(|chunk| {
-                        let bytes: [u8; 2] = [chunk[0], chunk[1]];
-                        half::bf16::from_bits(u16::from_le_bytes(bytes)).to_f64()
-                    })
-                    .collect(),
-            },
-            Dtype::I32 => match bytemuck::try_cast_slice::<u8, i32>(&buffer) {
-                Ok(i32_data) => i32_data.iter().map(|&x| x as f64).collect(),
-                Err(_) => buffer
-                    .chunks_exact(4)
-                    .map(|chunk| {
-                        let bytes: [u8; 4] = [chunk[0], chunk[1], chunk[2], chunk[3]];
-                        i32::from_le_bytes(bytes) as f64
-                    })
-                    .collect(),
-            },
-            Dtype::I64 => match bytemuck::try_cast_slice::<u8, i64>(&buffer) {
-                Ok(i64_data) => i64_data.iter().map(|&x| x as f64).collect(),
-                Err(_) => buffer
-                    .chunks_exact(8)
-                    .map(|chunk| {
-                        let bytes: [u8; 8] = [
-                            chunk[0], chunk[1], chunk[2], chunk[3], chunk[4], chunk[5], chunk[6],
-                            chunk[7],
-                        ];
-                        i64::from_le_bytes(bytes) as f64
-                    })
-                    .collect(),
-            },
+            Dtype::F16 => {
+                match bytemuck::try_cast_slice::<u8, u16>(&buffer) {
+                    Ok(f16_data) => f16_data.iter().map(|&x| half::f16::from_bits(x).to_f64()).collect(),
+                    Err(_) => {
+                        buffer.chunks_exact(2)
+                            .map(|chunk| {
+                                let bytes: [u8; 2] = [chunk[0], chunk[1]];
+                                half::f16::from_bits(u16::from_le_bytes(bytes)).to_f64()
+                            })
+                            .collect()
+                    }
+                }
+            }
+            Dtype::BF16 => {
+                match bytemuck::try_cast_slice::<u8, u16>(&buffer) {
+                    Ok(bf16_data) => bf16_data.iter().map(|&x| half::bf16::from_bits(x).to_f64()).collect(),
+                    Err(_) => {
+                        buffer.chunks_exact(2)
+                            .map(|chunk| {
+                                let bytes: [u8; 2] = [chunk[0], chunk[1]];
+                                half::bf16::from_bits(u16::from_le_bytes(bytes)).to_f64()
+                            })
+                            .collect()
+                    }
+                }
+            }
+            Dtype::I32 => {
+                match bytemuck::try_cast_slice::<u8, i32>(&buffer) {
+                    Ok(i32_data) => i32_data.iter().map(|&x| x as f64).collect(),
+                    Err(_) => {
+                        buffer.chunks_exact(4)
+                            .map(|chunk| {
+                                let bytes: [u8; 4] = [chunk[0], chunk[1], chunk[2], chunk[3]];
+                                i32::from_le_bytes(bytes) as f64
+                            })
+                            .collect()
+                    }
+                }
+            }
+            Dtype::I64 => {
+                match bytemuck::try_cast_slice::<u8, i64>(&buffer) {
+                    Ok(i64_data) => i64_data.iter().map(|&x| x as f64).collect(),
+                    Err(_) => {
+                        buffer.chunks_exact(8)
+                            .map(|chunk| {
+                                let bytes: [u8; 8] = [chunk[0], chunk[1], chunk[2], chunk[3], chunk[4], chunk[5], chunk[6], chunk[7]];
+                                i64::from_le_bytes(bytes) as f64
+                            })
+                            .collect()
+                    }
+                }
+            }
         };
-
+        
         Ok(DenseTensor::new(data, info.shape))
     }
 
     /// Load all tensors
     pub fn get_all_tensors(&mut self) -> GraphResult<HashMap<String, DenseTensor>> {
         let mut tensors = HashMap::new();
-
+        
         for name in self.tensors.keys().cloned().collect::<Vec<_>>() {
             let tensor = self.get_tensor(&name)?;
             tensors.insert(name, tensor);
         }
-
+        
         Ok(tensors)
     }
 
@@ -333,12 +310,12 @@ mod tests {
 
     #[test]
     fn test_dtype_parsing() {
-        assert_eq!(Dtype::from_str("F32"), Some(Dtype::F32));
-        assert_eq!(Dtype::from_str("f16"), Some(Dtype::F16));
-        assert_eq!(Dtype::from_str("BF16"), Some(Dtype::BF16));
-        assert_eq!(Dtype::from_str("I32"), Some(Dtype::I32));
-        assert_eq!(Dtype::from_str("i64"), Some(Dtype::I64));
-        assert_eq!(Dtype::from_str("UNKNOWN"), None);
+        assert_eq!("F32".parse::<Dtype>(), Ok(Dtype::F32));
+        assert_eq!("f16".parse::<Dtype>(), Ok(Dtype::F16));
+        assert_eq!("BF16".parse::<Dtype>(), Ok(Dtype::BF16));
+        assert_eq!("I32".parse::<Dtype>(), Ok(Dtype::I32));
+        assert_eq!("i64".parse::<Dtype>(), Ok(Dtype::I64));
+        assert_eq!("UNKNOWN".parse::<Dtype>(), Err(()));
     }
 
     #[test]

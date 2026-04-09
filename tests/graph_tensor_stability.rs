@@ -272,7 +272,7 @@ mod tests {
         let config = LieGroupConfig::new().with_orthogonalize(true);
         let optimizer = LieGroupOptimizer::new(config);
         let _ = optimizer.orthogonalize_weights(&mut graph).unwrap();
-        let errors: Vec<f64> = optimizer.error_accumulator().layer_errors().values().flatten().cloned().collect();
+        let errors: Vec<f64> = optimizer.error_accumulator().all_layer_errors().values().flatten().cloned().collect();
 
         let graph_error = errors[0];
 

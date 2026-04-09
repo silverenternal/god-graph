@@ -37,11 +37,12 @@
 //! # fn main() {}
 //! ```
 
-use crate::errors::GraphResult;
-use crate::graph::traits::{GraphBase, GraphQuery};
+use crate::errors::{GraphError, GraphResult};
+use crate::graph::traits::{GraphBase, GraphOps, GraphQuery};
 use crate::graph::Graph;
 use smallvec::SmallVec;
 use std::collections::HashMap;
+use std::path::Path;
 
 /// Operator types for LLM computation graph nodes
 #[derive(Debug, Clone, PartialEq)]
@@ -251,7 +252,7 @@ impl WeightTensor {
             return None;
         }
 
-        for (_i, (&idx, &dim)) in indices.iter().zip(self.shape.iter()).enumerate() {
+        for (&idx, &dim) in indices.iter().zip(self.shape.iter()) {
             if idx >= dim {
                 return None;
             }
@@ -279,7 +280,7 @@ impl WeightTensor {
             return false;
         }
 
-        for (_i, (&idx, &dim)) in indices.iter().zip(self.shape.iter()).enumerate() {
+        for (&idx, &dim) in indices.iter().zip(self.shape.iter()) {
             if idx >= dim {
                 return false;
             }
@@ -672,7 +673,7 @@ impl ModelSwitch {
         }
 
         // Check for missing weights in modified graph
-        for (name, _) in &original_weights {
+        for name in original_weights.keys() {
             if !per_tensor_diff.contains_key(name) {
                 per_tensor_diff.insert(name.clone(), f64::MAX);
                 tensor_count += 1;

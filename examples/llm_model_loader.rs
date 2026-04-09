@@ -175,6 +175,7 @@ fn find_safetensors_files(
     Ok(files)
 }
 
+#[cfg(all(feature = "transformer", feature = "safetensors"))]
 fn estimate_parameters_llama(config: &god_graph::transformer::loader::LlamaConfig) -> usize {
     let embed_params = config.vocab_size * config.hidden_size;
     let attn_params = config.hidden_size * config.hidden_size * 4;

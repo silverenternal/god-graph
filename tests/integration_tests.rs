@@ -348,8 +348,8 @@ fn test_degree_centrality() {
     // A has 3 outgoing edges, highest centrality
     // centrality is HashMap<NodeIndex, f64>
     assert!(!centrality.is_empty());
-    let node_a = graph.nodes().nth(0).unwrap().index();
-    assert!(centrality.get(&node_a).map_or(false, |&c| c > 0.0)); // Node A has highest centrality
+    let node_a = graph.nodes().next().unwrap().index();
+    assert!(centrality.get(&node_a).is_some_and(|&c| c > 0.0)); // Node A has highest centrality
 }
 
 /// 测试连通分量
