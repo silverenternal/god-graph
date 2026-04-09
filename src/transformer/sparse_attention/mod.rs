@@ -131,7 +131,7 @@ impl SparseMask {
     /// * `block_size` - Block size
     /// * `num_blocks` - Number of blocks to attend to
     pub fn block_sparse(seq_len: usize, block_size: usize, num_blocks: usize) -> Self {
-        let _num_blocks_total = (seq_len + block_size - 1) / block_size;
+        let _num_blocks_total = seq_len.div_ceil(block_size);
         let mut row_offsets = Vec::with_capacity(seq_len + 1);
         let mut col_indices = Vec::new();
 
@@ -323,8 +323,8 @@ impl SparseAttention {
     /// * `head_dim` - Head dimension
     /// * `center_ratio` - Ratio of center tokens
     pub fn star(head_dim: usize, _center_ratio: f64) -> Self {
-        let self_ = Self::new(SparsePattern::Star, head_dim);
-        self_
+        
+        Self::new(SparsePattern::Star, head_dim)
     }
 
     /// Build sparse mask for given sequence length
@@ -453,6 +453,7 @@ impl SlidingWindowAttention {
 
                         // Weighted sum of values
                         let v_slice = &value.data()[(b * num_heads * seq_len * head_dim + h * seq_len * head_dim + j * head_dim)..];
+                        #[allow(clippy::needless_range_loop)]
                         for d in 0..head_dim {
                             attn_output[d] += weight * v_slice[d];
                         }
@@ -461,6 +462,7 @@ impl SlidingWindowAttention {
 
                     // Normalize
                     if total_weight > 0.0 {
+                        #[allow(clippy::needless_range_loop)]
                         for d in 0..head_dim {
                             attn_output[d] /= total_weight;
                         }

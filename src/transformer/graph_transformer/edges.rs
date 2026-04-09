@@ -463,6 +463,7 @@ impl GraphEdge {
     }
 
     /// Create a self-attention edge with separate Q, K, V projections
+    #[allow(clippy::too_many_arguments)]
     pub fn self_attention_with_qkv(
         source: usize,
         target: usize,
@@ -496,7 +497,7 @@ impl GraphEdge {
 
     /// Check if this edge has complete QKV projections
     pub fn has_qkv(&self) -> bool {
-        self.self_attention.as_ref().map_or(false, |sa| sa.has_qkv())
+        self.self_attention.as_ref().is_some_and(|sa| sa.has_qkv())
     }
 
     /// Get the key projection (SelfAttention edges only)

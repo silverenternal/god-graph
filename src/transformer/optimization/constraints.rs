@@ -16,6 +16,9 @@ use crate::graph::Graph;
 use crate::transformer::optimization::switch::{OperatorType, WeightTensor};
 use std::collections::HashMap;
 
+/// Type alias for custom constraint functions
+type ConstraintFn = Box<dyn Fn(&Graph<OperatorType, WeightTensor>) -> GraphResult<bool> + Send + Sync>;
+
 /// Severity level for topology defects
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Severity {
@@ -87,7 +90,7 @@ pub enum TopologyConstraint {
         to: String,
     },
     /// Custom constraint function
-    Custom(Box<dyn Fn(&Graph<OperatorType, WeightTensor>) -> GraphResult<bool> + Send + Sync>),
+    Custom(ConstraintFn),
 }
 
 impl Clone for TopologyConstraint {

@@ -292,7 +292,7 @@ impl TensorBase for DenseTensor {
         self.clone()
     }
 
-    #[cfg(feature = "tensor-sparse")]
+    #[cfg(feature = "tensor")]
     fn to_sparse(&self) -> Option<crate::tensor::sparse::SparseTensor> {
         // 将密集张量转换为 CSR 格式
         let mut row_offsets = vec![0];
@@ -705,6 +705,7 @@ impl DenseTensor {
             let cols = self.shape[1];
             let rows = self.shape[0];
             let mut result = vec![0.0; cols];
+            #[allow(clippy::needless_range_loop)]
             for col in 0..cols {
                 for row in 0..rows {
                     result[col] += self.data[row * cols + col];
@@ -717,6 +718,7 @@ impl DenseTensor {
             let rows = self.shape[0];
             let cols = self.shape[1];
             let mut result = vec![0.0; rows];
+            #[allow(clippy::needless_range_loop)]
             for row in 0..rows {
                 let row_start = row * cols;
                 result[row] = self.data[row_start..row_start + cols].iter().sum::<f64>() / cols as f64;
@@ -753,6 +755,7 @@ impl DenseTensor {
             let cols = self.shape[1];
             let rows = self.shape[0];
             let mut result = vec![0.0; cols];
+            #[allow(clippy::needless_range_loop)]
             for col in 0..cols {
                 for row in 0..rows {
                     let diff = self.data[row * cols + col] - mean.data()[col];
@@ -765,6 +768,7 @@ impl DenseTensor {
             let rows = self.shape[0];
             let cols = self.shape[1];
             let mut result = vec![0.0; rows];
+            #[allow(clippy::needless_range_loop)]
             for row in 0..rows {
                 let row_start = row * cols;
                 let m = mean.data()[row];
@@ -955,7 +959,7 @@ impl DenseTensor {
         let mut new_shape = self.shape.to_vec();
         new_shape[self.ndim() - 1] = target_dim;
 
-        let mut data = Vec::with_capacity(self.numel() / 1 * target_dim);
+        let mut data = Vec::with_capacity(self.numel() * target_dim);
         for &val in self.data.iter() {
             for _ in 0..target_dim {
                 data.push(val);

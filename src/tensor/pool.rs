@@ -7,6 +7,9 @@ use core::fmt;
 use core::marker::PhantomData;
 
 #[cfg(feature = "tensor-pool")]
+use crate::tensor::error::TensorError;
+
+#[cfg(feature = "tensor-pool")]
 use crate::tensor::traits::{TensorBase, TensorOps};
 
 #[cfg(feature = "tensor-pool")]
@@ -397,9 +400,8 @@ impl GradientCheckpoint {
     pub fn take(&mut self, id: usize) -> Result<DenseTensor, TensorError> {
         self.saved_tensors.remove(&id).ok_or_else(|| TensorError::MatrixError {
             message: format!("Tensor with id {} not found in pool", id),
-        }).map(|tensor| {
+        }).inspect(|tensor| {
             self.memory_used -= tensor.nbytes();
-            tensor
         })
     }
 
@@ -427,7 +429,7 @@ impl GradientCheckpoint {
     /// 移除最旧的张量（简化实现：随机移除）
     fn evict_oldest(&mut self) {
         if let Some((&id, _)) = self.saved_tensors.iter().next() {
-            self.take(id);
+            let _ = self.take(id);
         }
     }
 }
@@ -488,6 +490,7 @@ struct ArenaSlice {
     /// Start pointer (raw pointer into arena)
     ptr: *mut f64,
     /// Number of elements
+    #[allow(dead_code)]
     len: usize,
     /// Shape
     shape: SmallVec<[usize; 4]>,
@@ -643,7 +646,7 @@ impl TensorArena {
 
         self.free_lists
             .entry(key)
-            .or_insert_with(Vec::new)
+            .or_default()
             .push(slice);
 
         self.stats.deallocation_count += 1;
