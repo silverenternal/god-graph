@@ -7,6 +7,9 @@ use core::fmt;
 use core::marker::PhantomData;
 
 #[cfg(feature = "tensor-pool")]
+use crate::tensor::error::TensorError;
+
+#[cfg(feature = "tensor-pool")]
 use crate::tensor::traits::{TensorBase, TensorOps};
 
 #[cfg(feature = "tensor-pool")]
@@ -397,9 +400,8 @@ impl GradientCheckpoint {
     pub fn take(&mut self, id: usize) -> Result<DenseTensor, TensorError> {
         self.saved_tensors.remove(&id).ok_or_else(|| TensorError::MatrixError {
             message: format!("Tensor with id {} not found in pool", id),
-        }).map(|tensor| {
+        }).inspect(|tensor| {
             self.memory_used -= tensor.nbytes();
-            tensor
         })
     }
 
@@ -427,7 +429,7 @@ impl GradientCheckpoint {
     /// 移除最旧的张量（简化实现：随机移除）
     fn evict_oldest(&mut self) {
         if let Some((&id, _)) = self.saved_tensors.iter().next() {
-            self.take(id);
+            let _ = self.take(id);
         }
     }
 }
@@ -583,10 +585,8 @@ impl TensorArena {
     ///
     /// Tries to reuse memory from the free list if a matching shape exists.
     /// Otherwise allocates new memory from the bump arena.
-    pub fn allocate(
-        &mut self,
-        shape: &[usize],
-    ) -> Result<ArenaTensor, crate::tensor::error::TensorError> {
+    pub fn allocate(&mut self, shape: &[usize]) -> Result<ArenaTensor, crate::tensor::error::TensorError>
+    {
         let key = ShapeKey::new(shape);
         let size = shape.iter().product::<usize>();
 
@@ -596,7 +596,7 @@ impl TensorArena {
                 self.stats.reuse_count += 1;
                 self.stats.bytes_in_use += size * core::mem::size_of::<f64>();
                 self.update_peak();
-
+                
                 slice.borrowed = true;
                 return Ok(ArenaTensor {
                     ptr: slice.ptr,
@@ -611,13 +611,12 @@ impl TensorArena {
         let layout = std::alloc::Layout::from_size_align(
             size * core::mem::size_of::<f64>(),
             64, // 64-byte alignment for SIMD
-        )
-        .map_err(|e| crate::tensor::error::TensorError::AllocationError {
+        ).map_err(|e| crate::tensor::error::TensorError::AllocationError {
             message: format!("Failed to create layout: {}", e),
         })?;
 
         let ptr = self.arena.alloc_layout(layout).as_ptr() as *mut f64;
-
+        
         self.stats.allocation_count += 1;
         self.stats.total_bytes_allocated += size * core::mem::size_of::<f64>();
         self.stats.bytes_in_use += size * core::mem::size_of::<f64>();
@@ -645,7 +644,10 @@ impl TensorArena {
             borrowed: false,
         };
 
-        self.free_lists.entry(key).or_default().push(slice);
+        self.free_lists
+            .entry(key)
+            .or_default()
+            .push(slice);
 
         self.stats.deallocation_count += 1;
         self.stats.bytes_in_use -= tensor.len * core::mem::size_of::<f64>();
@@ -684,19 +686,18 @@ impl TensorArena {
     }
 
     /// Force allocate without reuse (for benchmarking)
-    pub fn allocate_fresh(
-        &mut self,
-        shape: &[usize],
-    ) -> Result<ArenaTensor, crate::tensor::error::TensorError> {
+    pub fn allocate_fresh(&mut self, shape: &[usize]) -> Result<ArenaTensor, crate::tensor::error::TensorError> {
         let size = shape.iter().product::<usize>();
-
-        let layout = std::alloc::Layout::from_size_align(size * core::mem::size_of::<f64>(), 64)
-            .map_err(|e| crate::tensor::error::TensorError::AllocationError {
-                message: format!("Failed to create layout: {}", e),
-            })?;
+        
+        let layout = std::alloc::Layout::from_size_align(
+            size * core::mem::size_of::<f64>(),
+            64,
+        ).map_err(|e| crate::tensor::error::TensorError::AllocationError {
+            message: format!("Failed to create layout: {}", e),
+        })?;
 
         let ptr = self.arena.alloc_layout(layout).as_ptr() as *mut f64;
-
+        
         self.stats.allocation_count += 1;
         self.stats.total_bytes_allocated += size * core::mem::size_of::<f64>();
         self.stats.bytes_in_use += size * core::mem::size_of::<f64>();
@@ -785,12 +786,13 @@ impl Clone for ArenaTensor {
     fn clone(&self) -> Self {
         // Clone creates a new allocation, not a reference
         unsafe {
-            let layout =
-                std::alloc::Layout::from_size_align(self.len * core::mem::size_of::<f64>(), 64)
-                    .unwrap();
+            let layout = std::alloc::Layout::from_size_align(
+                self.len * core::mem::size_of::<f64>(),
+                64,
+            ).unwrap();
             let new_ptr = std::alloc::alloc(layout) as *mut f64;
             std::ptr::copy_nonoverlapping(self.ptr, new_ptr, self.len);
-
+            
             ArenaTensor {
                 ptr: new_ptr,
                 len: self.len,
@@ -823,11 +825,11 @@ mod arena_tests {
     fn test_arena_allocate() {
         let mut arena = TensorArena::with_capacity(1024 * 1024);
         let shape = vec![10, 10];
-
+        
         let tensor = arena.allocate(&shape).unwrap();
         assert_eq!(tensor.shape(), &[10, 10]);
         assert_eq!(tensor.len(), 100);
-
+        
         let stats = arena.stats();
         assert_eq!(stats.allocation_count, 1);
         assert_eq!(stats.reuse_count, 0);
@@ -837,17 +839,17 @@ mod arena_tests {
     fn test_arena_reuse() {
         let mut arena = TensorArena::with_capacity(1024 * 1024);
         let shape = vec![5, 5];
-
+        
         // Allocate
         let tensor1 = arena.allocate(&shape).unwrap();
-        let _stats_after_alloc = arena.stats().allocation_count;
-
+        let stats_after_alloc = arena.stats().allocation_count;
+        
         // Explicitly deallocate to return to free list
         arena.deallocate(tensor1);
-
+        
         // Allocate again with same shape - should reuse from free list
         let _tensor2 = arena.allocate(&shape).unwrap();
-
+        
         let stats = arena.stats();
         // Should have 1 allocation (first one) and 1 reuse (second one)
         assert_eq!(stats.allocation_count, 1);
@@ -857,7 +859,7 @@ mod arena_tests {
     #[test]
     fn test_arena_different_shapes() {
         let mut arena = TensorArena::with_capacity(1024 * 1024);
-
+        
         let t1 = arena.allocate(&[10]).unwrap();
         let t2 = arena.allocate(&[20]).unwrap();
         let shape1 = t1.shape().to_vec();
@@ -865,12 +867,12 @@ mod arena_tests {
         arena.deallocate(t1);
         arena.deallocate(t2);
         let t3 = arena.allocate(&[10]).unwrap();
-
+        
         // t3 should reuse t1's memory from free list
         assert_eq!(shape1, vec![10]);
         assert_eq!(shape2, vec![20]);
         assert_eq!(t3.shape(), &[10]);
-
+        
         let stats = arena.stats();
         assert_eq!(stats.allocation_count, 2); // t1 and t2
         assert_eq!(stats.reuse_count, 1); // t3 reused t1
@@ -879,12 +881,12 @@ mod arena_tests {
     #[test]
     fn test_arena_reset() {
         let mut arena = TensorArena::with_capacity(1024 * 1024);
-
+        
         let _t1 = arena.allocate(&[100]).unwrap();
         let _t2 = arena.allocate(&[200]).unwrap();
-
+        
         arena.reset();
-
+        
         assert_eq!(arena.bytes_in_use(), 0);
         assert_eq!(arena.stats().allocation_count, 0);
         assert_eq!(arena.stats().reuse_count, 0);
@@ -893,14 +895,14 @@ mod arena_tests {
     #[test]
     fn test_arena_stats() {
         let mut arena = TensorArena::with_capacity(1024 * 1024);
-
+        
         let shape = vec![10, 10];
         let size_bytes = 100 * core::mem::size_of::<f64>();
-
+        
         let t1 = arena.allocate(&shape).unwrap();
         arena.deallocate(t1);
         let _t2 = arena.allocate(&shape).unwrap();
-
+        
         let stats = arena.stats();
         // First allocation + first reuse
         assert_eq!(stats.total_bytes_allocated, size_bytes);
@@ -914,7 +916,7 @@ mod arena_tests {
     fn test_arena_tensor_zero() {
         let mut arena = TensorArena::with_capacity(1024 * 1024);
         let mut tensor = arena.allocate(&[10]).unwrap();
-
+        
         unsafe {
             tensor.zero();
             let slice = tensor.as_slice();

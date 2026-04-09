@@ -6,9 +6,9 @@
 //! - Star attention
 //! - Head-wise sparse attention
 
-use crate::tensor::sparse::SparseTensor;
-use crate::tensor::traits::{TensorBase, TensorOps};
 use crate::tensor::DenseTensor;
+use crate::tensor::traits::{TensorOps, TensorBase};
+use crate::tensor::sparse::SparseTensor;
 
 /// Sparse attention pattern types
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -323,6 +323,7 @@ impl SparseAttention {
     /// * `head_dim` - Head dimension
     /// * `center_ratio` - Ratio of center tokens
     pub fn star(head_dim: usize, _center_ratio: f64) -> Self {
+        
         Self::new(SparsePattern::Star, head_dim)
     }
 
@@ -341,7 +342,9 @@ impl SparseAttention {
                 let num_blocks = self.num_blocks.unwrap_or(4);
                 SparseMask::block_sparse(seq_len, block_size, num_blocks)
             }
-            SparsePattern::Star => SparseMask::star(seq_len, 0.1),
+            SparsePattern::Star => {
+                SparseMask::star(seq_len, 0.1)
+            }
             SparsePattern::HeadSparse => {
                 // Default to sliding window for head-sparse
                 SparseMask::sliding_window(seq_len, 64, true)
@@ -415,12 +418,7 @@ impl SlidingWindowAttention {
     /// * `query` - Query [batch, heads, seq_len, head_dim]
     /// * `key` - Key [batch, heads, seq_len, head_dim]
     /// * `value` - Value [batch, heads, seq_len, head_dim]
-    pub fn forward(
-        &self,
-        query: &DenseTensor,
-        key: &DenseTensor,
-        value: &DenseTensor,
-    ) -> DenseTensor {
+    pub fn forward(&self, query: &DenseTensor, key: &DenseTensor, value: &DenseTensor) -> DenseTensor {
         let batch_size = query.shape()[0];
         let num_heads = query.shape()[1];
         let seq_len = query.shape()[2];
@@ -441,12 +439,8 @@ impl SlidingWindowAttention {
 
                     for j in start..end {
                         // Compute dot product
-                        let q_slice = &query.data()[(b * num_heads * seq_len * head_dim
-                            + h * seq_len * head_dim
-                            + i * head_dim)..];
-                        let k_slice = &key.data()[(b * num_heads * seq_len * head_dim
-                            + h * seq_len * head_dim
-                            + j * head_dim)..];
+                        let q_slice = &query.data()[(b * num_heads * seq_len * head_dim + h * seq_len * head_dim + i * head_dim)..];
+                        let k_slice = &key.data()[(b * num_heads * seq_len * head_dim + h * seq_len * head_dim + j * head_dim)..];
 
                         let mut score = 0.0;
                         for d in 0..head_dim {
@@ -458,9 +452,8 @@ impl SlidingWindowAttention {
                         let weight = score.exp();
 
                         // Weighted sum of values
-                        let v_slice = &value.data()[(b * num_heads * seq_len * head_dim
-                            + h * seq_len * head_dim
-                            + j * head_dim)..];
+                        let v_slice = &value.data()[(b * num_heads * seq_len * head_dim + h * seq_len * head_dim + j * head_dim)..];
+                        #[allow(clippy::needless_range_loop)]
                         for d in 0..head_dim {
                             attn_output[d] += weight * v_slice[d];
                         }
@@ -469,8 +462,9 @@ impl SlidingWindowAttention {
 
                     // Normalize
                     if total_weight > 0.0 {
-                        for val in attn_output.iter_mut().take(head_dim) {
-                            *val /= total_weight;
+                        #[allow(clippy::needless_range_loop)]
+                        for d in 0..head_dim {
+                            attn_output[d] /= total_weight;
                         }
                     }
 

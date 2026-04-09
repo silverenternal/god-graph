@@ -292,7 +292,7 @@ impl TensorBase for DenseTensor {
         self.clone()
     }
 
-    #[cfg(feature = "tensor-sparse")]
+    #[cfg(feature = "tensor")]
     fn to_sparse(&self) -> Option<crate::tensor::sparse::SparseTensor> {
         // 将密集张量转换为 CSR 格式
         let mut row_offsets = vec![0];
@@ -711,6 +711,7 @@ impl DenseTensor {
             let cols = self.shape[1];
             let rows = self.shape[0];
             let mut result = vec![0.0; cols];
+            #[allow(clippy::needless_range_loop)]
             for col in 0..cols {
                 for row in 0..rows {
                     result[col] += self.data[row * cols + col];
@@ -723,6 +724,7 @@ impl DenseTensor {
             let rows = self.shape[0];
             let cols = self.shape[1];
             let mut result = vec![0.0; rows];
+            #[allow(clippy::needless_range_loop)]
             for row in 0..rows {
                 let row_start = row * cols;
                 result[row] =
@@ -765,6 +767,7 @@ impl DenseTensor {
             let cols = self.shape[1];
             let rows = self.shape[0];
             let mut result = vec![0.0; cols];
+            #[allow(clippy::needless_range_loop)]
             for col in 0..cols {
                 for row in 0..rows {
                     let diff = self.data[row * cols + col] - mean.data()[col];
@@ -777,6 +780,7 @@ impl DenseTensor {
             let rows = self.shape[0];
             let cols = self.shape[1];
             let mut result = vec![0.0; rows];
+            #[allow(clippy::needless_range_loop)]
             for row in 0..rows {
                 let row_start = row * cols;
                 let m = mean.data()[row];
