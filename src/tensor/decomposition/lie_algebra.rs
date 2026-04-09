@@ -154,7 +154,7 @@ pub fn skew_symmetric_projection(matrix: &DenseTensor) -> Result<DenseTensor, Te
     let data = matrix.data();
     let mut result = vec![0.0; n * n];
 
-    skew_symmetric_projection_with(&data, &mut result, n);
+    skew_symmetric_projection_with(data, &mut result, n);
 
     Ok(DenseTensor::from_vec(result, vec![n, n]))
 }

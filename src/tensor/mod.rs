@@ -38,7 +38,7 @@ pub mod traits;
 #[cfg(feature = "tensor")]
 pub mod dense;
 
-#[cfg(feature = "tensor-sparse")]
+#[cfg(feature = "tensor")]
 pub mod sparse;
 
 #[cfg(feature = "tensor")]
@@ -78,7 +78,7 @@ pub use traits::{COOView, DType, Device, SparseTensorOps, TensorBase, TensorOps}
 #[cfg(feature = "tensor")]
 pub use dense::DenseTensor;
 
-#[cfg(feature = "tensor-sparse")]
+#[cfg(feature = "tensor")]
 pub use sparse::{COOTensor, CSRTensor, SparseTensor};
 
 #[cfg(feature = "tensor")]
@@ -87,7 +87,7 @@ pub use error::TensorError;
 #[cfg(feature = "tensor")]
 pub use types::{EdgeFeatures, NodeFeatures, TensorEdge, TensorNode};
 
-#[cfg(feature = "tensor-sparse")]
+#[cfg(feature = "tensor")]
 pub use types::AdjacencyMatrix;
 
 #[cfg(feature = "tensor")]
@@ -113,7 +113,7 @@ pub use graph_tensor::{
     GraphFeatureExtractor, GraphReconstructor,
 };
 
-#[cfg(feature = "tensor-sparse")]
+#[cfg(feature = "tensor")]
 pub use graph_tensor::{
     GraphAdjacencyMatrix, GraphBatch, GraphTensorExt,
 };

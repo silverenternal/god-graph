@@ -18,7 +18,6 @@ pub struct COOTensor {
     shape: [usize; 2],
 }
 
-#[cfg(feature = "tensor-sparse")]
 impl COOTensor {
     /// 创建新的 COO 张量
     pub fn new(
@@ -84,7 +83,7 @@ pub struct CSRTensor {
     shape: [usize; 2],
 }
 
-#[cfg(feature = "tensor-sparse")]
+#[cfg(feature = "tensor")]
 impl CSRTensor {
     /// 创建新的 CSR 张量
     pub fn new(
@@ -170,7 +169,7 @@ pub enum SparseTensor {
     CSR(CSRTensor),
 }
 
-#[cfg(feature = "tensor-sparse")]
+#[cfg(feature = "tensor")]
 impl SparseTensor {
     /// 创建 COO 格式稀疏张量
     pub fn coo(
@@ -360,7 +359,7 @@ impl SparseTensor {
     }
 }
 
-#[cfg(feature = "tensor-sparse")]
+#[cfg(feature = "tensor")]
 impl SparseTensorOps for SparseTensor {
     fn nnz(&self) -> usize {
         match self {
@@ -395,7 +394,7 @@ impl SparseTensorOps for SparseTensor {
     }
 }
 
-#[cfg(feature = "tensor-sparse")]
+#[cfg(feature = "tensor")]
 impl TensorBase for SparseTensor {
     fn shape(&self) -> &[usize] {
         match self {
@@ -432,13 +431,13 @@ impl TensorBase for SparseTensor {
         DenseTensor::new(data, vec![rows, cols])
     }
 
-    #[cfg(feature = "tensor-sparse")]
+    #[cfg(feature = "tensor")]
     fn to_sparse(&self) -> Option<SparseTensor> {
         Some(self.clone())
     }
 }
 
-#[cfg(feature = "tensor-sparse")]
+#[cfg(feature = "tensor")]
 impl fmt::Debug for SparseTensor {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let shape = self.shape();

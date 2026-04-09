@@ -57,9 +57,9 @@ impl LlamaDecoderLayer {
         
         // 4. FFN with residual
         let mlp_output = self.mlp.forward(&normed);
-        let output = hidden.add(&mlp_output);
         
-        output
+        
+        hidden.add(&mlp_output)
     }
 
     /// Forward pass with KV cache

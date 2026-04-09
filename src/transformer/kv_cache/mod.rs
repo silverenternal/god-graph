@@ -307,7 +307,7 @@ impl PagedKVCache {
         num_kv_heads: usize,
         block_size: usize,
     ) -> Self {
-        let num_blocks = (max_seq_len + block_size - 1) / block_size;
+        let num_blocks = max_seq_len.div_ceil(block_size);
         let head_dim = hidden_dim / num_kv_heads;
 
         let key_blocks = vec![

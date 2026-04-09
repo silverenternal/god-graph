@@ -139,3 +139,9 @@ mod tests {
         }
     }
 }
+
+#[cfg(not(feature = "tensor"))]
+fn main() {
+    println!("This example requires the 'tensor' feature.");
+    println!("Run with: cargo run --example cad_llm_tensor_ring --features tensor");
+}

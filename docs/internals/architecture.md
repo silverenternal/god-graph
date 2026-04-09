@@ -57,7 +57,7 @@
 
 | 文件 | 职责 | 关键类型 |
 |------|------|----------|
-| `impl_.rs` | Graph 核心实现 | `Graph<T,E>`, `AdjBucket` |
+| `graph_impl.rs` | Graph 核心实现 | `Graph<T,E>`, `AdjBucket` |
 | `traits.rs` | Graph trait 定义 | `GraphBase`, `GraphOps`, `GraphQuery` |
 | `iterators.rs` | 迭代器实现 | `NeighborsIter`, `NodeIter`, `EdgeIter` |
 | `builders.rs` | 构建器 | `GraphBuilder` |

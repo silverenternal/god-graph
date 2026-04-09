@@ -7,7 +7,6 @@ mod tests {
     use god_graph::algorithms::flow::edmonds_karp;
     use god_graph::graph::Graph;
     use god_graph::graph::traits::GraphOps;
-    use god_graph::node::NodeIndex;
 
     /// 测试 Edmonds-Karp 算法 - 基本场景
     #[test]

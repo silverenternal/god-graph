@@ -140,7 +140,7 @@ mod tests {
             .expect("Failed to orthogonalize weights");
 
         // Compute orthogonalization statistics
-        let errors: Vec<f64> = optimizer.error_accumulator().layer_errors().values().flatten().cloned().collect();
+        let errors: Vec<f64> = optimizer.error_accumulator().all_layer_errors().values().flatten().cloned().collect();
 
         // Compute orthogonalization statistics
         let avg_error = errors.iter().sum::<f64>() / errors.len() as f64;
@@ -262,7 +262,7 @@ mod tests {
         optimizer.orthogonalize_weights(&mut graph)
             .expect("Failed to orthogonalize weights");
 
-        let ortho_errors: Vec<f64> = optimizer.error_accumulator().layer_errors().values().flatten().cloned().collect();
+        let ortho_errors: Vec<f64> = optimizer.error_accumulator().all_layer_errors().values().flatten().cloned().collect();
         let avg_ortho_error = ortho_errors.iter().sum::<f64>() / ortho_errors.len() as f64;
         eprintln!(
             "  Orthogonalization complete (avg error: {:.2e})",

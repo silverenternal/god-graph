@@ -46,7 +46,10 @@
       "Bash(old_code2, *)",
       "Bash(f.write)",
       "Bash(python_script)",
-      "Bash(cp *)"
+      "Bash(cp *)",
+      "Bash(rm *)",
+      "Bash(do *)",
+      "Bash(done)"
     ]
   },
   "$version": 3

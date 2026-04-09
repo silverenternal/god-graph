@@ -92,14 +92,8 @@ pub trait TensorBase: Clone + Send + Sync + Debug {
     fn to_dense(&self) -> crate::tensor::dense::DenseTensor;
 
     /// 转换为稀疏张量（如果适用）
-    #[cfg(feature = "tensor-sparse")]
+    #[cfg(feature = "tensor")]
     fn to_sparse(&self) -> Option<crate::tensor::sparse::SparseTensor>;
-
-    /// 转换为稀疏张量（当 tensor-sparse 特性未启用时返回 None）
-    #[cfg(not(feature = "tensor-sparse"))]
-    fn to_sparse(&self) -> Option<()> {
-        None
-    }
 }
 
 /// Tensor 操作 trait：定义数学运算

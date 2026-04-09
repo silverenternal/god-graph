@@ -204,7 +204,7 @@ impl LlamaWeightMapper {
         let name = format!("model.layers.{}.{}", layer_idx, component);
         tensors
             .get(&name)
-            .ok_or_else(move || GraphError::NotFound(name))
+            .ok_or(GraphError::NotFound(name))
     }
 }
 

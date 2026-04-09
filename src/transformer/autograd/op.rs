@@ -264,7 +264,7 @@ impl LayerNormOp {
         let mean = x.mean_dim(-1);
         let var = x.var_dim(-1);
         
-        let normalized = x.sub(&mean).div(&var.add(&DenseTensor::full(&var.shape(), self.epsilon)).sqrt());
+        let normalized = x.sub(&mean).div(&var.add(&DenseTensor::full(var.shape(), self.epsilon)).sqrt());
         normalized.mul(&self.weight).add(&self.bias)
     }
 }

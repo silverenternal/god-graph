@@ -389,7 +389,7 @@ impl GraphExecutor {
             dot.push_str(&format!("    n{} [label=\"{}\"];\n", node.index().index(), label));
         }
 
-        dot.push_str("\n");
+        dot.push('\n');
 
         // Add edges
         for edge in self.graph.edges() {
@@ -402,7 +402,7 @@ impl GraphExecutor {
                 edge.source().index(), edge.target().index(), style));
         }
 
-        dot.push_str("}");
+        dot.push('}');
         dot
     }
 

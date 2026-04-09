@@ -40,9 +40,11 @@ impl Sgd {
             velocity: HashMap::new(),
         }
     }
-    
+}
+
+impl Default for Sgd {
     /// Create SGD with default parameters (lr=0.01, no momentum, no weight decay)
-    pub fn default() -> Self {
+    fn default() -> Self {
         Self::new(0.01, 0.0, 0.0)
     }
 }
@@ -129,14 +131,16 @@ impl Adam {
         }
     }
     
-    /// Create Adam with default parameters (lr=0.001, beta1=0.9, beta2=0.999, eps=1e-8)
-    pub fn default() -> Self {
-        Self::new(0.001, 0.9, 0.999, 1e-8)
-    }
-    
     /// Set learning rate
     pub fn set_lr(&mut self, lr: f64) {
         self.lr = lr;
+    }
+}
+
+impl Default for Adam {
+    /// Create Adam with default parameters (lr=0.001, beta1=0.9, beta2=0.999, eps=1e-8)
+    fn default() -> Self {
+        Self::new(0.001, 0.9, 0.999, 1e-8)
     }
 }
 
@@ -174,7 +178,7 @@ impl Optimizer for Adam {
             let v_hat = v.scale(1.0 / bias_correction2);
             
             // Update parameters: param = param - lr * m_hat / (sqrt(v_hat) + eps)
-            let sqrt_v = v_hat.sqrt().add(&DenseTensor::full(&v_hat.shape(), self.epsilon));
+            let sqrt_v = v_hat.sqrt().add(&DenseTensor::full(v_hat.shape(), self.epsilon));
             let update = m_hat.div(&sqrt_v).scale(self.lr);
             
             *param = param.sub(&update);
@@ -215,9 +219,11 @@ impl AdamW {
             weight_decay,
         }
     }
-    
+}
+
+impl Default for AdamW {
     /// Create AdamW with default parameters (lr=0.001, weight_decay=0.01)
-    pub fn default() -> Self {
+    fn default() -> Self {
         Self::new(0.001, 0.9, 0.999, 1e-8, 0.01)
     }
 }

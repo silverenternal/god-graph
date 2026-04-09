@@ -59,7 +59,7 @@
 
 use std::collections::HashMap;
 
-#[cfg(all(feature = "tensor", feature = "tensor-autograd"))]
+#[cfg(all(feature = "tensor", feature = "tensor-gpu"))]
 use dfdx::prelude::*;
 
 #[cfg(feature = "rand")]

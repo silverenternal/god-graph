@@ -46,7 +46,7 @@ impl BatchData {
         let batch_size = input_ids.len();
         let mut mask_data = Vec::with_capacity(batch_size * max_len * max_len);
 
-        for (_i, &seq_len) in seq_lengths.iter().enumerate() {
+        for &seq_len in seq_lengths.iter() {
             for j in 0..max_len {
                 for k in 0..max_len {
                     // Valid positions can attend to each other
@@ -178,11 +178,7 @@ impl RequestScheduler {
     pub fn schedule(&mut self) -> Vec<&mut InferenceRequest> {
         // Move completed active requests to completed
         self.active.retain(|req| {
-            if req.completed {
-                false
-            } else {
-                true
-            }
+            !req.completed
         });
 
         // Move pending to active if there's capacity
@@ -212,8 +208,8 @@ impl RequestScheduler {
 
     /// Remove and return completed requests
     pub fn pop_completed(&mut self) -> Vec<InferenceRequest> {
-        let completed = std::mem::take(&mut self.completed);
-        completed
+        
+        std::mem::take(&mut self.completed)
     }
 }
 
@@ -304,9 +300,9 @@ impl<'a> BatchInference<'a> {
 
             // Sample or greedy
             let token = if req.config.do_sample {
-                self.sample_from_probs(&probs.data())
+                self.sample_from_probs(probs.data())
             } else {
-                self.argmax(&probs.data())
+                self.argmax(probs.data())
             };
 
             tokens.push(token);
@@ -421,7 +417,7 @@ pub mod utils {
 
         let mut data = Vec::with_capacity(batch_size * max_len * max_len);
 
-        for (_i, &seq_len) in lengths.iter().enumerate() {
+        for &seq_len in lengths.iter() {
             for j in 0..max_len {
                 for k in 0..max_len {
                     let can_attend = (j < seq_len && k < seq_len) as u8 as f64;

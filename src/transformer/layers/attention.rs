@@ -270,7 +270,7 @@ impl MultiHeadAttention {
                                 ];
                                 let b_simd = f64x4::new(b_vals);
                                 
-                                sum_simd = sum_simd + a_simd * b_simd;
+                                sum_simd += a_simd * b_simd;
                             }
                             
                             let sums = sum_simd.to_array();

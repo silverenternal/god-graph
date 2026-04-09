@@ -12,7 +12,7 @@ use crate::node::NodeIndex;
 use crate::tensor::dense::DenseTensor;
 use crate::tensor::traits::TensorBase;
 
-#[cfg(feature = "tensor-sparse")]
+#[cfg(feature = "tensor")]
 use crate::tensor::sparse::SparseTensor;
 
 #[cfg(feature = "serde")]
@@ -297,7 +297,7 @@ impl<T: TensorBase> GNMessage<T> {
 /// 邻接矩阵表示：用于图神经网络计算
 ///
 /// 使用稀疏张量格式存储图的邻接矩阵
-#[cfg(feature = "tensor-sparse")]
+#[cfg(feature = "tensor")]
 pub struct AdjacencyMatrix {
     /// 邻接张量（稀疏格式）
     pub tensor: SparseTensor,
@@ -305,7 +305,7 @@ pub struct AdjacencyMatrix {
     pub num_nodes: usize,
 }
 
-#[cfg(feature = "tensor-sparse")]
+#[cfg(feature = "tensor")]
 impl AdjacencyMatrix {
     /// 从边列表创建邻接矩阵
     pub fn from_edges(edges: &[(usize, usize, f64)], num_nodes: usize) -> Self {
@@ -337,7 +337,7 @@ pub struct DegreeMatrix {
     pub num_nodes: usize,
 }
 
-#[cfg(feature = "tensor-sparse")]
+#[cfg(feature = "tensor")]
 impl DegreeMatrix {
     /// 从邻接矩阵计算度矩阵
     pub fn from_adjacency(adj: &AdjacencyMatrix) -> Self {
@@ -364,8 +364,12 @@ impl DegreeMatrix {
 
     /// 计算 D^(-1/2)（用于图卷积的归一化）
     pub fn inverse_sqrt(&self, epsilon: f64) -> DenseTensor {
-        self.degrees
-            .map(|d: f64| if d > epsilon { 1.0 / d.sqrt() } else { 0.0 })
+        let shape = self.degrees.shape().to_vec();
+        let inv_sqrt: Vec<f64> = self.degrees.data()
+            .iter()
+            .map(|&d| if d > epsilon { 1.0 / d.sqrt() } else { 0.0 })
+            .collect();
+        DenseTensor::new(inv_sqrt, shape)
     }
 }
 
@@ -400,7 +404,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(feature = "tensor-sparse")]
+    #[cfg(feature = "tensor")]
     fn test_adjacency_matrix() {
         let edges = vec![(0, 1, 1.0), (0, 2, 1.0), (1, 2, 1.0)];
         let adj = AdjacencyMatrix::from_edges(&edges, 3);
@@ -415,7 +419,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(feature = "tensor-sparse")]
+    #[cfg(feature = "tensor")]
     fn test_degree_matrix() {
         let edges = vec![(0, 1, 1.0), (0, 2, 1.0), (1, 2, 1.0)];
         let adj = AdjacencyMatrix::from_edges(&edges, 3);

@@ -30,9 +30,8 @@ pub struct GenerationConfig {
     pub length_penalty: f64,
 }
 
-impl GenerationConfig {
-    /// Create a default generation config
-    pub fn default() -> Self {
+impl Default for GenerationConfig {
+    fn default() -> Self {
         Self {
             max_length: 256,
             min_length: 0,
@@ -47,7 +46,9 @@ impl GenerationConfig {
             length_penalty: 1.0,
         }
     }
+}
 
+impl GenerationConfig {
     /// Create config for greedy decoding
     pub fn greedy() -> Self {
         Self {
@@ -158,7 +159,7 @@ impl<'a> TextGenerator<'a> {
             probs = probs.softmax(-1);
             
             // Greedy: pick the token with highest probability
-            let next_token = self.argmax(&probs.data());
+            let next_token = self.argmax(probs.data());
             
             // Check for EOS
             if Some(next_token) == self.config.eos_token_id {
@@ -204,7 +205,7 @@ impl<'a> TextGenerator<'a> {
             }
             
             // Sample from the distribution
-            let next_token = self.sample_from_probs(&probs.data(), &mut rng);
+            let next_token = self.sample_from_probs(probs.data(), &mut rng);
             
             // Check for EOS
             if Some(next_token) == self.config.eos_token_id {
@@ -236,7 +237,7 @@ impl<'a> TextGenerator<'a> {
                 let last_logits = logits.get_row(seq_len - 1);
                 
                 // Get top-k candidates
-                let top_indices = self.topk_indices(&last_logits.data(), self.config.num_beams);
+                let top_indices = self.topk_indices(last_logits.data(), self.config.num_beams);
                 
                 for &next_token in &top_indices {
                     let mut new_beam = beam_ids.clone();

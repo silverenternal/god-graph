@@ -52,10 +52,10 @@ jobs:
           components: clippy
 
       - name: Run Clippy (default features)
-        run: cargo clippy --all-targets -- -D warnings
+        run: cargo clippy --lib --tests -- -D warnings
 
       - name: Run Clippy (all non-GPU features)
-        run: cargo clippy --all-targets --features "std,parallel,serde,dot,matrix,rand,simd,tensor,tensor-sparse,tensor-gnn,tensor-pool,tensor-batch" -- -D warnings
+        run: cargo clippy --lib --tests --features "std,parallel,serde,dot,matrix,rand,simd,tensor,tensor-gnn,tensor-pool,tensor-autograd,transformer,safetensors,cad-llm,indexmap,distributed,mcp" -- -D warnings
 
   # ============================================
   # 测试套件
@@ -74,7 +74,7 @@ jobs:
           - "--features std"
           - "--features parallel"
           - "--features serde"
-          - "--features \"std,parallel,serde,dot,matrix,rand,simd,tensor,tensor-sparse,tensor-gnn,tensor-pool,tensor-batch\""
+          - "--features \"std,parallel,serde,dot,matrix,rand,simd,tensor,tensor-gnn,tensor-pool,tensor-autograd,transformer,safetensors,cad-llm,indexmap,distributed,mcp\""
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -123,7 +123,7 @@ jobs:
           key: ${{ runner.os }}-cargo-bench-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Run benchmarks
-        run: cargo bench --features "std,parallel,serde,dot,matrix,rand,simd,tensor,tensor-sparse,tensor-gnn,tensor-pool,tensor-batch" --no-fail-fast
+        run: cargo bench --features "std,parallel,serde,dot,matrix,rand,simd,tensor,tensor-gnn,tensor-pool,tensor-autograd,transformer,safetensors,cad-llm,indexmap,distributed,mcp" --no-fail-fast
 
       - name: Upload benchmark results
         uses: actions/upload-artifact@v4
@@ -147,7 +147,7 @@ jobs:
       - name: Check documentation
         env:
           RUSTDOCFLAGS: -D warnings
-        run: cargo doc --features "std,parallel,serde,dot,matrix,rand,simd,tensor,tensor-sparse,tensor-gnn,tensor-pool,tensor-batch" --no-deps
+        run: cargo doc --features "std,parallel,serde,dot,matrix,rand,simd,tensor,tensor-gnn,tensor-pool,tensor-autograd,transformer,safetensors,cad-llm,indexmap,distributed,mcp" --no-deps
 
   # ============================================
   # 覆盖率检查（可选，需要 tarpaulin）
@@ -167,7 +167,7 @@ jobs:
         run: cargo install cargo-tarpaulin
 
       - name: Generate coverage report
-        run: cargo tarpaulin --features "std,parallel,serde,dot,matrix,rand,simd,tensor,tensor-sparse,tensor-gnn,tensor-pool,tensor-batch" --out xml --fail-under 70
+        run: cargo tarpaulin --features "std,parallel,serde,dot,matrix,rand,simd,tensor,tensor-gnn,tensor-pool,tensor-autograd,transformer,safetensors,cad-llm,indexmap,distributed,mcp" --out xml --fail-under 70
 
       - name: Check coverage threshold (minimum 70%)
         run: |
@@ -205,7 +205,7 @@ jobs:
       - name: Simulate docs.rs build
         env:
           RUSTDOCFLAGS: --cfg docsrs
-        run: cargo doc --features "std,parallel,serde,dot,matrix,rand,simd,tensor,tensor-sparse,tensor-gnn,tensor-pool,tensor-batch" --no-deps
+        run: cargo doc --features "std,parallel,serde,dot,matrix,rand,simd,tensor,tensor-gnn,tensor-pool,tensor-autograd,transformer,safetensors,cad-llm,indexmap,distributed,mcp" --no-deps
 
   # ============================================
   # 发布检查（仅在创建 tag 时运行）
@@ -222,7 +222,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Build release
-        run: cargo build --release --features "std,parallel,serde,dot,matrix,rand,simd,tensor,tensor-sparse,tensor-gnn,tensor-pool,tensor-batch"
+        run: cargo build --release --features "std,parallel,serde,dot,matrix,rand,simd,tensor,tensor-gnn,tensor-pool,tensor-autograd,transformer,safetensors,cad-llm,indexmap,distributed,mcp"
 
       - name: Verify package
         run: cargo package

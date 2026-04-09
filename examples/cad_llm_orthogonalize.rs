@@ -109,6 +109,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+#[cfg(feature = "tensor")]
 /// Check if a matrix is orthogonal (Q^T Q ≈ I)
 fn check_orthogonality(tensor: &DenseTensor, tolerance: f64) -> bool {
     let shape = tensor.shape();
@@ -122,11 +123,11 @@ fn check_orthogonality(tensor: &DenseTensor, tolerance: f64) -> bool {
     // Check Q^T Q = I
     for i in 0..n {
         for j in 0..n {
-            let mut dot = 0.0;
+            let mut dot: f64 = 0.0;
             for k in 0..n {
                 dot += data[k * n + i] * data[k * n + j];
             }
-            let expected = if i == j { 1.0 } else { 0.0 };
+            let expected: f64 = if i == j { 1.0 } else { 0.0 };
             if (dot - expected).abs() > tolerance {
                 return false;
             }
@@ -136,6 +137,7 @@ fn check_orthogonality(tensor: &DenseTensor, tolerance: f64) -> bool {
     true
 }
 
+#[cfg(feature = "tensor")]
 /// Calculate orthogonality error (||Q^T Q - I||_F)
 fn calculate_orthogonality_error(tensor: &DenseTensor) -> f64 {
     let shape = tensor.shape();
@@ -145,15 +147,15 @@ fn calculate_orthogonality_error(tensor: &DenseTensor) -> f64 {
 
     let n = shape[0];
     let data = tensor.data();
-    let mut error = 0.0;
+    let mut error: f64 = 0.0;
 
     for i in 0..n {
         for j in 0..n {
-            let mut dot = 0.0;
+            let mut dot: f64 = 0.0;
             for k in 0..n {
                 dot += data[k * n + i] * data[k * n + j];
             }
-            let expected = if i == j { 1.0 } else { 0.0 };
+            let expected: f64 = if i == j { 1.0 } else { 0.0 };
             error += (dot - expected).powi(2);
         }
     }
@@ -161,6 +163,7 @@ fn calculate_orthogonality_error(tensor: &DenseTensor) -> f64 {
     error.sqrt()
 }
 
+#[cfg(feature = "tensor")]
 /// Check if a matrix is skew-symmetric (A^T = -A)
 fn check_skew_symmetric(tensor: &DenseTensor, tolerance: f64) -> bool {
     let shape = tensor.shape();
@@ -184,7 +187,7 @@ fn check_skew_symmetric(tensor: &DenseTensor, tolerance: f64) -> bool {
     true
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "tensor"))]
 mod tests {
     use super::*;
 
@@ -224,4 +227,10 @@ mod tests {
         let rotation = DenseTensor::from_vec(vec![cos_t, -sin_t, sin_t, cos_t], vec![2, 2]);
         assert!(check_orthogonality(&rotation, 1e-5));
     }
+}
+
+#[cfg(not(feature = "tensor"))]
+fn main() {
+    println!("This example requires the 'tensor' feature.");
+    println!("Run with: cargo run --example cad_llm_orthogonalize --features tensor");
 }

@@ -338,7 +338,7 @@ impl ComputeGraph {
             }
             OpType::Transpose => {
                 // Transpose gradient is just transpose of gradient
-                if let Some(_) = inputs.first() {
+                if !inputs.is_empty() {
                     grads.insert(0, grad_output.transpose(None));
                 }
             }

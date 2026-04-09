@@ -222,7 +222,7 @@ impl QuantizedTensor {
         let scale = (max - min) / 15.0; // INT4 has 16 levels
 
         // Quantize to INT4 and pack
-        let mut packed_data = Vec::with_capacity((data.len() + 1) / 2);
+        let mut packed_data = Vec::with_capacity(data.len().div_ceil(2));
 
         for i in (0..data.len()).step_by(2) {
             let q0 = ((data[i] - min) / scale).round() as i32;
@@ -330,7 +330,7 @@ impl QuantizedTensor {
         let total_elements = self.shape.iter().product::<usize>();
         match self.config.dtype {
             QuantDtype::INT8 => total_elements, // 1 byte per element
-            QuantDtype::INT4 => (total_elements + 1) / 2, // Packed: 2 elements per byte
+            QuantDtype::INT4 => total_elements.div_ceil(2), // Packed: 2 elements per byte
             QuantDtype::F32 => total_elements * 4, // 4 bytes per element
         }
     }

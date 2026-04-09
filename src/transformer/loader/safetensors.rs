@@ -39,16 +39,20 @@ impl Dtype {
             Dtype::I64 => 8,
         }
     }
+}
+
+impl std::str::FromStr for Dtype {
+    type Err = ();
 
     /// Parse dtype from string
-    pub fn from_str(s: &str) -> Option<Self> {
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "F32" | "f32" | "FLOAT32" => Some(Dtype::F32),
-            "F16" | "f16" | "FLOAT16" => Some(Dtype::F16),
-            "BF16" | "bf16" | "BFLOAT16" => Some(Dtype::BF16),
-            "I32" | "i32" | "INT32" => Some(Dtype::I32),
-            "I64" | "i64" | "INT64" => Some(Dtype::I64),
-            _ => None,
+            "F32" | "f32" | "FLOAT32" => Ok(Dtype::F32),
+            "F16" | "f16" | "FLOAT16" => Ok(Dtype::F16),
+            "BF16" | "bf16" | "BFLOAT16" => Ok(Dtype::BF16),
+            "I32" | "i32" | "INT32" => Ok(Dtype::I32),
+            "I64" | "i64" | "INT64" => Ok(Dtype::I64),
+            _ => Err(()),
         }
     }
 }
@@ -122,8 +126,8 @@ impl SafetensorsLoader {
                         .and_then(|v| v.as_str())
                         .ok_or_else(|| GraphError::InvalidFormat(format!("Missing dtype for tensor {}", name)))?;
 
-                    let dtype = Dtype::from_str(dtype_str)
-                        .ok_or_else(|| GraphError::InvalidFormat(format!("Unknown dtype: {}", dtype_str)))?;
+                    let dtype: Dtype = dtype_str.parse()
+                        .map_err(|_| GraphError::InvalidFormat(format!("Unknown dtype: {}", dtype_str)))?;
 
                     let shape = tensor_info.get("shape")
                         .and_then(|v| v.as_array())
@@ -306,12 +310,12 @@ mod tests {
 
     #[test]
     fn test_dtype_parsing() {
-        assert_eq!(Dtype::from_str("F32"), Some(Dtype::F32));
-        assert_eq!(Dtype::from_str("f16"), Some(Dtype::F16));
-        assert_eq!(Dtype::from_str("BF16"), Some(Dtype::BF16));
-        assert_eq!(Dtype::from_str("I32"), Some(Dtype::I32));
-        assert_eq!(Dtype::from_str("i64"), Some(Dtype::I64));
-        assert_eq!(Dtype::from_str("UNKNOWN"), None);
+        assert_eq!("F32".parse::<Dtype>(), Ok(Dtype::F32));
+        assert_eq!("f16".parse::<Dtype>(), Ok(Dtype::F16));
+        assert_eq!("BF16".parse::<Dtype>(), Ok(Dtype::BF16));
+        assert_eq!("I32".parse::<Dtype>(), Ok(Dtype::I32));
+        assert_eq!("i64".parse::<Dtype>(), Ok(Dtype::I64));
+        assert_eq!("UNKNOWN".parse::<Dtype>(), Err(()));
     }
 
     #[test]

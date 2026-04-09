@@ -66,7 +66,7 @@ impl ErrorAccumulator {
     pub fn record_error(&mut self, layer_name: &str, error: f64) {
         self.layer_errors
             .entry(layer_name.to_string())
-            .or_insert_with(Vec::new)
+            .or_default()
             .push(error);
 
         self.total_error += error;
@@ -91,7 +91,7 @@ impl ErrorAccumulator {
         let layer_vec = self
             .layer_errors
             .entry(layer_name.to_string())
-            .or_insert_with(Vec::new);
+            .or_default();
 
         for error in errors {
             layer_vec.push(error);
@@ -128,6 +128,11 @@ impl ErrorAccumulator {
     /// Get the total number of error recordings
     pub fn total_recordings(&self) -> usize {
         self.layer_errors.values().map(|v| v.len()).sum()
+    }
+
+    /// Get all layer errors
+    pub fn all_layer_errors(&self) -> &HashMap<String, Vec<f64>> {
+        &self.layer_errors
     }
 
     /// Get errors for a specific layer
